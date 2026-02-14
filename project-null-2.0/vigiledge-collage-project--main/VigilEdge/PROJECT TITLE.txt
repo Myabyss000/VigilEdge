@@ -1,0 +1,95 @@
+PROJECT TITLE
+
+Secure VaultX: Unified Password and File Protection System
+
+PROJECT SYNOPSIS REPORT
+
+
+BACHELOR OF SCIENCE 
+IN 
+ADVANCED NETWORKING AND CYBER SECURITY 
+2023 Batch
+
+ 
+
+Brainware University
+            August, 2025
+           SUBMITTED BY:
+ARGHYA ADHIKARY………BWU/BNC/23/026
+SREEJA MONDAL…..BWU/BNC/23/165
+SRINJHON BANERJEE…..BWU/BNC/23/003
+SHIBAM SANBIGNA…BWU/BNC/23/052
+	
+
+	GUIDED BY:
+                                                                                                  Hrithik Roy
+                                                                                      ASSISTANT PROFESSOR
+                                                                                   Cyber Science & Technology	
+ 
+ 
+Project Synopsis
+Title: Secure VaultX: Unified Password and File Protection System
+1. Introduction
+Secure VaultX is an all-in-onesolution for managing passwords and protecting files, combining advanced encryption, biometric access, and real-time threat detection in a single secure platform.
+2. Problem Statement
+With rising cyber threats, users face challenges in remembering multiple complex passwords and securing confidential files. Traditional methods like weak passwords, unorganized storage, or relying on third-party apps increase the risk of breaches. There is a need for a unified, user-friendly system that provides both password security and file protection.
+Secure VaultX solves digital security challenges by offering a unified system for password and file protection. Users begin with biometric or master password authentication to access an encrypted vault. The system then generates and stores strong, unique passwords, monitors for breaches, and prompts updates. Files are encrypted using standards like AES-256 and can be securely shared with access controls. A central dashboard displays password health, file status, and threat alerts. AI continuously detects phishing, suspicious logins, and file anomalies, offering real-time guidance. Users receive tutorials, tips, and support, while encrypted cloud sync ensures cross-device access. Emergency access protocols allow trusted contacts to retrieve data when needed—making Secure VaultX a smart, seamless solution for modern digital protection.
+
+
+3. Objectives
+- To study the basic working of  Secure VaultX secures passwords and files using AES encryption, hashing, and password management—ensuring access only for the rightful user.
+- To understand and compare popular A Unified Password and File Protection System secures passwords and files in one platform. Examples: Bitwarden, 1Password, Keeper
+- To implement a new A Unified Password and File Protection System securely stores passwords and files in one solution using encryption and access controlTo evaluate how helpful isClearly defines the system’s purpose (secure storage of passwords and files).
+
+
+
+4. Literature Review (Summary)
+Previous studies show that password managers improve security but face risks like single-point failure[1], while file encryption tools secure data but often lack usability and sharing features[2]. Multi-factor authentication, strong key management, and end-to-end encryption are critical[3]. However, most systems treat password and file protection separately[4]. Secure VaultX addresses this gap by unifying both, focusing on stronger encryption, seamless usability, and secure recovery/sharing[5]. Existing research shows password managers and file encryption tools work well separately but have usability and security gaps[6]. Secure VaultX combines both in one system, offering stronger protection, easier use, and secure recovery[7].  
+5. Methodology
+Tools and Technologies:
+ Programming Language: Python
+GUI Framework: Tkinter
+Database: SQLite (for encrypted local storage)
+Encryption: (for password hashing&key derivation)
+Authentication: Master password with Multi-Factor Authentication 
+ Libraries/Modules: cryptography, hashlib, tkinter, sqlite3
+Testing Tools: Security testing  performance evaluation tools
+
+Steps:
+ System Design – Create a unified framework that combines password management and file encryption in one secure vault.
+ Encryption & Key Management – Use  for file protection, key derivation, and strong hashing to secure stored credentials.
+ Authentication – Implement a master password with Multi-Factor Authentication (OTP/biometric) for stronger access control.
+ Data Storage – Store all passwords and files in an encrypted vault with end-to-end protection to prevent unauthorized access.
+ Implementation – Develop a user-friendly interface for storing, retrieving, and sharing passwords and files securely.
+ Testing & Evaluation – Perform security testing performance analysis, and usability testing to validate reliability.
+
+6. Expected Outcomes
+ A secure vault that stores both passwords and files with strong encryption.
+ Protection against brute-force, unauthorized access, and data leakage.
+ Simple, user-friendly interface for managing credentials and files.
+ Improved usability compared to using separate tools.
+ Reliable performance with tested security, making it suitable for real-world use.
+
+7. Project Timeline 
+Sl.No.	Date	Activity
+1	08.08.2025	Topic finalization
+2	22.08.2025	Literature survey, Review-1
+3	16.09.2025	Task-1, Review-2
+4	10.10.2025	Task-2
+5	31.10.2025	Task-3: Testing and visualization
+6	20.11.2025	Task-4: Analysis and result interpretation, Review-3
+7	26.11.2025	Documentation and report submission
+
+8. References
+1. Stallings, W. (2017). Cryptography and Network Security: Principles and Practice. Pearson.
+2. Kaufman, C., Perlman, R.,&Speciner, M. (2016). Network Security: Private Communication in a Public World. Pearson Education.
+3. Menezes, A. J., Van Oorschot, P. C.,&Vanstone, S. A. (2018). Handbook of Applied Cryptography. CRC Press.
+4. Al-Khafaji, H., Zolkipli, M. F.,&Sulaiman, R. (2019). “A Secure File Encryption and Sharing System Using Hybrid Cryptography.” International Journal of Advanced Computer Science and Applications (IJACSA), 10(5), 327–334.
+5. Bonneau, J., Herley, C., Van Oorschot, P. C.,&Stajano, F. (2012). “The Quest to Replace Passwords: A Framework for Comparative Evaluation of Web Authentication Schemes.” IEEE Symposium on Security and Privacy.
+6. Singh, S.,&Kumar, R. (2020). “Data Security Using Advanced Encryption Standard (AES) Algorithm.” International Journal of Computer Applications, 177(30), 22–27.
+7. National Institute of Standards and Technology (NIST). (2017). Digital Identity Guidelines (NIST SP 800-63-3). https://doi.org/10.6028/NIST.SP.800-63-3
+8. Schneier, B. (2015). Applied Cryptography: Protocols, Algorithms, and Source Code in C. Wiley.
+9. Kaspersky. (2023). What is File Encryption? Retrieved from: https://www.kaspersky.com/resource-center/definitions/what-is-file-encryption
+10. OWASP Foundation. (2023). Password Storage Cheat Sheet. Retrieved from: https://cheatsheetseries.owasp.org
+
+

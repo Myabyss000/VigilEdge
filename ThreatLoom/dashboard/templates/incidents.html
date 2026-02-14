@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}ThreatLoom - Incidents{% endblock %}
+{% block nav_incidents %}text-white font-semibold{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-lg font-semibold text-white">Incident Management</h2>
+    <div class="flex gap-2">
+        <select id="filter-status" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Statuses</option>
+            <option value="NEW">New</option>
+            <option value="INVESTIGATING">Investigating</option>
+            <option value="MITIGATED">Mitigated</option>
+            <option value="CLOSED">Closed</option>
+        </select>
+        <select id="filter-priority" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Priorities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+        </select>
+    </div>
+</div>
+
+<div class="bg-soc-panel border border-soc-border rounded-lg overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+                <th class="text-left px-4 py-3">ID</th>
+                <th class="text-left px-4 py-3">Priority</th>
+                <th class="text-left px-4 py-3">Title</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">Attack Types</th>
+                <th class="text-left px-4 py-3">Created</th>
+                <th class="text-left px-4 py-3">Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for incident in incidents %}
+            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition cursor-pointer incident-row"
+                data-status="{{ incident.status.value }}" data-priority="{{ incident.priority.value }}">
+                <td class="px-4 py-2 font-mono text-xs text-blue-400">{{ incident.incident_uid }}</td>
+                <td class="px-4 py-2">
+                    <span class="text-xs font-medium px-2 py-0.5 rounded
+                        {% if incident.priority.value == 'CRITICAL' %}bg-red-900 text-red-300
+                        {% elif incident.priority.value == 'HIGH' %}bg-orange-900 text-orange-300
+                        {% elif incident.priority.value == 'MEDIUM' %}bg-yellow-900 text-yellow-300
+                        {% else %}bg-blue-900 text-blue-300{% endif %}">
+                        {{ incident.priority.value }}
+                    </span>
+                </td>
+                <td class="px-4 py-2 text-gray-200">{{ incident.title }}</td>
+                <td class="px-4 py-2">
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if incident.status.value == 'NEW' %}bg-blue-900 text-blue-300
+                        {% elif incident.status.value == 'INVESTIGATING' %}bg-purple-900 text-purple-300
+                        {% elif incident.status.value == 'MITIGATED' %}bg-green-900 text-green-300
+                        {% elif incident.status.value == 'CLOSED' %}bg-gray-700 text-gray-300
+                        {% else %}bg-yellow-900 text-yellow-300{% endif %}">
+                        {{ incident.status.value }}
+                    </span>
+                </td>
+                <td class="px-4 py-2 text-xs text-gray-400">{{ incident.attack_types or '-' }}</td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {{ incident.created_at.strftime('%Y-%m-%d %H:%M') if incident.created_at else '' }}
+                </td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {{ incident.updated_at.strftime('%Y-%m-%d %H:%M') if incident.updated_at else '' }}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not incidents %}
+            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No incidents found</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    ['filter-status', 'filter-priority'].forEach(id => {
+        document.getElementById(id).addEventListener('change', filterIncidents);
+    });
+
+    function filterIncidents() {
+        const status = document.getElementById('filter-status').value;
+        const priority = document.getElementById('filter-priority').value;
+        document.querySelectorAll('.incident-row').forEach(row => {
+            const matchStatus = !status || row.dataset.status === status;
+            const matchPriority = !priority || row.dataset.priority === priority;
+            row.style.display = (matchStatus && matchPriority) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

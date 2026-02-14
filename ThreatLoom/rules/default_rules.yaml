@@ -1,0 +1,296 @@
+# =============================================================================
+# ThreatLoom — Default Detection Rules
+# =============================================================================
+# Place custom rules in this file or add new YAML files under rules/
+# Rule format:
+#   - id: unique rule identifier
+#     name: human-readable name
+#     description: what this rule detects
+#     enabled: true/false
+#     severity: CRITICAL | HIGH | MEDIUM | LOW
+#     type: signature | threshold
+#     mitre_tactic: MITRE ATT&CK tactic
+#     mitre_technique: MITRE technique ID (e.g. T1190)
+#
+# Signature rules: match on log field values
+#   conditions: list of {field, operator, value}
+#     operators: equals, not_equals, contains, regex, in, gt, lt
+#
+# Threshold rules: fire when count exceeds limit in window
+#   threshold:
+#     field: field to count on (e.g. src_ip)
+#     count: minimum events
+#     window_seconds: time window
+#     filter: optional field match
+# =============================================================================
+
+rules:
+
+  # ─── SQL Injection Signatures ─────────────────────────────────────────
+  - id: sig-sqli-blocked
+    name: "SQL Injection Attempt Blocked"
+    description: "Detects blocked SQL injection attacks"
+    enabled: true
+    severity: HIGH
+    type: signature
+    mitre_tactic: "Initial Access"
+    mitre_technique: "T1190"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "SQLI"
+      - field: action
+        operator: equals
+        value: "BLOCKED"
+
+  - id: sig-sqli-allowed
+    name: "SQL Injection Bypassed WAF"
+    description: "SQL injection attempt that was NOT blocked — investigate immediately"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Initial Access"
+    mitre_technique: "T1190"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "SQLI"
+      - field: action
+        operator: equals
+        value: "ALLOWED"
+
+  # ─── XSS Signatures ──────────────────────────────────────────────────
+  - id: sig-xss-blocked
+    name: "XSS Attack Blocked"
+    description: "Detects blocked cross-site scripting attacks"
+    enabled: true
+    severity: HIGH
+    type: signature
+    mitre_tactic: "Initial Access"
+    mitre_technique: "T1189"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "XSS"
+      - field: action
+        operator: equals
+        value: "BLOCKED"
+
+  - id: sig-xss-allowed
+    name: "XSS Attack Bypassed WAF"
+    description: "XSS attack was NOT blocked — potential compromise"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Initial Access"
+    mitre_technique: "T1189"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "XSS"
+      - field: action
+        operator: equals
+        value: "ALLOWED"
+
+  # ─── RCE Signatures ──────────────────────────────────────────────────
+  - id: sig-rce-any
+    name: "Remote Code Execution Attempt"
+    description: "Detects any RCE attempt regardless of action taken"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Execution"
+    mitre_technique: "T1059"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "RCE"
+
+  # ─── LFI / Path Traversal ────────────────────────────────────────────
+  - id: sig-lfi
+    name: "Local File Inclusion Attempt"
+    description: "Detects path traversal / file inclusion attacks"
+    enabled: true
+    severity: HIGH
+    type: signature
+    mitre_tactic: "Discovery"
+    mitre_technique: "T1083"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "LFI"
+
+  - id: sig-path-traversal
+    name: "Path Traversal in HTTP Path"
+    description: "Detects directory traversal patterns in request path"
+    enabled: true
+    severity: HIGH
+    type: signature
+    mitre_tactic: "Discovery"
+    mitre_technique: "T1083"
+    conditions:
+      - field: http_path
+        operator: regex
+        value: "\\.\\./|\\.\\.\\\\|%2e%2e|%252e"
+
+  # ─── SSRF ─────────────────────────────────────────────────────────────
+  - id: sig-ssrf
+    name: "Server-Side Request Forgery Attempt"
+    description: "Detected SSRF attack"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Lateral Movement"
+    mitre_technique: "T1210"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "SSRF"
+
+  # ─── DDoS ─────────────────────────────────────────────────────────────
+  - id: sig-ddos
+    name: "DDoS Attack Detected"
+    description: "Firewall classified traffic as DDoS"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Impact"
+    mitre_technique: "T1498"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "DDOS"
+
+  # ─── Brute Force Thresholds ───────────────────────────────────────────
+  - id: thr-brute-force-5min
+    name: "Brute Force — 10+ blocked in 5 min"
+    description: "Single IP generating 10+ blocked requests in 5 minutes"
+    enabled: true
+    severity: HIGH
+    type: threshold
+    mitre_tactic: "Credential Access"
+    mitre_technique: "T1110"
+    threshold:
+      field: src_ip
+      count: 10
+      window_seconds: 300
+      filter:
+        action: "BLOCKED"
+
+  - id: thr-brute-force-auth
+    name: "Auth Brute Force — 15+ login attempts in 5 min"
+    description: "Excessive authentication attempts from single IP"
+    enabled: true
+    severity: HIGH
+    type: threshold
+    mitre_tactic: "Credential Access"
+    mitre_technique: "T1110"
+    threshold:
+      field: src_ip
+      count: 15
+      window_seconds: 300
+      filter:
+        http_path: "/login"
+
+  # ─── Port Scan Detection ──────────────────────────────────────────────
+  - id: thr-port-scan
+    name: "Port Scan — 20+ ports in 2 min"
+    description: "Single IP hitting 20+ distinct destination ports in 2 minutes"
+    enabled: true
+    severity: MEDIUM
+    type: threshold
+    mitre_tactic: "Discovery"
+    mitre_technique: "T1046"
+    threshold:
+      field: src_ip
+      count: 20
+      window_seconds: 120
+      filter:
+        attack_type: "PORT_SCAN"
+
+  # ─── High Request Volume ──────────────────────────────────────────────
+  - id: thr-high-volume-1min
+    name: "High Request Volume — 200+ req/min"
+    description: "Single IP sending over 200 requests in 1 minute"
+    enabled: true
+    severity: MEDIUM
+    type: threshold
+    mitre_tactic: "Impact"
+    mitre_technique: "T1498"
+    threshold:
+      field: src_ip
+      count: 200
+      window_seconds: 60
+
+  - id: thr-extreme-volume-1min
+    name: "Extreme Request Volume — 1000+ req/min"
+    description: "Potential DDoS — single IP sending over 1000 requests per minute"
+    enabled: true
+    severity: CRITICAL
+    type: threshold
+    mitre_tactic: "Impact"
+    mitre_technique: "T1498"
+    threshold:
+      field: src_ip
+      count: 1000
+      window_seconds: 60
+
+  # ─── Suspicious Paths ──────────────────────────────────────────────────
+  - id: sig-admin-probe
+    name: "Admin Path Probe"
+    description: "Requests to common admin/config paths"
+    enabled: true
+    severity: MEDIUM
+    type: signature
+    mitre_tactic: "Reconnaissance"
+    mitre_technique: "T1595"
+    conditions:
+      - field: http_path
+        operator: regex
+        value: "/(admin|wp-admin|phpmyadmin|.env|config|debug|actuator|swagger)"
+
+  - id: sig-shell-access
+    name: "Web Shell Access Attempt"
+    description: "Requests targeting common web shell filenames"
+    enabled: true
+    severity: CRITICAL
+    type: signature
+    mitre_tactic: "Persistence"
+    mitre_technique: "T1505.003"
+    conditions:
+      - field: http_path
+        operator: regex
+        value: "\\.(php|asp|aspx|jsp|cgi)\\??(cmd|exec|command|shell|upload)"
+
+  # ─── Blocked Rate Limiter ─────────────────────────────────────────────
+  - id: thr-rate-limited
+    name: "Excessive Rate Limiting — 50+ in 5 min"
+    description: "Single IP hitting rate limiter repeatedly"
+    enabled: true
+    severity: MEDIUM
+    type: threshold
+    mitre_tactic: "Impact"
+    mitre_technique: "T1498"
+    threshold:
+      field: src_ip
+      count: 50
+      window_seconds: 300
+      filter:
+        action: "RATE_LIMITED"
+
+  # ─── Bot Detection ────────────────────────────────────────────────────
+  - id: sig-malicious-bot
+    name: "Malicious Bot Detected"
+    description: "Firewall identified traffic as malicious bot"
+    enabled: true
+    severity: MEDIUM
+    type: signature
+    mitre_tactic: "Reconnaissance"
+    mitre_technique: "T1595"
+    conditions:
+      - field: attack_type
+        operator: equals
+        value: "BOT"
+      - field: action
+        operator: equals
+        value: "BLOCKED"

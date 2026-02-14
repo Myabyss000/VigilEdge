@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}ThreatLoom - Alerts{% endblock %}
+{% block nav_alerts %}text-white font-semibold{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-lg font-semibold text-white">Alert Management</h2>
+    <div class="flex gap-2">
+        <select id="filter-severity" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+        </select>
+        <select id="filter-status" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Statuses</option>
+            <option value="NEW">New</option>
+            <option value="ACKNOWLEDGED">Acknowledged</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="FALSE_POSITIVE">False Positive</option>
+        </select>
+    </div>
+</div>
+
+<div class="bg-soc-panel border border-soc-border rounded-lg overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+                <th class="text-left px-4 py-3">Severity</th>
+                <th class="text-left px-4 py-3">Title</th>
+                <th class="text-left px-4 py-3">Source IP</th>
+                <th class="text-left px-4 py-3">Attack Type</th>
+                <th class="text-left px-4 py-3">Source</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">MITRE</th>
+                <th class="text-left px-4 py-3">Events</th>
+                <th class="text-left px-4 py-3">Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition cursor-pointer alert-row"
+                data-severity="{{ alert.severity.value }}" data-status="{{ alert.status.value }}">
+                <td class="px-4 py-2">
+                    <span class="inline-block w-2 h-2 rounded-full mr-2
+                        {% if alert.severity.value == 'CRITICAL' %}bg-red-500
+                        {% elif alert.severity.value == 'HIGH' %}bg-orange-500
+                        {% elif alert.severity.value == 'MEDIUM' %}bg-yellow-500
+                        {% else %}bg-blue-500{% endif %}"></span>
+                    <span class="text-xs font-medium
+                        {% if alert.severity.value == 'CRITICAL' %}text-red-400
+                        {% elif alert.severity.value == 'HIGH' %}text-orange-400
+                        {% elif alert.severity.value == 'MEDIUM' %}text-yellow-400
+                        {% else %}text-blue-400{% endif %}">{{ alert.severity.value }}</span>
+                </td>
+                <td class="px-4 py-2 text-gray-200 max-w-xs truncate">{{ alert.title }}</td>
+                <td class="px-4 py-2 font-mono text-red-400 text-xs">{{ alert.src_ip or '-' }}</td>
+                <td class="px-4 py-2 text-xs">{{ alert.attack_type or '-' }}</td>
+                <td class="px-4 py-2 text-xs text-gray-400">{{ alert.detection_source }}</td>
+                <td class="px-4 py-2">
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if alert.status.value == 'NEW' %}bg-blue-900 text-blue-300
+                        {% elif alert.status.value == 'ACKNOWLEDGED' %}bg-yellow-900 text-yellow-300
+                        {% elif alert.status.value == 'IN_PROGRESS' %}bg-purple-900 text-purple-300
+                        {% elif alert.status.value == 'RESOLVED' %}bg-green-900 text-green-300
+                        {% else %}bg-gray-700 text-gray-300{% endif %}">
+                        {{ alert.status.value }}
+                    </span>
+                </td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {{ alert.mitre_technique or '-' }}
+                </td>
+                <td class="px-4 py-2 text-xs font-mono">{{ alert.event_count }}</td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {{ alert.created_at.strftime('%m-%d %H:%M:%S') if alert.created_at else '' }}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not alerts %}
+            <tr><td colspan="9" class="px-4 py-8 text-center text-gray-500">No alerts found</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Client-side filtering
+    ['filter-severity', 'filter-status'].forEach(id => {
+        document.getElementById(id).addEventListener('change', filterAlerts);
+    });
+
+    function filterAlerts() {
+        const sev = document.getElementById('filter-severity').value;
+        const status = document.getElementById('filter-status').value;
+        document.querySelectorAll('.alert-row').forEach(row => {
+            const matchSev = !sev || row.dataset.severity === sev;
+            const matchStatus = !status || row.dataset.status === status;
+            row.style.display = (matchSev && matchStatus) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

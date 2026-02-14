@@ -1,0 +1,255 @@
+# =============================================================================
+# ThreatLoom — Default SOAR Playbooks
+# =============================================================================
+# Playbooks define automated response flows triggered by alert conditions.
+#
+# Format:
+#   - id: unique playbook identifier
+#     name: human-readable name
+#     description: what this playbook does
+#     enabled: true/false
+#     trigger:
+#       severity: minimum alert severity to trigger (CRITICAL, HIGH, MEDIUM, LOW)
+#       attack_types: list of attack types (optional, empty = all)
+#       conditions: additional field matches (optional)
+#     actions: ordered list of response actions
+#       - type: action type
+#         params: action-specific parameters
+#     cooldown_seconds: min delay between re-triggering for same source
+#
+# Action types:
+#   - block_ip:       { duration_minutes, reason }
+#   - rate_limit:     { requests_per_minute, duration_minutes }
+#   - temp_ban:       { duration_minutes, reason }
+#   - notify:         { channels: [log, email, webhook], message }
+#   - escalate:       { priority, assign_to }
+#   - create_incident:{ priority, title_template }
+#   - tag_ioc:        { tags: [...] }
+# =============================================================================
+
+playbooks:
+
+  # ─── Critical Attack Auto-Block ────────────────────────────────────────
+  - id: pb-critical-autoblock
+    name: "Critical Attack Auto-Block"
+    description: "Automatically blocks IPs generating critical-severity alerts"
+    enabled: true
+    trigger:
+      severity: CRITICAL
+      attack_types: []   # all attack types
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 1440  # 24 hours
+          reason: "Auto-blocked: critical severity alert"
+      - type: create_incident
+        params:
+          priority: CRITICAL
+          title_template: "Auto-blocked critical attack from {src_ip}"
+      - type: notify
+        params:
+          channels: [log]
+          message: "CRITICAL: IP {src_ip} auto-blocked for 24h — {attack_type} attack"
+    cooldown_seconds: 300
+
+  # ─── SQLi Response ─────────────────────────────────────────────────────
+  - id: pb-sqli-response
+    name: "SQL Injection Response"
+    description: "Blocks IP and creates incident for SQL injection attacks"
+    enabled: true
+    trigger:
+      severity: HIGH
+      attack_types: [SQLI]
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 480  # 8 hours
+          reason: "SQL injection attack detected"
+      - type: create_incident
+        params:
+          priority: HIGH
+          title_template: "SQL Injection from {src_ip} — {event_count} events"
+      - type: tag_ioc
+        params:
+          tags: [sqli, web-attack, ioc]
+      - type: notify
+        params:
+          channels: [log]
+          message: "SQLi attack from {src_ip} blocked for 8h"
+    cooldown_seconds: 600
+
+  # ─── XSS Response ──────────────────────────────────────────────────────
+  - id: pb-xss-response
+    name: "XSS Attack Response"
+    description: "Rate limits then blocks repeated XSS attackers"
+    enabled: true
+    trigger:
+      severity: HIGH
+      attack_types: [XSS]
+    actions:
+      - type: rate_limit
+        params:
+          requests_per_minute: 5
+          duration_minutes: 60
+      - type: create_incident
+        params:
+          priority: HIGH
+          title_template: "XSS attack from {src_ip}"
+      - type: notify
+        params:
+          channels: [log]
+          message: "XSS attack from {src_ip} — rate limited to 5 req/min"
+    cooldown_seconds: 600
+
+  # ─── RCE Emergency Response ────────────────────────────────────────────
+  - id: pb-rce-emergency
+    name: "RCE Emergency Lockdown"
+    description: "Immediately blocks IP and escalates for RCE attempts"
+    enabled: true
+    trigger:
+      severity: HIGH
+      attack_types: [RCE]
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 4320  # 72 hours
+          reason: "Emergency: Remote Code Execution attempt"
+      - type: create_incident
+        params:
+          priority: CRITICAL
+          title_template: "EMERGENCY: RCE attempt from {src_ip}"
+      - type: escalate
+        params:
+          priority: CRITICAL
+          assign_to: admin
+      - type: notify
+        params:
+          channels: [log]
+          message: "EMERGENCY RCE attempt from {src_ip} — blocked 72h, escalated to admin"
+    cooldown_seconds: 60
+
+  # ─── Brute Force Auto-Response ─────────────────────────────────────────
+  - id: pb-brute-force
+    name: "Brute Force Mitigation"
+    description: "Progressive response: rate-limit first, then block on escalation"
+    enabled: true
+    trigger:
+      severity: HIGH
+      attack_types: [BRUTE_FORCE]
+    actions:
+      - type: rate_limit
+        params:
+          requests_per_minute: 2
+          duration_minutes: 30
+      - type: temp_ban
+        params:
+          duration_minutes: 120
+          reason: "Brute force attack detected"
+      - type: create_incident
+        params:
+          priority: HIGH
+          title_template: "Brute force attack from {src_ip}"
+      - type: notify
+        params:
+          channels: [log]
+          message: "Brute force from {src_ip}: rate-limited + temp banned 2h"
+    cooldown_seconds: 900
+
+  # ─── DDoS Mitigation ──────────────────────────────────────────────────
+  - id: pb-ddos-mitigation
+    name: "DDoS Attack Mitigation"
+    description: "Aggressive blocking for DDoS sources"
+    enabled: true
+    trigger:
+      severity: CRITICAL
+      attack_types: [DDOS]
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 2880  # 48 hours
+          reason: "DDoS attack source"
+      - type: create_incident
+        params:
+          priority: CRITICAL
+          title_template: "DDoS attack from {src_ip} — {event_count} events"
+      - type: escalate
+        params:
+          priority: CRITICAL
+          assign_to: admin
+      - type: notify
+        params:
+          channels: [log]
+          message: "DDoS from {src_ip} blocked for 48h — {event_count} events detected"
+    cooldown_seconds: 120
+
+  # ─── Port Scan Response ────────────────────────────────────────────────
+  - id: pb-port-scan
+    name: "Port Scan Response"
+    description: "Blocks IPs performing port scans"
+    enabled: true
+    trigger:
+      severity: MEDIUM
+      attack_types: [PORT_SCAN]
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 240  # 4 hours
+          reason: "Port scanning detected"
+      - type: create_incident
+        params:
+          priority: MEDIUM
+          title_template: "Port scan from {src_ip}"
+      - type: tag_ioc
+        params:
+          tags: [recon, port-scan]
+      - type: notify
+        params:
+          channels: [log]
+          message: "Port scan from {src_ip} — blocked 4h"
+    cooldown_seconds: 600
+
+  # ─── SSRF Response ────────────────────────────────────────────────────
+  - id: pb-ssrf-response
+    name: "SSRF Attack Response"
+    description: "Blocks SSRF attackers and creates incident"
+    enabled: true
+    trigger:
+      severity: HIGH
+      attack_types: [SSRF]
+    actions:
+      - type: block_ip
+        params:
+          duration_minutes: 1440  # 24 hours
+          reason: "SSRF attack detected"
+      - type: create_incident
+        params:
+          priority: CRITICAL
+          title_template: "SSRF attack from {src_ip}"
+      - type: escalate
+        params:
+          priority: CRITICAL
+          assign_to: admin
+      - type: notify
+        params:
+          channels: [log]
+          message: "SSRF attack from {src_ip} — blocked 24h, escalated"
+    cooldown_seconds: 300
+
+  # ─── General Medium Severity ───────────────────────────────────────────
+  - id: pb-medium-alert-log
+    name: "Medium Severity Logging"
+    description: "Creates incident for medium-severity alerts that don't match specific playbooks"
+    enabled: true
+    trigger:
+      severity: MEDIUM
+      attack_types: []
+    actions:
+      - type: create_incident
+        params:
+          priority: MEDIUM
+          title_template: "Medium alert: {attack_type} from {src_ip}"
+      - type: notify
+        params:
+          channels: [log]
+          message: "Medium-severity {attack_type} from {src_ip} — incident created"
+    cooldown_seconds: 1800

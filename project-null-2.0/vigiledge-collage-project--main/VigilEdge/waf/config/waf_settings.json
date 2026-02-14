@@ -1,0 +1,45 @@
+{
+  "security": {
+    "threat_detection_enabled": true,
+    "auto_block_ips": true,
+    "rate_limiting": true,
+    "rate_limit_value": 100,
+    "block_duration": 60,
+    "threat_sensitivity": "medium"
+  },
+  "network": {
+    "listen_port": 5000,
+    "max_connections": 1000,
+    "ssl_enabled": false,
+    "ssl_cert_path": "/certs/server.crt",
+    "ssl_key_path": "/certs/server.key",
+    "allowed_origins": [
+      "http://localhost:5000",
+      "http://127.0.0.1:5000"
+    ]
+  },
+  "logging": {
+    "log_level": "INFO",
+    "log_to_file": true,
+    "log_file_path": "./logs/vigiledge.log",
+    "max_log_size_mb": 100,
+    "log_retention_days": 30,
+    "compress_old_logs": true
+  },
+  "rules": {
+    "sql_injection": true,
+    "xss_protection": true,
+    "path_traversal": true,
+    "bot_detection": true,
+    "command_injection": false
+  },
+  "backup": {
+    "auto_backup": true,
+    "backup_frequency": "daily"
+  },
+  "theme": {
+    "selected_theme": "dark",
+    "auto_dark_mode": false
+  },
+  "authentication": {}
+}

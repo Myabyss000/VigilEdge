@@ -1,0 +1,803 @@
+/* VigilEdge WAF Enhanced Dashboard Styles */
+/* Professional Cyber Security Theme with Modern UX */
+
+/* Sidebar Overlay for Mobile */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9998;
+    display: none;
+    backdrop-filter: blur(4px);
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* Mobile menu toggle - hidden by default, shown on mobile */
+.mobile-menu-toggle {
+    display: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Base styles for proper box-sizing */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body, html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* Chart Styling */
+.chart-container {
+    position: relative;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    overflow: hidden;
+}
+
+.chart-placeholder {
+    color: var(--text-muted);
+    font-size: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chart-placeholder-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+/* Enhanced Security Event Styling */
+.event-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.event-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.event-item:hover::before {
+    left: 100%;
+}
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Progress Bars */
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progress-shine 2s linear infinite;
+}
+
+@keyframes progress-shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Interactive Buttons */
+.cyber-button {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.875rem;
+}
+
+.cyber-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.cyber-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glow-blue);
+}
+
+.cyber-button:hover::before {
+    left: 100%;
+}
+
+.cyber-button:active {
+    transform: translateY(0);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(50px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+/* Cyber Grid Pattern */
+.cyber-grid {
+    position: relative;
+    background-image: 
+        linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Glitch Effect */
+.glitch-text {
+    position: relative;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch-text::before {
+    animation: glitch-1 0.5s infinite;
+    color: var(--cyber-blue);
+    z-index: -1;
+}
+
+.glitch-text::after {
+    animation: glitch-2 0.5s infinite;
+    color: var(--danger);
+    z-index: -2;
+}
+
+@keyframes glitch-1 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-2 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(2px, 2px); }
+    40% { transform: translate(2px, -2px); }
+    60% { transform: translate(-2px, 2px); }
+    80% { transform: translate(-2px, -2px); }
+}
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* Network Visualization */
+.network-node {
+    width: 12px;
+    height: 12px;
+    background: var(--cyber-blue);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 0 10px var(--cyber-blue);
+    animation: node-pulse 3s ease-in-out infinite;
+}
+
+.network-node.threat {
+    background: var(--danger);
+    box-shadow: 0 0 15px var(--danger);
+    animation: threat-pulse 1s ease-in-out infinite;
+}
+
+.network-connection {
+    position: absolute;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyber-blue), transparent);
+    animation: data-flow 2s linear infinite;
+}
+
+@keyframes node-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.7; }
+}
+
+@keyframes threat-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+
+@keyframes data-flow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* Security Level Indicator */
+.security-level {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.security-level.high {
+    color: var(--success);
+}
+
+.security-level.medium {
+    color: var(--warning);
+}
+
+.security-level.low {
+    color: var(--danger);
+}
+
+.security-level-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.security-level.high .security-level-icon {
+    background: var(--success);
+}
+
+.security-level.medium .security-level-icon {
+    background: var(--warning);
+}
+
+.security-level.low .security-level-icon {
+    background: var(--danger);
+}
+
+/* Mobile Optimizations */
+/* Tablet Responsive - Medium devices (768px to 1024px) */
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1rem;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* Mobile Responsive - Small devices (max 768px) */
+@media (max-width: 768px) {
+    /* Reset body and html for mobile */
+    html, body {
+        font-size: 14px !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+    
+    /* Dashboard Container */
+    .dashboard-container {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Sidebar - hide by default on mobile, show when toggled */
+    .sidebar {
+        position: fixed !important;
+        left: -300px !important;
+        top: 0 !important;
+        height: 100vh !important;
+        width: 280px !important;
+        z-index: 9999 !important;
+        transition: left 0.3s ease !important;
+        overflow-y: auto !important;
+    }
+    
+    .sidebar.active {
+        left: 0 !important;
+    }
+    
+    /* Mobile menu toggle button - highly visible */
+    .mobile-menu-toggle {
+        display: block !important;
+        position: fixed !important;
+        top: 0.5rem !important;
+        left: 0.5rem !important;
+        z-index: 10001 !important;
+        background: rgba(0, 212, 255, 0.95) !important;
+        border: 2px solid #00d4ff !important;
+        color: #0f0f23 !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        font-size: 1.5rem !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.5) !important;
+        line-height: 1 !important;
+    }
+    
+    /* Main content - full width on mobile */
+    .main-content {
+        width: 100% !important;
+        max-width: 100vw !important;
+        margin-left: 0 !important;
+        padding: 1rem !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Hero section adjustments */
+    .quantum-hero-section {
+        min-height: 40vh !important;
+        padding: 2rem 1rem !important;
+    }
+    
+    .neon-title {
+        font-size: 2rem !important;
+        padding: 0 1rem !important;
+    }
+    
+    .subtitle {
+        font-size: 0.75rem !important;
+    }
+    
+    .holo-container {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 2rem auto !important;
+    }
+    
+    .holo-screen {
+        padding: 1rem !important;
+    }
+    
+    /* Matrix effects - reduce on mobile for performance */
+    .matrix-rain,
+    .data-stream {
+        opacity: 0.3 !important;
+    }
+    
+    /* Header adjustments */
+    .header {
+        padding: 0.75rem 1rem !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .header h1,
+    .header-title h2 {
+        font-size: 1.1rem !important;
+    }
+    
+    .header-actions {
+        width: 100% !important;
+        margin-top: 0.5rem !important;
+        justify-content: space-between !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+    
+    /* Stats grid - single column on mobile */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .stat-card {
+        padding: 1rem !important;
+        width: 100% !important;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem !important;
+    }
+    
+    .stat-icon {
+        font-size: 1.5rem !important;
+    }
+    
+    /* Dashboard grid */
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        padding: 0.5rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Cards */
+    .card {
+        padding: 1rem !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .card-header {
+        font-size: 1rem !important;
+        padding: 0.75rem 0 !important;
+        flex-wrap: wrap !important;
+    }
+    
+    /* Buttons - make them more touch-friendly */
+    .cyber-button,
+    button {
+        padding: 0.75rem 1.25rem !important;
+        font-size: 0.85rem !important;
+        min-height: 44px !important; /* Touch-friendly size */
+        white-space: normal !important;
+        text-align: center !important;
+    }
+    
+    /* Modal */
+    .modal-content {
+        padding: 1.5rem !important;
+        margin: 0.5rem !important;
+        width: 95% !important;
+        max-width: 95vw !important;
+    }
+    
+    /* Charts */
+    .chart-container {
+        height: 220px !important;
+        width: 100% !important;
+    }
+    
+    /* Tables - make scrollable with better UX */
+    .event-list,
+    .connection-list,
+    table {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .event-item,
+    .connection-item,
+    tr {
+        font-size: 0.8rem !important;
+        padding: 0.75rem !important;
+        min-width: 300px !important;
+    }
+    
+    /* Network visualization */
+    .network-node {
+        width: 8px !important;
+        height: 8px !important;
+    }
+    
+    /* Hide less important info on mobile */
+    .event-details small,
+    .connection-details small {
+        font-size: 0.7rem !important;
+    }
+    
+    /* Logo adjustments */
+    .logo h1 {
+        font-size: 1.3rem !important;
+    }
+    
+    .logo p {
+        font-size: 0.75rem !important;
+    }
+    
+    /* Navigation menu */
+    .nav-menu {
+        padding: 0.5rem !important;
+    }
+    
+    .nav-link {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .nav-icon {
+        font-size: 1.2rem !important;
+    }
+    
+    /* Form elements in settings */
+    .form-input,
+    .form-select,
+    .form-textarea,
+    input,
+    select,
+    textarea {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        padding: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ensure all containers don't overflow */
+    * {
+        max-width: 100vw !important;
+    }
+    
+    /* Hide scrollbar but keep functionality */
+    ::-webkit-scrollbar {
+        width: 4px !important;
+        height: 4px !important;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: rgba(0, 212, 255, 0.3) !important;
+        border-radius: 2px !important;
+    }
+}
+
+/* Extra small devices - Phones in portrait (max 480px) */
+@media (max-width: 480px) {
+    html, body {
+        font-size: 13px !important;
+    }
+    
+    .mobile-menu-toggle {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 1.25rem !important;
+    }
+    
+    .neon-title {
+        font-size: 1.5rem !important;
+    }
+    
+    .subtitle {
+        font-size: 0.65rem !important;
+    }
+    
+    .header h1,
+    .header-title h2 {
+        font-size: 0.95rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem !important;
+    }
+    
+    .cyber-button,
+    button {
+        padding: 0.65rem 1rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .card {
+        padding: 0.75rem !important;
+    }
+    
+    .card-header {
+        font-size: 0.9rem !important;
+    }
+    
+    .chart-container {
+        height: 180px !important;
+    }
+    
+    .holo-container {
+        width: 98% !important;
+    }
+    
+    /* Stack action buttons vertically on tiny screens */
+    .header-actions,
+    .card-actions {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+    
+    .cyber-button {
+        width: 100% !important;
+    }
+    
+    /* Reduce padding everywhere */
+    .main-content {
+        padding: 0.75rem !important;
+    }
+    
+    .dashboard-grid {
+        padding: 0.25rem !important;
+        gap: 0.75rem !important;
+    }
+    
+    /* Make nav items more compact */
+    .nav-link {
+        padding: 0.6rem 0.75rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .nav-icon {
+        font-size: 1rem !important;
+    }
+    
+    .logo h1 {
+        font-size: 1.1rem !important;
+    }
+    
+    .logo p {
+        font-size: 0.7rem !important;
+    }
+}
+
+/* Landscape mode for small phones */
+@media (max-width: 768px) and (orientation: landscape) {
+    .quantum-hero-section {
+        min-height: 30vh !important;
+    }
+    
+    .neon-title {
+        font-size: 1.5rem !important;
+    }
+    
+    .holo-container {
+        margin: 1rem auto !important;
+    }
+    
+    .sidebar {
+        width: 220px !important;
+        left: -220px !important;
+    }
+}
+
+/* Very large phones and small tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .cyber-button {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.85rem !important;
+    }
+}

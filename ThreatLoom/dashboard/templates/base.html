@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ThreatLoom SOC{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        soc: {
+                            dark: '#0a0e17',
+                            panel: '#111827',
+                            border: '#1f2937',
+                            accent: '#3b82f6',
+                            danger: '#ef4444',
+                            warn: '#f59e0b',
+                            success: '#22c55e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-soc-dark text-gray-200 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-soc-panel border-b border-soc-border px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-6">
+            <h1 class="text-xl font-bold text-white">
+                <span class="text-soc-accent">&#9670;</span> ThreatLoom
+                <span class="text-xs text-gray-500 ml-2">SOC Platform</span>
+            </h1>
+            <div class="flex gap-4 ml-8">
+                <a href="/" class="text-sm hover:text-white transition {% block nav_dashboard %}{% endblock %}">Dashboard</a>
+                <a href="/alerts-view" class="text-sm hover:text-white transition {% block nav_alerts %}{% endblock %}">Alerts</a>
+                <a href="/incidents-view" class="text-sm hover:text-white transition {% block nav_incidents %}{% endblock %}">Incidents</a>
+                <a href="/logs-view" class="text-sm hover:text-white transition {% block nav_logs %}{% endblock %}">Logs</a>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="live-indicator" class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-xs text-gray-400">LIVE</span>
+            </div>
+            <span class="text-xs text-gray-500" id="clock"></span>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="p-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Live clock
+        function updateClock() {
+            document.getElementById('clock').textContent = new Date().toISOString().slice(0, 19) + 'Z';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

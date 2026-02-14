@@ -1,0 +1,260 @@
+# VigilEdge WAF Security Rules Configuration
+# This file defines custom security rules for threat detection
+
+# SQL Injection Detection Rules
+sql_injection:
+  enabled: true
+  rules:
+    - id: "SQL_001"
+      name: "UNION SELECT Attack"
+      pattern: "union\\s+select"
+      severity: "critical"
+      description: "Detects UNION-based SQL injection attempts"
+    
+    - id: "SQL_002"
+      name: "DROP TABLE Attack"
+      pattern: "drop\\s+table"
+      severity: "critical"
+      description: "Detects table deletion attempts"
+    
+    - id: "SQL_003"
+      name: "INSERT INTO Attack"
+      pattern: "insert\\s+into"
+      severity: "high"
+      description: "Detects unauthorized data insertion attempts"
+    
+    - id: "SQL_004"
+      name: "DELETE FROM Attack"
+      pattern: "delete\\s+from"
+      severity: "high"
+      description: "Detects unauthorized data deletion attempts"
+    
+    - id: "SQL_005"
+      name: "UPDATE SET Attack"
+      pattern: "update\\s+\\w+\\s+set"
+      severity: "high"
+      description: "Detects unauthorized data modification attempts"
+
+# XSS (Cross-Site Scripting) Detection Rules
+xss:
+  enabled: true
+  rules:
+    - id: "XSS_001"
+      name: "Script Tag Injection"
+      pattern: "<script[^>]*>.*?</script>"
+      severity: "high"
+      description: "Detects script tag injection attempts"
+    
+    - id: "XSS_002"
+      name: "JavaScript Protocol"
+      pattern: "javascript:"
+      severity: "high"
+      description: "Detects javascript: protocol usage"
+    
+    - id: "XSS_003"
+      name: "Event Handler Injection"
+      pattern: "on(load|click|error|focus|blur|change|submit)"
+      severity: "medium"
+      description: "Detects event handler injection attempts"
+    
+    - id: "XSS_004"
+      name: "Iframe Injection"
+      pattern: "<iframe[^>]*>"
+      severity: "medium"
+      description: "Detects iframe injection attempts"
+
+# Local File Inclusion (LFI) Detection Rules
+lfi:
+  enabled: true
+  rules:
+    - id: "LFI_001"
+      name: "Directory Traversal"
+      pattern: "\\.\\.\\/|\\.\\.\\\\"
+      severity: "high"
+      description: "Detects directory traversal attempts"
+    
+    - id: "LFI_002"
+      name: "System File Access"
+      pattern: "\\/(etc|proc|sys|dev)\\/|\\\\(windows|winnt)\\\\"
+      severity: "critical"
+      description: "Detects system file access attempts"
+
+# Remote File Inclusion (RFI) Detection Rules
+rfi:
+  enabled: true
+  rules:
+    - id: "RFI_001"
+      name: "Remote URL Inclusion"
+      pattern: "http[s]?:\\/\\/.*\\.(txt|php|asp|jsp)"
+      severity: "high"
+      description: "Detects remote file inclusion attempts"
+
+# Command Injection Detection Rules
+command_injection:
+  enabled: true
+  rules:
+    - id: "CMD_001"
+      name: "Shell Command Injection"
+      pattern: "[;&|`]|\\$\\(|\\${|<\\(|>\\("
+      severity: "critical"
+      description: "Detects shell command injection attempts"
+    
+    - id: "CMD_002"
+      name: "PowerShell Command Injection"
+      pattern: "powershell|cmd\\.exe|start-process"
+      severity: "critical"
+      description: "Detects PowerShell command injection attempts"
+
+# Authentication Bypass Detection Rules
+auth_bypass:
+  enabled: true
+  rules:
+    - id: "AUTH_001"
+      name: "Token in URL Parameter"
+      pattern: "[?&](token|auth|api_key|apikey|key|access_token|session|sess)=[^&\\s]+"
+      severity: "high"
+      description: "Detects authentication tokens in URL parameters (session fixation/bypass attempt)"
+    
+    - id: "AUTH_002"
+      name: "Password in URL Parameter"
+      pattern: "[?&](password|passwd|pwd|pass)=[^&\\s]+"
+      severity: "critical"
+      description: "Detects passwords in URL parameters (credential exposure)"
+    
+    - id: "AUTH_003"
+      name: "Admin Parameter Manipulation"
+      pattern: "[?&](admin|is_admin|isadmin|role|user_role|privilege)=[^&\\s]+"
+      severity: "high"
+      description: "Detects privilege escalation attempts via URL parameters"
+    
+    - id: "AUTH_004"
+      name: "Session Fixation Attack"
+      pattern: "[?&](PHPSESSID|JSESSIONID|ASP\\.NET_SessionId|session_id|sessionid)=[^&\\s]+"
+      severity: "high"
+      description: "Detects session fixation attack attempts"
+    
+    - id: "AUTH_005"
+      name: "JWT Token in URL"
+      pattern: "[?&](jwt|bearer|authorization)=[^&\\s]+"
+      severity: "high"
+      description: "Detects JWT tokens in URL (insecure practice)"
+
+# Bot Detection Rules
+bot_detection:
+  enabled: true
+  rules:
+    - id: "BOT_001"
+      name: "Common Bots"
+      pattern: "bot|crawler|spider|scraper"
+      severity: "low"
+      description: "Detects common bot user agents"
+    
+    - id: "BOT_002"
+      name: "Automated Tools"
+      pattern: "curl|wget|python|java|go-http-client"
+      severity: "medium"
+      description: "Detects automated tool user agents"
+    
+    - id: "BOT_003"
+      name: "Security Scanners"
+      pattern: "nikto|nessus|openvas|nmap|masscan"
+      severity: "high"
+      description: "Detects security scanner user agents"
+
+# Rate Limiting Configuration
+rate_limiting:
+  enabled: true
+  global:
+    requests_per_minute: 100
+    burst_allowance: 10
+  
+  by_endpoint:
+    "/api/": 
+      requests_per_minute: 200
+      burst_allowance: 20
+    "/admin/":
+      requests_per_minute: 30
+      burst_allowance: 5
+    "/proxy":
+      requests_per_minute: 500
+      burst_allowance: 50
+
+# IP Whitelisting
+whitelist:
+  enabled: true
+  ips:
+    - "127.0.0.1"          # Localhost
+    - "::1"                # IPv6 localhost
+    - "192.168.1.0/24"     # Local network (example)
+    - "10.0.0.0/8"         # Private network (example)
+
+# IP Blacklisting  
+blacklist:
+  enabled: true
+  ips:
+    # Example known malicious IPs (these are examples - replace with real threat intel)
+    - "198.51.100.0/24"    # Example malicious network
+    - "203.0.113.0/24"     # Example malicious network
+  
+  auto_block:
+    enabled: true
+    threshold: 5           # Auto-block after 5 violations
+    duration: 3600         # Block for 1 hour (in seconds)
+
+# Geographic Restrictions
+geo_blocking:
+  enabled: false
+  blocked_countries:
+    - "CN"                 # China (example)
+    - "RU"                 # Russia (example)
+    - "KP"                 # North Korea (example)
+  
+  allowed_countries:
+    - "US"                 # United States
+    - "CA"                 # Canada
+    - "GB"                 # United Kingdom
+    - "DE"                 # Germany
+    - "FR"                 # France
+
+# Content Security Policy
+csp:
+  enabled: true
+  policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:;"
+
+# HTTP Security Headers
+security_headers:
+  enabled: true
+  headers:
+    "X-Content-Type-Options": "nosniff"
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+
+# Monitoring and Alerting
+monitoring:
+  enabled: true
+  metrics_retention_days: 30
+  alert_thresholds:
+    requests_per_second: 1000
+    blocked_requests_percentage: 10
+    error_rate_percentage: 5
+    response_time_ms: 5000
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  destinations:
+    - "file"
+    - "console"
+  
+  security_events:
+    log_all: true
+    include_payload: false     # Set to true for debugging (security risk)
+    max_payload_length: 1000
+  
+  performance:
+    log_slow_requests: true
+    slow_request_threshold_ms: 1000

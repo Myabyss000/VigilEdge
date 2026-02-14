@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}ThreatLoom - Log Viewer{% endblock %}
+{% block nav_logs %}text-white font-semibold{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-lg font-semibold text-white">Firewall Log Viewer</h2>
+    <div class="flex gap-2">
+        <select id="filter-action" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Actions</option>
+            <option value="ALLOWED">Allowed</option>
+            <option value="BLOCKED">Blocked</option>
+            <option value="RATE_LIMITED">Rate Limited</option>
+            <option value="DROPPED">Dropped</option>
+        </select>
+        <select id="filter-attack" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+            <option value="">All Types</option>
+            <option value="NONE">Clean</option>
+            <option value="SQLI">SQLi</option>
+            <option value="XSS">XSS</option>
+            <option value="RCE">RCE</option>
+            <option value="LFI">LFI</option>
+            <option value="BRUTE_FORCE">Brute Force</option>
+            <option value="PORT_SCAN">Port Scan</option>
+            <option value="DDOS">DDoS</option>
+            <option value="BOT">Bot</option>
+        </select>
+        <input type="text" id="filter-ip" placeholder="Filter by IP..."
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm w-36">
+    </div>
+</div>
+
+<div class="bg-soc-panel border border-soc-border rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead>
+                <tr class="text-gray-500 uppercase border-b border-gray-800">
+                    <th class="text-left px-3 py-2">Time</th>
+                    <th class="text-left px-3 py-2">Source IP</th>
+                    <th class="text-left px-3 py-2">Dest</th>
+                    <th class="text-left px-3 py-2">Proto</th>
+                    <th class="text-left px-3 py-2">Method</th>
+                    <th class="text-left px-3 py-2">Path</th>
+                    <th class="text-left px-3 py-2">Status</th>
+                    <th class="text-left px-3 py-2">Action</th>
+                    <th class="text-left px-3 py-2">Attack</th>
+                    <th class="text-left px-3 py-2">Severity</th>
+                    <th class="text-left px-3 py-2">Country</th>
+                    <th class="text-left px-3 py-2">MITRE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="border-b border-gray-800 hover:bg-gray-800/30 transition log-row"
+                    data-action="{{ log.action.value if log.action else '' }}"
+                    data-attack="{{ log.attack_type.value if log.attack_type else '' }}"
+                    data-ip="{{ log.src_ip }}">
+                    <td class="px-3 py-1.5 font-mono text-gray-400">
+                        {{ log.timestamp.strftime('%H:%M:%S.%f')[:-3] if log.timestamp else '' }}
+                    </td>
+                    <td class="px-3 py-1.5 font-mono
+                        {% if log.attack_type and log.attack_type.value != 'NONE' %}text-red-400{% else %}text-gray-300{% endif %}">
+                        {{ log.src_ip }}{% if log.src_port %}:{{ log.src_port }}{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5 font-mono text-gray-400">
+                        {{ log.dst_ip or '-' }}{% if log.dst_port %}:{{ log.dst_port }}{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5 text-gray-400">{{ log.protocol.value if log.protocol else '-' }}</td>
+                    <td class="px-3 py-1.5 text-blue-400">{{ log.http_method or '-' }}</td>
+                    <td class="px-3 py-1.5 text-gray-300 max-w-xs truncate">{{ log.http_path or '-' }}</td>
+                    <td class="px-3 py-1.5 font-mono
+                        {% if log.http_status and log.http_status >= 400 %}text-red-400
+                        {% elif log.http_status and log.http_status >= 300 %}text-yellow-400
+                        {% else %}text-green-400{% endif %}">
+                        {{ log.http_status or '-' }}
+                    </td>
+                    <td class="px-3 py-1.5">
+                        <span class="px-1.5 py-0.5 rounded text-xs
+                            {% if log.action and log.action.value == 'BLOCKED' %}bg-red-900 text-red-300
+                            {% elif log.action and log.action.value == 'RATE_LIMITED' %}bg-yellow-900 text-yellow-300
+                            {% else %}bg-green-900 text-green-300{% endif %}">
+                            {{ log.action.value if log.action else '-' }}
+                        </span>
+                    </td>
+                    <td class="px-3 py-1.5">
+                        {% if log.attack_type and log.attack_type.value != 'NONE' %}
+                        <span class="px-1.5 py-0.5 rounded bg-red-900 text-red-300 text-xs">{{ log.attack_type.value }}</span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5">
+                        <span class="
+                            {% if log.severity and log.severity.value == 'CRITICAL' %}text-red-400
+                            {% elif log.severity and log.severity.value == 'HIGH' %}text-orange-400
+                            {% elif log.severity and log.severity.value == 'MEDIUM' %}text-yellow-400
+                            {% else %}text-gray-500{% endif %}">
+                            {{ log.severity.value if log.severity else '-' }}
+                        </span>
+                    </td>
+                    <td class="px-3 py-1.5 text-gray-400">{{ log.geo_country or '-' }}</td>
+                    <td class="px-3 py-1.5 text-gray-500">{{ log.mitre_technique or '-' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not logs %}
+                <tr><td colspan="12" class="px-4 py-8 text-center text-gray-500">No logs found</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    ['filter-action', 'filter-attack'].forEach(id => {
+        document.getElementById(id).addEventListener('change', filterLogs);
+    });
+    document.getElementById('filter-ip').addEventListener('input', filterLogs);
+
+    function filterLogs() {
+        const action = document.getElementById('filter-action').value;
+        const attack = document.getElementById('filter-attack').value;
+        const ip = document.getElementById('filter-ip').value.toLowerCase();
+
+        document.querySelectorAll('.log-row').forEach(row => {
+            const matchAction = !action || row.dataset.action === action;
+            const matchAttack = !attack || row.dataset.attack === attack;
+            const matchIp = !ip || row.dataset.ip.toLowerCase().includes(ip);
+            row.style.display = (matchAction && matchAttack && matchIp) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

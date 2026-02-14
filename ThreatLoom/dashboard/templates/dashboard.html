@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}ThreatLoom - SOC Dashboard{% endblock %}
+{% block nav_dashboard %}text-white font-semibold{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Logs (24h)</div>
+        <div class="text-2xl font-bold text-white mt-1">{{ "{:,}".format(total_logs) }}</div>
+    </div>
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Blocked</div>
+        <div class="text-2xl font-bold text-red-400 mt-1">{{ "{:,}".format(total_blocked) }}</div>
+    </div>
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Alerts (24h)</div>
+        <div class="text-2xl font-bold text-yellow-400 mt-1">{{ total_alerts }}</div>
+    </div>
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Active Alerts</div>
+        <div class="text-2xl font-bold text-orange-400 mt-1">{{ active_alerts }}</div>
+    </div>
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Open Incidents</div>
+        <div class="text-2xl font-bold text-purple-400 mt-1">{{ open_incidents }}</div>
+    </div>
+    <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Active Blocks</div>
+        <div class="text-2xl font-bold text-green-400 mt-1">{{ active_blocks }}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Real-time Alert Feed -->
+    <div class="lg:col-span-2 bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white">Real-Time Alert Feed</h2>
+            <span class="text-xs text-gray-500">Last 20 alerts</span>
+        </div>
+        <div class="overflow-y-auto max-h-96" id="alert-feed">
+            {% for alert in recent_alerts %}
+            <div class="px-4 py-2 border-b border-gray-800 hover:bg-gray-800/50 transition flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full flex-shrink-0
+                    {% if alert.severity.value == 'CRITICAL' %}bg-red-500
+                    {% elif alert.severity.value == 'HIGH' %}bg-orange-500
+                    {% elif alert.severity.value == 'MEDIUM' %}bg-yellow-500
+                    {% else %}bg-blue-500{% endif %}"></span>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-gray-200 truncate">{{ alert.title }}</div>
+                    <div class="text-xs text-gray-500">
+                        {{ alert.src_ip or 'N/A' }} &middot;
+                        {{ alert.detection_source }} &middot;
+                        {{ alert.created_at.strftime('%H:%M:%S') if alert.created_at else '' }}
+                    </div>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0
+                    {% if alert.severity.value == 'CRITICAL' %}bg-red-900 text-red-300
+                    {% elif alert.severity.value == 'HIGH' %}bg-orange-900 text-orange-300
+                    {% elif alert.severity.value == 'MEDIUM' %}bg-yellow-900 text-yellow-300
+                    {% else %}bg-blue-900 text-blue-300{% endif %}">
+                    {{ alert.severity.value }}
+                </span>
+                <span class="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-300 flex-shrink-0">
+                    {{ alert.status.value }}
+                </span>
+            </div>
+            {% endfor %}
+            {% if not recent_alerts %}
+            <div class="px-4 py-8 text-center text-gray-500">No alerts yet. System is clean.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Severity Distribution Chart -->
+    <div class="bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border">
+            <h2 class="text-sm font-semibold text-white">Alert Severity Distribution</h2>
+        </div>
+        <div class="p-4">
+            <canvas id="severityChart" height="200"></canvas>
+        </div>
+        <div class="px-4 pb-4">
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-red-500"></span>Critical: {{ severity_dist.get('CRITICAL', 0) }}</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-orange-500"></span>High: {{ severity_dist.get('HIGH', 0) }}</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-yellow-500"></span>Medium: {{ severity_dist.get('MEDIUM', 0) }}</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-blue-500"></span>Low: {{ severity_dist.get('LOW', 0) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Attack Type Distribution -->
+    <div class="bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border">
+            <h2 class="text-sm font-semibold text-white">Attack Type Distribution (24h)</h2>
+        </div>
+        <div class="p-4">
+            <canvas id="attackChart" height="240"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Attackers -->
+    <div class="bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border">
+            <h2 class="text-sm font-semibold text-white">Top Attackers (24h)</h2>
+        </div>
+        <div class="overflow-y-auto max-h-80">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+                        <th class="text-left px-4 py-2">#</th>
+                        <th class="text-left px-4 py-2">IP Address</th>
+                        <th class="text-left px-4 py-2">Country</th>
+                        <th class="text-right px-4 py-2">Events</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attacker in top_attackers %}
+                    <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                        <td class="px-4 py-2 text-gray-500">{{ loop.index }}</td>
+                        <td class="px-4 py-2 font-mono text-red-400">{{ attacker.ip }}</td>
+                        <td class="px-4 py-2">{{ attacker.country }}</td>
+                        <td class="px-4 py-2 text-right font-semibold">{{ attacker.count }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not top_attackers %}
+                    <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">No attacks detected</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Geo-IP Map Placeholder -->
+    <div class="bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border">
+            <h2 class="text-sm font-semibold text-white">Attacker Geo Distribution</h2>
+        </div>
+        <div class="p-4">
+            {% if geo_data %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+                        <th class="text-left px-2 py-1">Country</th>
+                        <th class="text-left px-2 py-1">Lat</th>
+                        <th class="text-left px-2 py-1">Lon</th>
+                        <th class="text-right px-2 py-1">Events</th>
+                        <th class="text-left px-2 py-1">Bar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for geo in geo_data %}
+                    <tr class="border-b border-gray-800">
+                        <td class="px-2 py-1 font-semibold">{{ geo.country }}</td>
+                        <td class="px-2 py-1 text-gray-400">{{ "%.2f"|format(geo.lat) if geo.lat else '-' }}</td>
+                        <td class="px-2 py-1 text-gray-400">{{ "%.2f"|format(geo.lon) if geo.lon else '-' }}</td>
+                        <td class="px-2 py-1 text-right">{{ geo.count }}</td>
+                        <td class="px-2 py-1">
+                            <div class="bg-gray-700 rounded-full h-2 w-full">
+                                <div class="bg-red-500 rounded-full h-2" style="width: {{ (geo.count / (geo_data[0].count or 1) * 100)|int }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center text-gray-500 py-8">No geographic data available</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="bg-soc-panel border border-soc-border rounded-lg">
+        <div class="px-4 py-3 border-b border-soc-border">
+            <h2 class="text-sm font-semibold text-white">Firewall Health & Performance</h2>
+        </div>
+        <div class="p-4 grid grid-cols-2 gap-4">
+            <div class="text-center">
+                <div class="text-xs text-gray-400 mb-2">CPU Usage</div>
+                <div class="relative w-24 h-24 mx-auto">
+                    <svg viewBox="0 0 36 36" class="w-full h-full">
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#374151" stroke-width="3"/>
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                            stroke="{% if cpu_percent > 80 %}#ef4444{% elif cpu_percent > 60 %}#f59e0b{% else %}#22c55e{% endif %}"
+                            stroke-width="3" stroke-dasharray="{{ cpu_percent }}, 100" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold">{{ cpu_percent }}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs text-gray-400 mb-2">Memory Usage</div>
+                <div class="relative w-24 h-24 mx-auto">
+                    <svg viewBox="0 0 36 36" class="w-full h-full">
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#374151" stroke-width="3"/>
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                            stroke="{% if memory_percent > 80 %}#ef4444{% elif memory_percent > 60 %}#f59e0b{% else %}#22c55e{% endif %}"
+                            stroke-width="3" stroke-dasharray="{{ memory_percent }}, 100" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold">{{ memory_percent }}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-span-2 mt-4">
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-gray-800 rounded px-3 py-2">
+                        <span class="text-gray-400">Total Logs 24h</span>
+                        <span class="float-right font-mono">{{ "{:,}".format(total_logs) }}</span>
+                    </div>
+                    <div class="bg-gray-800 rounded px-3 py-2">
+                        <span class="text-gray-400">Blocked 24h</span>
+                        <span class="float-right font-mono text-red-400">{{ "{:,}".format(total_blocked) }}</span>
+                    </div>
+                    <div class="bg-gray-800 rounded px-3 py-2">
+                        <span class="text-gray-400">Active Alerts</span>
+                        <span class="float-right font-mono text-yellow-400">{{ active_alerts }}</span>
+                    </div>
+                    <div class="bg-gray-800 rounded px-3 py-2">
+                        <span class="text-gray-400">Active Blocks</span>
+                        <span class="float-right font-mono text-green-400">{{ active_blocks }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Severity Doughnut Chart
+    const sevCtx = document.getElementById('severityChart').getContext('2d');
+    new Chart(sevCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: [
+                    {{ severity_dist.get('CRITICAL', 0) }},
+                    {{ severity_dist.get('HIGH', 0) }},
+                    {{ severity_dist.get('MEDIUM', 0) }},
+                    {{ severity_dist.get('LOW', 0) }}
+                ],
+                backgroundColor: ['#ef4444', '#f97316', '#eab308', '#3b82f6'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            cutout: '65%',
+        }
+    });
+
+    // Attack Type Bar Chart
+    const atkCtx = document.getElementById('attackChart').getContext('2d');
+    const attackData = {{ attack_dist | tojson }};
+    new Chart(atkCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(attackData),
+            datasets: [{
+                label: 'Events',
+                data: Object.values(attackData),
+                backgroundColor: '#3b82f6',
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    grid: { color: '#1f2937' },
+                    ticks: { color: '#9ca3af' }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: '#9ca3af', font: { size: 11 } }
+                }
+            }
+        }
+    });
+
+    // WebSocket live feed
+    const ws = new WebSocket(`ws://${location.host}/ws/alerts`);
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'new_alert') {
+            const feed = document.getElementById('alert-feed');
+            const d = msg.data;
+            const sevColor = {
+                CRITICAL: 'bg-red-500', HIGH: 'bg-orange-500',
+                MEDIUM: 'bg-yellow-500', LOW: 'bg-blue-500'
+            };
+            const sevBadge = {
+                CRITICAL: 'bg-red-900 text-red-300', HIGH: 'bg-orange-900 text-orange-300',
+                MEDIUM: 'bg-yellow-900 text-yellow-300', LOW: 'bg-blue-900 text-blue-300'
+            };
+            const row = document.createElement('div');
+            row.className = 'px-4 py-2 border-b border-gray-800 hover:bg-gray-800/50 transition flex items-center gap-3 animate-pulse';
+            row.innerHTML = `
+                <span class="w-2 h-2 rounded-full flex-shrink-0 ${sevColor[d.severity] || 'bg-gray-500'}"></span>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-gray-200 truncate">${d.title || 'New Alert'}</div>
+                    <div class="text-xs text-gray-500">${d.src_ip || 'N/A'} &middot; ${d.detection_source || ''}</div>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ${sevBadge[d.severity] || 'bg-gray-700 text-gray-300'}">${d.severity || 'INFO'}</span>
+            `;
+            feed.insertBefore(row, feed.firstChild);
+            setTimeout(() => row.classList.remove('animate-pulse'), 2000);
+        }
+    };
+    ws.onclose = () => {
+        document.getElementById('live-indicator').innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span><span class="text-xs text-red-400">OFFLINE</span>';
+    };
+</script>
+{% endblock %}
