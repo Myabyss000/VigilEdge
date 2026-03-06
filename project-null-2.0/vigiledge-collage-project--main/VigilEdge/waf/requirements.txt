@@ -15,6 +15,8 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 itsdangerous>=2.0.0
+pyotp>=2.9.0
+qrcode[pil]>=7.4.2
 
 # Networking & HTTP
 httpx==0.25.2                   # Also used for ThreatLoom SOC integration
@@ -29,6 +31,9 @@ flask-cors>=4.0.0
 # Data Processing & Analysis
 pandas==2.1.3
 numpy==1.25.2
+scikit-learn>=1.5.0
+joblib>=1.4.2
+sentence-transformers>=3.0.1
 python-dateutil==2.8.2
 
 # Monitoring & Logging
