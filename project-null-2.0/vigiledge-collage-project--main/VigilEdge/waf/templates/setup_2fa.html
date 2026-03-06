@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Setup 2FA - VigilEdge WAF</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(100, 200, 255, 0.2);
+            --card-bg: rgba(30, 30, 50, 0.85);
+            --sidebar-bg: rgba(20, 25, 45, 0.95);
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --text-primary: #ffffff;
+            --text-secondary: #e1e7f5;
+            --text-muted: #94a3b8;
+            --success: #00ff87;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+            --glow-blue: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-icon {
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            width: calc(100% - 280px);
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* 2FA Setup Card */
+        .setup-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            opacity: 1;
+            color: var(--cyber-blue);
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .step.active .step-number {
+            background: var(--cyber-blue);
+            color: #000;
+            box-shadow: 0 0 15px var(--cyber-blue);
+        }
+
+        .qr-section {
+            margin-bottom: 3rem;
+        }
+
+        .qr-frame {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            display: inline-block;
+            margin: 2rem 0;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .qr-frame::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 18px;
+            padding: 3px;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            z-index: -1;
+        }
+
+        .secret-key-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyber-teal);
+            letter-spacing: 2px;
+            margin: 1rem auto;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .secret-key-box:hover {
+            border-color: var(--cyber-teal);
+            box-shadow: 0 0 15px rgba(0, 255, 166, 0.2);
+        }
+
+        .input-group {
+            margin: 2rem auto;
+            max-width: 300px;
+            position: relative;
+        }
+
+        .code-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            text-align: center;
+            color: white;
+            letter-spacing: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: var(--cyber-blue);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .btn-cyber {
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            color: #0f172a;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .btn-cyber:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: 0.3s;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <h1>🛡️ VigilEdge</h1>
+            <p>Security Operations</p>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="/" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/settings" class="nav-link">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/auth/setup-2fa" class="nav-link active">
+                    <span class="nav-icon">🔐</span>
+                    <span>Setup 2FA</span>
+                </a>
+            </li>
+            <li class="nav-item"
+                style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                <a href="/logout" class="nav-link" style="color: #ff6b6b;">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1 class="page-title">🔐 Two-Factor Authentication</h1>
+            <p class="page-subtitle">Enhance your account security with Google Authenticator</p>
+        </div>
+
+        <div class="setup-container">
+            <div class="step-indicator">
+                <div class="step active">
+                    <div class="step-number">1</div>
+                    <span>Scan QR</span>
+                </div>
+                <div class="step active">
+                    <div class="step-number">2</div>
+                    <span>Verify Code</span>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <span>Activated</span>
+                </div>
+            </div>
+
+            <div class="qr-section">
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">Open your authenticator app and scan the
+                    code below:</p>
+
+                <div class="qr-frame">
+                    <img src="data:image/png;base64,{{ qr_b64 }}" alt="2FA QR Code" width="200" height="200"
+                        style="display: block;">
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Can't scan? Enter the
+                        setup key manually:</p>
+                    <div class="secret-key-box" onclick="copySecret(this)" title="Click to copy">
+                        {{ secret }}
+                    </div>
+                </div>
+            </div>
+
+            <form action="/auth/verify-2fa" method="POST">
+                <input type="hidden" name="secret" value="{{ secret }}">
+
+                <div class="input-group">
+                    <input type="text" name="code" class="code-input" placeholder="000 000" maxlength="6" required
+                        autocomplete="off" autofocus>
+                </div>
+
+                <button type="submit" class="btn-cyber">Enable 2FA 🛡️</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        function copySecret(element) {
+            const text = element.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = element.innerText;
+                element.innerText = "COPIED!";
+                element.style.borderColor = "var(--success)";
+                element.style.color = "var(--success)";
+
+                setTimeout(() => {
+                    element.innerText = originalText;
+                    element.style.borderColor = "var(--glass-border)";
+                    element.style.color = "var(--cyber-teal)";
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+
+</html>

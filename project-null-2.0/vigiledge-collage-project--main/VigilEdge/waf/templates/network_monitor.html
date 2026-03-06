@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor - VigilEdge WAF</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(100, 200, 255, 0.2);
+            --card-bg: rgba(30, 30, 50, 0.85);
+            --sidebar-bg: rgba(20, 25, 45, 0.95);
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --text-primary: #ffffff;
+            --text-secondary: #e1e7f5;
+            --text-muted: #94a3b8;
+            --success: #00ff87;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            background: transparent;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Network Status Grid */
+        .network-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .network-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .network-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .network-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .network-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .network-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+        }
+
+        .status-dot.warning {
+            background: var(--warning);
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .network-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Connection Table */
+        .connections-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .refresh-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: auto;
+        }
+
+        .refresh-btn:hover {
+            background: var(--cyber-blue);
+            color: var(--primary-bg);
+        }
+
+        .connections-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .connections-table th,
+        .connections-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .connections-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .connections-table td {
+            color: var(--text-secondary);
+        }
+
+        .connections-table tr:hover {
+            background: var(--glass-bg);
+        }
+
+        .connection-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .connection-type.websocket {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--cyber-blue);
+        }
+
+        .connection-type.http {
+            background: rgba(0, 255, 166, 0.2);
+            color: var(--cyber-teal);
+        }
+
+        .connection-type.https {
+            background: rgba(124, 58, 237, 0.2);
+            color: var(--cyber-purple);
+        }
+
+        /* Bandwidth Monitor */
+        .bandwidth-monitor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .bandwidth-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .bandwidth-header {
+            margin-bottom: 1rem;
+        }
+
+        .bandwidth-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .bandwidth-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--cyber-blue);
+        }
+
+        .bandwidth-bar {
+            height: 8px;
+            background: var(--glass-bg);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .bandwidth-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            animation: bandwidth-flow 2s ease-in-out infinite;
+        }
+
+        @keyframes bandwidth-flow {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Geographic Map Placeholder */
+        .geo-map {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .map-placeholder {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .network-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bandwidth-monitor {
+                grid-template-columns: 1fr;
+            }
+
+            .speed-test-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Speed Test Section */
+        .speed-test-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .speed-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .speed-test-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .speed-test-container {
+            display: flex;
+            gap: 2rem;
+            align-items: stretch;
+        }
+
+        .realtime-speed {
+            flex: 1;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .speed-gauge {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .speed-gauge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .speed-gauge.upload::before {
+            background: linear-gradient(90deg, var(--cyber-purple), #f472b6);
+        }
+
+        .speed-gauge-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .speed-gauge-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .speed-gauge.upload .speed-gauge-value {
+            background: linear-gradient(135deg, var(--cyber-purple), #f472b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .speed-gauge-unit {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .speed-gauge-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .speed-test-panel {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .speed-test-btn {
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            color: #000;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .speed-test-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        }
+
+        .speed-test-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .speed-test-btn.running {
+            animation: pulse-glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3); }
+            50% { box-shadow: 0 4px 25px rgba(0, 212, 255, 0.6); }
+        }
+
+        .speed-test-progress {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            height: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .speed-test-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .speed-test-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .speed-test-results {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-top: auto;
+        }
+
+        .speed-result-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .speed-result-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--cyber-blue);
+        }
+
+        .speed-result-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .speed-result-item.ping .speed-result-value {
+            color: var(--success);
+        }
+
+        .speed-result-item.download .speed-result-value {
+            color: var(--cyber-blue);
+        }
+
+        .speed-result-item.upload .speed-result-value {
+            color: var(--cyber-purple);
+        }
+
+        /* ============= REAL NETWORK MONITORING STYLES ============= */
+
+        /* Network Interfaces Section */
+        .network-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .section-title-main {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-badge {
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            color: #000;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Interface Cards */
+        .interface-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .interface-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .interface-card.active {
+            border-left: 4px solid var(--success);
+        }
+
+        .interface-card.inactive {
+            border-left: 4px solid var(--danger);
+            opacity: 0.7;
+        }
+
+        .interface-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .interface-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .interface-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .interface-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .interface-stat {
+            text-align: center;
+        }
+
+        .interface-stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--cyber-blue);
+        }
+
+        .interface-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Connections Table */
+        .connections-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--glass-border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--glass-bg);
+            color: var(--cyber-blue);
+            border-color: var(--cyber-blue);
+        }
+
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .mini-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--cyber-blue);
+            font-weight: 500;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .mini-table td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .mini-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .conn-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .conn-status.established { background: rgba(0, 255, 135, 0.2); color: var(--success); }
+        .conn-status.listen { background: rgba(0, 212, 255, 0.2); color: var(--cyber-blue); }
+        .conn-status.time_wait { background: rgba(255, 179, 71, 0.2); color: var(--warning); }
+        .conn-status.close_wait { background: rgba(255, 107, 107, 0.2); color: var(--danger); }
+
+        .port-tag {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            background: rgba(124, 58, 237, 0.2);
+            color: var(--cyber-purple);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Live Activity Feed */
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid var(--cyber-blue);
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .activity-item.page_visit { border-left-color: var(--cyber-blue); }
+        .activity-item.form_submit { border-left-color: var(--warning); }
+        .activity-item.login_attempt { border-left-color: var(--cyber-purple); }
+        .activity-item.search { border-left-color: var(--cyber-teal); }
+        .activity-item.attack { border-left-color: var(--danger); }
+
+        .activity-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-details {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .activity-ip {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyber-teal);
+        }
+
+        /* Connection Graph */
+        .graph-container {
+            height: 350px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #networkGraph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .scrollable-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Two Column Layout */
+        .two-column-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .two-column-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="logo">
+            <h1>🛡️ VigilEdge</h1>
+            <p>Security Operations</p>
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="/" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/security-rules" class="nav-link">
+                    <span class="nav-icon">🛡️</span>
+                    <span>Security Rules</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/threat-detection" class="nav-link">
+                    <span class="nav-icon">🚨</span>
+                    <span>Threat Detection</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/analytics" class="nav-link">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/network-monitor" class="nav-link active">
+                    <span class="nav-icon">🌐</span>
+                    <span>Network Monitor</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/blocked-ips" class="nav-link">
+                    <span class="nav-icon">🚫</span>
+                    <span>Blocked IPs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/event-logs" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    <span>Event Logs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/settings" class="nav-link">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/auth/setup-2fa" class="nav-link">
+                    <span class="nav-icon">🔐</span>
+                    <span>Setup 2FA</span>
+                </a>
+            </li>
+
+            <li class="nav-item"
+                style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                <a href="/logout" class="nav-link" style="color: #ff6b6b;">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">🌐 Network Monitor</h1>
+            <p class="page-subtitle">Real-time network traffic and connection monitoring</p>
+        </div>
+
+        <!-- Network Status Grid -->
+        <div class="network-grid">
+            <div class="network-card">
+                <div class="network-header">
+                    <h3 class="network-title">WAF Engine Status</h3>
+                    <div class="network-status">
+                        <div class="status-dot online"></div>
+                        <span>Online</span>
+                    </div>
+                </div>
+                <div class="network-metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="uptime-val">Loading...</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="latency-val">--</div>
+                        <div class="metric-label">Latency</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-card">
+                <div class="network-header">
+                    <h3 class="network-title">Database Connection</h3>
+                    <div class="network-status">
+                        <div class="status-dot online"></div>
+                        <span>Connected</span>
+                    </div>
+                </div>
+                <div class="network-metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="db-pool">Active</div>
+                        <div class="metric-label">Status</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">SQLite</div>
+                        <div class="metric-label">Type</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPLACED Fake Redis with Real Memory Usage -->
+            <div class="network-card">
+                <div class="network-header">
+                    <h3 class="network-title">System Memory</h3>
+                    <div class="network-status">
+                        <div class="status-dot online"></div>
+                        <span>Active</span>
+                    </div>
+                </div>
+                <div class="network-metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="mem-usage">0 MB</div>
+                        <div class="metric-label">Used (RSS)</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="total-requests-card">0</div>
+                        <div class="metric-label">Total Reqs</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPLACED Fake Load Balancer with Real CPU Usage -->
+            <div class="network-card">
+                <div class="network-header">
+                    <h3 class="network-title">System CPU</h3>
+                    <div class="network-status">
+                        <div class="status-dot warning" id="cpu-dot"></div>
+                        <span id="cpu-status">Monitoring</span>
+                    </div>
+                </div>
+                <div class="network-metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="cpu-usage">0%</div>
+                        <div class="metric-label">Process CPU</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="threats-detected-card">0</div>
+                        <div class="metric-label">Threats</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Connections -->
+        <div class="connections-section">
+            <div class="section-header">
+                <h3 class="section-title">Active Connections</h3>
+                <button class="refresh-btn" onclick="fetchConnections()">🔄 Refresh</button>
+            </div>
+            <table class="connections-table">
+                <thead>
+                    <tr>
+                        <th>Client IP</th>
+                        <th>Methods</th>
+                        <th>Unique URLs</th>
+                        <th>Requests</th>
+                        <th>First Seen</th>
+                        <th>User Agent (Top)</th>
+                    </tr>
+                </thead>
+                <tbody id="connectionsTable">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">Loading
+                            connections...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bandwidth Monitor -->
+        <div class="bandwidth-monitor">
+            <div class="bandwidth-card">
+                <div class="bandwidth-header">
+                    <h3 class="bandwidth-title">Incoming Traffic</h3>
+                    <div class="bandwidth-value" id="incomingBandwidth">125.4 Mbps</div>
+                </div>
+                <div class="bandwidth-bar">
+                    <div class="bandwidth-fill" id="incomingBar" style="width: 65%;"></div>
+                </div>
+            </div>
+
+            <div class="bandwidth-card">
+                <div class="bandwidth-header">
+                    <h3 class="bandwidth-title">Outgoing Traffic</h3>
+                    <div class="bandwidth-value" id="outgoingBandwidth">98.7 Mbps</div>
+                </div>
+                <div class="bandwidth-bar">
+                    <div class="bandwidth-fill" id="outgoingBar" style="width: 45%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Internet Speed Test Section -->
+        <div class="speed-test-section">
+            <div class="speed-test-header">
+                <h3 class="speed-test-title">
+                    <span>🚀</span>
+                    <span>Internet Speed Monitor</span>
+                </h3>
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Real-time network speed & speed test</span>
+            </div>
+
+            <div class="speed-test-container">
+                <!-- Real-time Speed Gauges -->
+                <div class="realtime-speed">
+                    <div class="speed-gauge download">
+                        <div class="speed-gauge-icon">⬇️</div>
+                        <div class="speed-gauge-value" id="realtimeDownload">0.00</div>
+                        <div class="speed-gauge-unit">Mbps</div>
+                        <div class="speed-gauge-label">Download Speed</div>
+                    </div>
+                    <div class="speed-gauge upload">
+                        <div class="speed-gauge-icon">⬆️</div>
+                        <div class="speed-gauge-value" id="realtimeUpload">0.00</div>
+                        <div class="speed-gauge-unit">Mbps</div>
+                        <div class="speed-gauge-label">Upload Speed</div>
+                    </div>
+                </div>
+
+                <!-- Speed Test Panel -->
+                <div class="speed-test-panel">
+                    <button class="speed-test-btn" id="speedTestBtn" onclick="startSpeedTest()">
+                        <span id="speedTestBtnIcon">🔬</span>
+                        <span id="speedTestBtnText">Run Speed Test</span>
+                    </button>
+                    
+                    <div class="speed-test-progress">
+                        <div class="speed-test-progress-bar" id="speedTestProgress"></div>
+                    </div>
+                    
+                    <div class="speed-test-status" id="speedTestStatus">
+                        Click the button to test your internet speed
+                    </div>
+                    
+                    <div class="speed-test-results">
+                        <div class="speed-result-item ping">
+                            <div class="speed-result-value" id="testPing">--</div>
+                            <div class="speed-result-label">Ping (ms)</div>
+                        </div>
+                        <div class="speed-result-item download">
+                            <div class="speed-result-value" id="testDownload">--</div>
+                            <div class="speed-result-label">Download</div>
+                        </div>
+                        <div class="speed-result-item upload">
+                            <div class="speed-result-value" id="testUpload">--</div>
+                            <div class="speed-result-label">Upload</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Interfaces Section -->
+        <div class="network-section">
+            <div class="section-title-row">
+                <h3 class="section-title-main">
+                    <span>🔌</span>
+                    <span>Network Interfaces</span>
+                </h3>
+                <span class="section-badge" id="ifaceCount">Loading...</span>
+            </div>
+            <div class="interface-grid" id="interfaceGrid">
+                <div class="interface-card">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Loading network interfaces...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column: Connections & Ports -->
+        <div class="two-column-grid">
+            <!-- Active Connections -->
+            <div class="network-section" style="margin-top: 0;">
+                <div class="section-title-row">
+                    <h3 class="section-title-main">
+                        <span>🔗</span>
+                        <span>Active Connections</span>
+                    </h3>
+                    <span class="section-badge" id="connCount">0</span>
+                </div>
+                <div class="connections-filter">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="ESTABLISHED">Established</button>
+                    <button class="filter-btn" data-filter="LISTEN">Listening</button>
+                    <button class="filter-btn" data-filter="TIME_WAIT">Time Wait</button>
+                </div>
+                <div class="scrollable-table">
+                    <table class="mini-table" id="connectionsRealTable">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Local</th>
+                                <th>Remote</th>
+                                <th>Status</th>
+                                <th>Process</th>
+                            </tr>
+                        </thead>
+                        <tbody id="connectionsRealBody">
+                            <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Listening Ports -->
+            <div class="network-section" style="margin-top: 0;">
+                <div class="section-title-row">
+                    <h3 class="section-title-main">
+                        <span>📡</span>
+                        <span>Listening Ports</span>
+                    </h3>
+                    <span class="section-badge" id="portCount">0</span>
+                </div>
+                <div class="scrollable-table">
+                    <table class="mini-table" id="portsTable">
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Protocol</th>
+                                <th>Address</th>
+                                <th>Service</th>
+                                <th>Process</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portsBody">
+                            <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live User Activity Feed -->
+        <div class="network-section">
+            <div class="section-title-row">
+                <h3 class="section-title-main">
+                    <span>👁️</span>
+                    <span>Live User Activity</span>
+                </h3>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">Real-time activity on vulnerable app</span>
+                    <button class="refresh-btn" onclick="fetchLiveActivity()" style="font-size: 0.85rem;">🔄 Refresh</button>
+                </div>
+            </div>
+            <div class="activity-feed" id="activityFeed">
+                <div class="activity-item">
+                    <div class="activity-icon">⏳</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Waiting for activity...</div>
+                        <div class="activity-details">Visit the protected vulnerable application to see real-time activity here</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Graph -->
+        <div class="network-section">
+            <div class="section-title-row">
+                <h3 class="section-title-main">
+                    <span>🕸️</span>
+                    <span>Connection Visualization</span>
+                </h3>
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Network topology graph</span>
+            </div>
+            <div class="graph-container">
+                <canvas id="networkGraph"></canvas>
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #00d4ff;"></div>
+                        <span>Server</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #00ff87;"></div>
+                        <span>Local Host</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #f472b6;"></div>
+                        <span>Remote Host</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #7c3aed;"></div>
+                        <span>Open Port</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geographic Map -->
+        <div class="geo-map">
+            <div id="connectionMap" style="height: 400px; width: 100%; border-radius: 12px; z-index: 1;"></div>
+            <div class="map-loading" id="mapLoading">
+                <div class="spinner"></div>
+                <p>Locating...</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // Update metrics every 3 seconds
+        setInterval(() => {
+            fetchSystemMetrics();
+        }, 3000);
+
+        setInterval(() => {
+            fetchConnections();
+        }, 5000);
+
+        async function updateBandwidthMetrics() {
+            try {
+                const response = await fetch('/api/v1/metrics');
+                const data = await response.json();
+
+                if (data.success) {
+                    if (!window.lastBytes) {
+                        window.lastBytes = {
+                            in: data.incoming_bytes || 0,
+                            out: data.outgoing_bytes || 0,
+                            time: Date.now()
+                        };
+                        return; // Wait for next tick
+                    }
+
+                    const now = Date.now();
+                    const timeDiff = (now - window.lastBytes.time) / 1000; // seconds
+
+                    if (timeDiff > 0) {
+                        const inDiff = (data.incoming_bytes || 0) - window.lastBytes.in;
+                        const outDiff = (data.outgoing_bytes || 0) - window.lastBytes.out;
+
+                        // Bytes per second * 8 = bits per second
+                        const inMbps = Math.max(0, ((inDiff * 8) / timeDiff) / 1000000);
+                        const outMbps = Math.max(0, ((outDiff * 8) / timeDiff) / 1000000);
+
+                        const elIn = document.getElementById('incomingBandwidth');
+                        const elOut = document.getElementById('outgoingBandwidth');
+
+                        if (elIn) elIn.textContent = `${inMbps.toFixed(2)} Mbps`;
+                        if (elOut) elOut.textContent = `${outMbps.toFixed(2)} Mbps`;
+
+                        // Update bars (assuming max 100 Mbps for visual scale)
+                        const barIn = document.getElementById('incomingBar');
+                        const barOut = document.getElementById('outgoingBar');
+
+                        if (barIn) barIn.style.width = `${Math.min((inMbps / 100) * 100, 100)}%`;
+                        if (barOut) barOut.style.width = `${Math.min((outMbps / 100) * 100, 100)}%`;
+                    }
+
+                    window.lastBytes = {
+                        in: data.incoming_bytes || 0,
+                        out: data.outgoing_bytes || 0,
+                        time: now
+                    };
+                }
+            } catch (error) {
+                console.error("Failed to update bandwidth:", error);
+            }
+        }
+
+        async function fetchSystemMetrics() {
+            try {
+                const response = await fetch('/api/v1/system/uptime');
+                const data = await response.json();
+
+                // Update Uptime
+                document.getElementById('uptime-val').textContent = data.uptime_formatted;
+
+                // Update CPU
+                const cpu = data.cpu_percent;
+                document.getElementById('cpu-usage').textContent = `${cpu.toFixed(1)}%`;
+                const cpuDot = document.getElementById('cpu-dot');
+                if (cpu > 80) {
+                    cpuDot.className = 'status-dot offline'; // red
+                    document.getElementById('cpu-status').textContent = 'High Load';
+                } else if (cpu > 50) {
+                    cpuDot.className = 'status-dot warning'; // yellow
+                    document.getElementById('cpu-status').textContent = 'Moderate';
+                } else {
+                    cpuDot.className = 'status-dot online'; // green
+                    document.getElementById('cpu-status').textContent = 'Healthy';
+                }
+
+                // Update Memory
+                document.getElementById('mem-usage').textContent = `${data.memory_mb.toFixed(1)} MB`;
+
+                // Update Stats
+                document.getElementById('total-requests-card').textContent = data.total_requests;
+                document.getElementById('threats-detected-card').textContent = data.threats_detected;
+
+            } catch (error) {
+                console.error('Error fetching system metrics:', error);
+            }
+        }
+
+        // Fetch real network connections from API
+        async function fetchConnections() {
+            try {
+                const btn = document.querySelector('.refresh-btn');
+                if (btn) {
+                    btn.style.transform = 'rotate(360deg)';
+                    setTimeout(() => { btn.style.transform = 'rotate(0deg)'; }, 500);
+                }
+
+                const response = await fetch('/api/v1/connections/active');
+                const data = await response.json();
+
+                const tbody = document.getElementById('connectionsTable');
+                if (data.connections && data.connections.length > 0) {
+                    tbody.innerHTML = '';
+                    data.connections.forEach(conn => {
+                        const row = tbody.insertRow();
+                        const timeAgo = getRelativeTime(conn.first_seen);
+
+                        // Clean user agent
+                        let ua = conn.user_agents && conn.user_agents.length > 0 ? conn.user_agents[0] : 'Unknown';
+                        if (ua.length > 30) ua = ua.substring(0, 30) + '...';
+
+                        row.innerHTML = `
+                            <td><span style="color: #00ff87; font-family: monospace;">${conn.ip}</span></td>
+                            <td>${conn.methods.join(', ')}</td>
+                            <td>${conn.unique_urls} endpoints</td>
+                            <td>${conn.request_count}</td>
+                            <td>${timeAgo}</td>
+                            <td class="text-muted" title="${conn.user_agents[0]}">${ua}</td>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">No active connections detected</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to fetch connections:', error);
+                const tbody = document.getElementById('connectionsTable');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #ff6b6b;">Failed to load connection data</td></tr>';
+            }
+        }
+
+        // Calculate relative time
+        function getRelativeTime(timestamp) {
+            const now = new Date();
+            const past = new Date(timestamp);
+            const diffMs = now - past;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+
+            if (diffSec < 60) return `${diffSec}s ago`;
+            if (diffMin < 60) return `${diffMin}m ago`;
+            return `${Math.floor(diffMin / 60)}h ago`;
+        }
+
+        // Initialize Map
+        // Initialize Map
+        let globalMap = null;
+        let globalMarkers = null;
+        
+        async function initMap() {
+            try {
+                // Check if element exists
+                const mapElement = document.getElementById('connectionMap');
+                if (!mapElement) return;
+
+                globalMap = L.map('connectionMap').setView([20, 0], 2);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(globalMap);
+
+                // Add dark mode filter to tiles
+                const tilePane = document.querySelector('.leaflet-tile-pane');
+                if (tilePane) tilePane.style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
+
+                globalMarkers = L.layerGroup().addTo(globalMap);
+                
+                // Initial load of users
+                await updateMapMarkers();
+
+            } catch (e) {
+                console.error("Map init failed:", e);
+                const loading = document.getElementById('mapLoading');
+                if (loading) loading.innerHTML = '<p style="color: #ff6b6b">Map Error</p>';
+            }
+        }
+        
+        async function updateMapMarkers() {
+            if (!globalMap || !globalMarkers) return;
+            
+            try {
+                // Fetch from TWO sources: client-side victims AND server-side geolocated connections
+                const [victimsResp, liveUsersResp] = await Promise.all([
+                    fetch('/api/v1/victims'),
+                    fetch('/api/v1/users/live')
+                ]);
+                
+                const victimsData = await victimsResp.json();
+                const liveUsersData = await liveUsersResp.json();
+
+                console.log("Victim Data:", victimsData);
+                console.log("Live Users (Server Geolocated):", liveUsersData);
+
+                // Clear existing markers
+                globalMarkers.clearLayers();
+                
+                let totalUsers = 0;
+                let geolocatedUsers = 0;
+                const addedIPs = new Set();
+
+                // Add client-side victims (may have GPS data)
+                if (victimsData.victims && victimsData.victims.length > 0) {
+                    victimsData.victims.forEach(victim => {
+                        if (victim.location && victim.location.lat && victim.location.lng) {
+                            addMarkerToMap(victim, 'client');
+                            addedIPs.add(victim.ip);
+                            geolocatedUsers++;
+                        }
+                        totalUsers++;
+                    });
+                }
+                
+                // Add server-side geolocated users (IP-based)
+                if (liveUsersData.users && liveUsersData.users.length > 0) {
+                    liveUsersData.users.forEach(user => {
+                        // Skip if already added from client-side (client data may be more accurate)
+                        if (!addedIPs.has(user.ip) && user.location && user.location.lat && user.location.lng) {
+                            addMarkerToMap(user, 'server');
+                            geolocatedUsers++;
+                        }
+                        if (!addedIPs.has(user.ip)) {
+                            totalUsers++;
+                        }
+                    });
+                }
+
+                // Update debug overlay
+                const loading = document.getElementById('mapLoading');
+                let debugOverlay = document.getElementById('victim-debug-overlay');
+                if (!debugOverlay) {
+                    debugOverlay = document.createElement('div');
+                    debugOverlay.id = 'victim-debug-overlay';
+                    debugOverlay.style.cssText = "position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; z-index: 9999; font-size: 12px; font-family: monospace;";
+                    document.getElementById('connectionMap').appendChild(debugOverlay);
+                }
+                debugOverlay.innerHTML = `
+                    <strong>📍 User Tracking Status</strong><br>
+                    Total Connections: ${totalUsers}<br>
+                    Geolocated: <span style="color: ${geolocatedUsers > 0 ? '#48bb78' : '#f56565'}">${geolocatedUsers}</span><br>
+                    Last Updated: ${new Date().toLocaleTimeString()}
+                `;
+
+                if (loading) loading.style.display = 'none';
+
+                if (totalUsers === 0) {
+                    if (loading) {
+                        loading.style.display = 'block';
+                        loading.innerHTML = '<p style="color: #ecc94b">Waiting for connections...<br>(Visit the protected app)</p>';
+                    }
+                }
+
+                // Fit bounds if we have markers
+                if (globalMarkers.getLayers().length > 0) {
+                    const group = new L.featureGroup(globalMarkers.getLayers());
+                    globalMap.fitBounds(group.getBounds().pad(0.1));
+                }
+
+            } catch (err) {
+                console.error("Failed to update map:", err);
+            }
+        }
+        
+        function addMarkerToMap(user, source) {
+            const loc = user.location;
+            const locSource = loc.source || (source === 'server' ? 'server-geoip' : 'client');
+            const isGPS = locSource === 'gps' || locSource === 'browser';
+            const accuracy = loc.accuracy ? `${loc.accuracy.toFixed(0)}m` : 'N/A';
+            const city = loc.city || '';
+            const country = loc.country || '';
+            const locationInfo = city && country ? `${city}, ${country}` : (city || country || '');
+            
+            // Different colors: Green=GPS, Orange=Server IP, Blue=Client IP
+            const markerColor = isGPS ? '#00ff87' : (source === 'server' ? '#ffb347' : '#00d4ff');
+            const sourceLabel = isGPS ? '🛰️ GPS (Accurate)' : (source === 'server' ? '🖥️ Server IP Lookup' : '🌐 Client IP Lookup');
+            
+            const marker = L.marker([loc.lat, loc.lng])
+                .bindPopup(`
+                    <div style="color: #333; min-width: 220px;">
+                        <b style="color: ${markerColor};">📍 User Detected</b><br>
+                        <hr style="margin: 5px 0; border-color: #eee;">
+                        <b>IP:</b> ${user.ip}<br>
+                        <b>Time:</b> ${new Date(user.timestamp).toLocaleString()}<br>
+                        ${locationInfo ? `<b>Location:</b> ${locationInfo}<br>` : ''}
+                        ${loc.isp ? `<b>ISP:</b> ${loc.isp}<br>` : ''}
+                        <b>Source:</b> <span style="color: ${markerColor}; font-weight: bold;">${sourceLabel}</span><br>
+                        ${isGPS ? `<b>Accuracy:</b> ${accuracy}<br>` : ''}
+                        <b>Requests:</b> ${user.request_count || 1}<br>
+                        <b>Device:</b> ${(user.ua || 'Unknown').substring(0, 40)}...
+                    </div>
+                `);
+            globalMarkers.addLayer(marker);
+        }
+
+        // Legacy function for backward compatibility
+        async function fetchVictims() {
+            // Now handled by updateMapMarkers
+            await updateMapMarkers();
+        }
+
+        // Wait for leaflet to load
+        window.addEventListener('load', initMap);
+
+        // Initial load
+        fetchSystemMetrics();
+        fetchConnections();
+        updateBandwidthMetrics();
+        updateRealtimeSpeed();
+
+        // Polling for bandwidth (every 2 seconds for smoother rate)
+        setInterval(updateBandwidthMetrics, 2000);
+        
+        // Refresh map markers every 5 seconds
+        setInterval(updateMapMarkers, 5000);
+
+        // Update real-time speed every 2 seconds
+        setInterval(updateRealtimeSpeed, 2000);
+
+        // ============= SPEED TEST FUNCTIONS =============
+        
+        let speedTestPolling = null;
+
+        async function updateRealtimeSpeed() {
+            try {
+                const response = await fetch('/api/v1/speed/realtime');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const downloadEl = document.getElementById('realtimeDownload');
+                    const uploadEl = document.getElementById('realtimeUpload');
+                    
+                    if (downloadEl) {
+                        downloadEl.textContent = data.download_speed.toFixed(2);
+                        // Add animation on change
+                        downloadEl.style.transform = 'scale(1.05)';
+                        setTimeout(() => { downloadEl.style.transform = 'scale(1)'; }, 200);
+                    }
+                    if (uploadEl) {
+                        uploadEl.textContent = data.upload_speed.toFixed(2);
+                        uploadEl.style.transform = 'scale(1.05)';
+                        setTimeout(() => { uploadEl.style.transform = 'scale(1)'; }, 200);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to update realtime speed:', error);
+            }
+        }
+
+        async function startSpeedTest() {
+            const btn = document.getElementById('speedTestBtn');
+            const btnText = document.getElementById('speedTestBtnText');
+            const btnIcon = document.getElementById('speedTestBtnIcon');
+            const progressBar = document.getElementById('speedTestProgress');
+            const statusEl = document.getElementById('speedTestStatus');
+            
+            // Check if already running
+            if (btn.classList.contains('running')) {
+                return;
+            }
+            
+            try {
+                // Start the speed test
+                const response = await fetch('/api/v1/speed/test', { method: 'POST' });
+                const data = await response.json();
+                
+                if (!data.success) {
+                    statusEl.textContent = data.message || 'Failed to start speed test';
+                    return;
+                }
+                
+                // Update UI to running state
+                btn.classList.add('running');
+                btn.disabled = true;
+                btnIcon.textContent = '⏳';
+                btnText.textContent = 'Testing...';
+                
+                // Start polling for results
+                speedTestPolling = setInterval(pollSpeedTestStatus, 1000);
+                
+            } catch (error) {
+                console.error('Failed to start speed test:', error);
+                statusEl.textContent = 'Error starting speed test';
+            }
+        }
+
+        async function pollSpeedTestStatus() {
+            try {
+                const response = await fetch('/api/v1/speed/test');
+                const data = await response.json();
+                
+                if (!data.success) return;
+                
+                const result = data.result;
+                const progressBar = document.getElementById('speedTestProgress');
+                const statusEl = document.getElementById('speedTestStatus');
+                const btn = document.getElementById('speedTestBtn');
+                const btnText = document.getElementById('speedTestBtnText');
+                const btnIcon = document.getElementById('speedTestBtnIcon');
+                
+                // Update progress
+                if (progressBar) {
+                    progressBar.style.width = `${result.progress}%`;
+                }
+                
+                // Update status message
+                if (statusEl) {
+                    statusEl.textContent = result.message || 'Testing...';
+                }
+                
+                // Check if completed or error
+                if (result.status === 'completed' || result.status === 'error') {
+                    clearInterval(speedTestPolling);
+                    speedTestPolling = null;
+                    
+                    // Reset button
+                    btn.classList.remove('running');
+                    btn.disabled = false;
+                    btnIcon.textContent = '🔬';
+                    btnText.textContent = 'Run Speed Test';
+                    
+                    if (result.status === 'completed') {
+                        // Update results
+                        document.getElementById('testPing').textContent = 
+                            result.ping > 0 ? result.ping.toFixed(0) : '--';
+                        document.getElementById('testDownload').textContent = 
+                            result.download > 0 ? result.download.toFixed(1) : '--';
+                        document.getElementById('testUpload').textContent = 
+                            result.upload > 0 ? result.upload.toFixed(1) : '--';
+                        
+                        // Update status with timestamp
+                        const timestamp = result.timestamp ? 
+                            new Date(result.timestamp).toLocaleTimeString() : 
+                            new Date().toLocaleTimeString();
+                        statusEl.textContent = `Last tested at ${timestamp} via ${result.server || 'HTTP test'}`;
+                    } else {
+                        statusEl.textContent = result.message || 'Speed test failed';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Failed to poll speed test:', error);
+            }
+        }
+
+        // ============= REAL NETWORK MONITORING FUNCTIONS =============
+
+        let currentConnectionFilter = 'all';
+
+        // Fetch network interfaces
+        async function fetchNetworkInterfaces() {
+            try {
+                const response = await fetch('/api/v1/network/interfaces');
+                const data = await response.json();
+                
+                const grid = document.getElementById('interfaceGrid');
+                const countBadge = document.getElementById('ifaceCount');
+                
+                if (!data.success || !data.interfaces || data.interfaces.length === 0) {
+                    grid.innerHTML = `<div class="interface-card">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            ${data.error || 'No network interfaces found. Install psutil: pip install psutil'}
+                        </div>
+                    </div>`;
+                    countBadge.textContent = '0 interfaces';
+                    return;
+                }
+                
+                const activeInterfaces = data.interfaces.filter(i => i.is_up);
+                countBadge.textContent = `${activeInterfaces.length} active / ${data.interfaces.length} total`;
+                
+                grid.innerHTML = data.interfaces.map(iface => `
+                    <div class="interface-card ${iface.is_up ? 'active' : 'inactive'}">
+                        <div class="interface-header">
+                            <span class="interface-name">${iface.name}</span>
+                            <div class="interface-status">
+                                <div class="status-dot ${iface.is_up ? 'online' : 'offline'}"></div>
+                                <span>${iface.is_up ? 'UP' : 'DOWN'}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                            ${iface.ipv4 || 'No IPv4'} ${iface.speed_mbps ? `| ${iface.speed_mbps} Mbps` : ''}
+                        </div>
+                        <div class="interface-stats">
+                            <div class="interface-stat">
+                                <div class="interface-stat-value">${formatBytes(iface.bytes_recv)}</div>
+                                <div class="interface-stat-label">⬇️ Received</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="interface-stat-value">${formatBytes(iface.bytes_sent)}</div>
+                                <div class="interface-stat-label">⬆️ Sent</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="interface-stat-value">${formatNumber(iface.packets_recv)}</div>
+                                <div class="interface-stat-label">Packets In</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="interface-stat-value">${iface.errors_in + iface.errors_out}</div>
+                                <div class="interface-stat-label">Errors</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Failed to fetch network interfaces:', error);
+            }
+        }
+
+        // Fetch active network connections
+        async function fetchRealConnections() {
+            try {
+                const response = await fetch('/api/v1/network/connections');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('connectionsRealBody');
+                const countBadge = document.getElementById('connCount');
+                
+                if (!data.success || !data.connections) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">
+                        ${data.error || 'Failed to load connections'}
+                    </td></tr>`;
+                    return;
+                }
+                
+                countBadge.textContent = `${data.total} total`;
+                
+                // Filter connections
+                let filtered = data.connections;
+                if (currentConnectionFilter !== 'all') {
+                    filtered = data.connections.filter(c => c.status === currentConnectionFilter);
+                }
+                
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">
+                        No ${currentConnectionFilter === 'all' ? '' : currentConnectionFilter} connections
+                    </td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = filtered.slice(0, 50).map(conn => `
+                    <tr>
+                        <td><span style="color: ${conn.type === 'TCP' ? 'var(--cyber-blue)' : 'var(--cyber-purple)'};">${conn.type}</span></td>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">${conn.local_address || '-'}</td>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">${conn.remote_address || '-'}</td>
+                        <td><span class="conn-status ${conn.status.toLowerCase().replace('_', '-')}">${conn.status}</span></td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${conn.process || '-'}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Failed to fetch connections:', error);
+            }
+        }
+
+        // Fetch listening ports
+        async function fetchListeningPorts() {
+            try {
+                const response = await fetch('/api/v1/network/ports');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('portsBody');
+                const countBadge = document.getElementById('portCount');
+                
+                if (!data.success || !data.ports) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">
+                        ${data.error || 'Failed to load ports'}
+                    </td></tr>`;
+                    return;
+                }
+                
+                countBadge.textContent = `${data.total} open`;
+                
+                if (data.ports.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">
+                        No listening ports found
+                    </td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = data.ports.map(port => `
+                    <tr>
+                        <td><span class="port-tag">${port.port}</span></td>
+                        <td>${port.protocol}</td>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">${port.address}</td>
+                        <td><span style="color: var(--cyber-teal);">${port.service}</span></td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${port.process || '-'}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Failed to fetch ports:', error);
+            }
+        }
+
+        // Fetch live user activity
+        async function fetchLiveActivity() {
+            try {
+                const response = await fetch('/api/v1/activity/live');
+                const data = await response.json();
+                
+                const feed = document.getElementById('activityFeed');
+                
+                if (!data.success || !data.activities || data.activities.length === 0) {
+                    feed.innerHTML = `
+                        <div class="activity-item">
+                            <div class="activity-icon">⏳</div>
+                            <div class="activity-content">
+                                <div class="activity-title">Waiting for activity...</div>
+                                <div class="activity-details">Visit the protected vulnerable application to see real-time activity here</div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                feed.innerHTML = data.activities.map(activity => {
+                    const icon = getActivityIcon(activity.action);
+                    const time = new Date(activity.timestamp).toLocaleTimeString();
+                    const details = activity.details || {};
+                    
+                    return `
+                        <div class="activity-item ${activity.action}">
+                            <div class="activity-icon">${icon}</div>
+                            <div class="activity-content">
+                                <div class="activity-title">${formatActionTitle(activity.action, activity.page)}</div>
+                                <div class="activity-details">
+                                    <span class="activity-ip">${activity.ip}</span>
+                                    ${activity.method ? `• ${activity.method}` : ''}
+                                    ${details.location ? `• ${details.location.city || ''} ${details.location.country || ''}` : ''}
+                                </div>
+                            </div>
+                            <div class="activity-time">${time}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Failed to fetch live activity:', error);
+            }
+        }
+
+        // Draw connection graph
+        async function drawConnectionGraph() {
+            try {
+                const canvas = document.getElementById('networkGraph');
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                
+                const response = await fetch('/api/v1/network/graph-data');
+                const data = await response.json();
+                
+                if (!data.success || !data.nodes) {
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '14px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Unable to load network graph', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Position nodes
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) - 50;
+                
+                const nodePositions = {};
+                const nodes = data.nodes;
+                const links = data.links;
+                
+                // Position server in center
+                nodes.forEach((node, i) => {
+                    if (node.type === 'server') {
+                        nodePositions[node.id] = { x: centerX, y: centerY };
+                    } else {
+                        const angle = (i / nodes.length) * Math.PI * 2;
+                        const r = radius * (0.6 + Math.random() * 0.4);
+                        nodePositions[node.id] = {
+                            x: centerX + Math.cos(angle) * r,
+                            y: centerY + Math.sin(angle) * r
+                        };
+                    }
+                });
+                
+                // Draw links
+                ctx.lineWidth = 1;
+                links.forEach(link => {
+                    const source = nodePositions[link.source];
+                    const target = nodePositions[link.target];
+                    if (source && target) {
+                        ctx.beginPath();
+                        ctx.moveTo(source.x, source.y);
+                        ctx.lineTo(target.x, target.y);
+                        ctx.strokeStyle = link.type === 'established' ? 'rgba(0, 255, 135, 0.3)' : 'rgba(124, 58, 237, 0.3)';
+                        ctx.stroke();
+                    }
+                });
+                
+                // Draw nodes
+                nodes.forEach(node => {
+                    const pos = nodePositions[node.id];
+                    if (!pos) return;
+                    
+                    const color = getNodeColor(node);
+                    const size = node.type === 'server' ? 20 : 8;
+                    
+                    // Glow effect
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size + 5, 0, Math.PI * 2);
+                    ctx.fillStyle = color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+                    ctx.fill();
+                    
+                    // Node
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    // Label (only for server and some nodes)
+                    if (node.type === 'server' || node.type === 'port') {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '11px JetBrains Mono';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(node.label, pos.x, pos.y + size + 15);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Failed to draw connection graph:', error);
+            }
+        }
+
+        // Helper functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function getActivityIcon(action) {
+            const icons = {
+                'page_visit': '🌐',
+                'form_submit': '📝',
+                'login_attempt': '🔐',
+                'search': '🔍',
+                'attack': '⚠️',
+                'blocked': '🚫',
+                'api_call': '📡'
+            };
+            return icons[action] || '📌';
+        }
+
+        function formatActionTitle(action, page) {
+            const titles = {
+                'page_visit': `Visited ${page}`,
+                'form_submit': `Form submission on ${page}`,
+                'login_attempt': `Login attempt`,
+                'search': `Search on ${page}`,
+                'attack': `Attack detected! ${page}`,
+                'blocked': `Request blocked`,
+                'tracked': `User tracked on ${page}`
+            };
+            return titles[action] || `Activity on ${page}`;
+        }
+
+        function getNodeColor(node) {
+            const colors = {
+                'server': '#00d4ff',
+                'remote': '#f472b6',
+                'port': '#7c3aed'
+            };
+            if (node.group === 1) return '#00ff87'; // Local/private
+            return colors[node.type] || '#00d4ff';
+        }
+
+        // Connection filter handlers
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentConnectionFilter = btn.dataset.filter;
+                fetchRealConnections();
+            });
+        });
+
+        // Initialize new monitoring
+        fetchNetworkInterfaces();
+        fetchRealConnections();
+        fetchListeningPorts();
+        fetchLiveActivity();
+        drawConnectionGraph();
+
+        // Polling for new monitoring (every 3 seconds)
+        setInterval(fetchNetworkInterfaces, 3000);
+        setInterval(fetchRealConnections, 3000);
+        setInterval(fetchListeningPorts, 5000);
+        setInterval(fetchLiveActivity, 3000);
+        setInterval(drawConnectionGraph, 5000);
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Rules - VigilEdge WAF</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/css/enhanced-dashboard.css">
+    <script>
+        // Define toggleRule function BEFORE HTML loads
+        window.toggleRule = async function (toggleElement) {
+            console.log('Toggle clicked!', toggleElement);
+
+            // Rule mapping
+            const ruleMap = {
+                'SQL Injection Protection': 'sql_injection',
+                'Cross-Site Scripting (XSS) Protection': 'xss',
+                'Path Traversal Protection': 'path_traversal',
+                'Rate Limiting': 'rate_limit',
+                'File Upload Scanning': 'file_upload',
+                'IP Reputation Filtering': 'ip_reputation'
+            };
+
+            // Toggle the active state
+            toggleElement.classList.toggle('active');
+
+            const ruleCard = toggleElement.closest('.rule-card');
+            const ruleTitle = ruleCard.querySelector('h3').textContent;
+            const statusIndicator = toggleElement.nextElementSibling;
+            const isActive = toggleElement.classList.contains('active');
+
+            // Update status indicator
+            if (isActive) {
+                statusIndicator.className = 'status-indicator active';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Active';
+            } else {
+                statusIndicator.className = 'status-indicator inactive';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Inactive';
+            }
+
+            // Save state to localStorage
+            const ruleId = ruleTitle.replace(/\s+/g, '_').toLowerCase();
+            localStorage.setItem(`rule_${ruleId}`, isActive ? 'active' : 'inactive');
+
+            // Send to backend API
+            const ruleName = ruleMap[ruleTitle];
+            if (ruleName) {
+                try {
+                    const response = await fetch('/api/v1/rules/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rule_name: ruleName,
+                            enabled: isActive
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log(`✓ ${ruleTitle}: ${isActive ? 'ON' : 'OFF'} - Backend synced`);
+                    } else {
+                        console.warn(`⚠ ${ruleTitle}: UI updated but backend sync failed`);
+                    }
+                } catch (error) {
+                    console.error('Backend sync error:', error);
+                }
+            }
+
+            // Visual feedback
+            ruleCard.style.opacity = '0.7';
+            setTimeout(() => {
+                ruleCard.style.opacity = '1';
+            }, 200);
+        };
+
+        console.log('toggleRule function defined in head');
+    </script>
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f2e;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a9c0;
+            --text-muted: #6b7280;
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
+            --glow-teal: 0 0 20px rgba(0, 255, 166, 0.5);
+            --glow-purple: 0 0 20px rgba(124, 58, 237, 0.5);
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .logo-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 166, 0.1));
+            color: var(--text-primary);
+            border-left: 3px solid var(--cyber-blue);
+            box-shadow: var(--glow-blue);
+        }
+
+        .nav-icon {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+        }
+
+        /* Security Rules Grid */
+        .rules-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .rule-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rule-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .rule-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--glow-blue);
+            border-color: var(--cyber-blue);
+        }
+
+        .rule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .rule-info h3 {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .rule-info p {
+            color: var(--text-muted);
+            font-size: 0.925rem;
+        }
+
+        .rule-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .toggle-switch:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(30px);
+        }
+
+        .rule-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cyber-blue);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .cyber-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.875rem;
+        }
+
+        .cyber-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow-blue);
+        }
+
+        .cyber-button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+        }
+
+        .cyber-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: var(--glow-teal);
+        }
+
+        .cyber-button.danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .cyber-button.danger:hover {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-indicator.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-indicator.inactive {
+            background: rgba(156, 163, 175, 0.2);
+            color: var(--text-muted);
+            border: 1px solid var(--text-muted);
+        }
+
+        .status-indicator.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .rule-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">🛡️</div>
+                <div>
+                    <div class="logo-text">VigilEdge</div>
+                    <div class="logo-subtitle">SECURITY OPERATIONS</div>
+                </div>
+            </div>
+
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="/" class="nav-link">
+                            <span class="nav-icon">📊</span>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/security-rules" class="nav-link active">
+                            <span class="nav-icon">🔒</span>
+                            Security Rules
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/threat-detection" class="nav-link">
+                            <span class="nav-icon">🚨</span>
+                            Threat Detection
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/analytics" class="nav-link">
+                            <span class="nav-icon">📈</span>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/network-monitor" class="nav-link">
+                            <span class="nav-icon">🌐</span>
+                            Network Monitor
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/blocked-ips" class="nav-link">
+                            <span class="nav-icon">🚫</span>
+                            Blocked IPs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/event-logs" class="nav-link">
+                            <span class="nav-icon">📝</span>
+                            Event Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/settings" class="nav-link">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/auth/setup-2fa" class="nav-link">
+                            <span class="nav-icon">🔐</span>
+                            <span>Setup 2FA</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item"
+                        style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                        <a href="/logout" class="nav-link" style="color: #ff6b6b;">
+                            <span class="nav-icon">🚪</span>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Security Rules</h1>
+                <p class="page-subtitle">Manage and monitor your firewall security rules and policies</p>
+            </div>
+
+
+
+            <!-- Security Rules Grid -->
+            <div class="rules-grid">
+                <!-- SQL Injection Protection -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>SQL Injection Protection</h3>
+                            <p>Blocks common SQL injection patterns and suspicious database queries</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="sql-blocked">0</div>
+                            <div class="metric-label">Blocked</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="sql-accuracy">0%</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="sql-response">0ms</div>
+                            <div class="metric-label">Avg Response</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- XSS Protection -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>Cross-Site Scripting (XSS) Protection</h3>
+                            <p>Prevents malicious script injection and execution attempts</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="xss-blocked">0</div>
+                            <div class="metric-label">Blocked</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="xss-accuracy">0%</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="xss-response">0ms</div>
+                            <div class="metric-label">Avg Response</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Path Traversal Protection -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>Path Traversal Protection</h3>
+                            <p>Blocks directory traversal attacks and unauthorized file access</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="path-blocked">0</div>
+                            <div class="metric-label">Blocked</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="path-accuracy">0%</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="path-response">0ms</div>
+                            <div class="metric-label">Avg Response</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rate Limiting -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>Rate Limiting</h3>
+                            <p>Controls request frequency to prevent DDoS and brute force attacks</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="rate-blocked">0</div>
+                            <div class="metric-label">Blocked</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="rate-accuracy">0%</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">100/min</div>
+                            <div class="metric-label">Limit</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload Scanning -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>File Upload Scanning</h3>
+                            <p>Scans uploaded files for malware and suspicious content</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator inactive">
+                                <span class="status-dot"></span>
+                                Inactive
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="file-quarantined">0</div>
+                            <div class="metric-label">Quarantined</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="file-detection">0%</div>
+                            <div class="metric-label">Detection</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">5MB</div>
+                            <div class="metric-label">Max Size</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IP Reputation -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>IP Reputation Filtering</h3>
+                            <p>Blocks requests from known malicious IP addresses and networks</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator warning">
+                                <span class="status-dot"></span>
+                                Warning
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="ip-blocked-count">0</div>
+                            <div class="metric-label">Blocked IPs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="ip-confidence">0%</div>
+                            <div class="metric-label">Confidence</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">24h</div>
+                            <div class="metric-label">Update Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto IP Blocking -->
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-info">
+                            <h3>Auto IP Blocking</h3>
+                            <p>Automatically bans IP addresses after detecting attacks (disable for testing)</p>
+                        </div>
+                        <div class="rule-toggle">
+                            <div class="toggle-switch active" onclick="toggleRule(this)"></div>
+                            <span class="status-indicator active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rule-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="auto-blocked-ips">0</div>
+                            <div class="metric-label">Auto-Banned IPs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="auto-block-rate">0%</div>
+                            <div class="metric-label">Block Rate</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="auto-block-threshold">3</div>
+                            <div class="metric-label">Attack Threshold</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        console.log('Security Rules script loaded');
+
+        // Rule mapping for backend API
+        const ruleMap = {
+            'SQL Injection Protection': 'sql_injection',
+            'Cross-Site Scripting (XSS) Protection': 'xss',
+            'Path Traversal Protection': 'path_traversal',
+            'Rate Limiting': 'rate_limit',
+            'File Upload Scanning': 'file_upload',
+            'IP Reputation Filtering': 'ip_reputation',
+            'Auto IP Blocking': 'auto_ip_blocking'
+        };
+
+        // Global toggleRule function with backend sync
+        window.toggleRule = async function (toggleElement) {
+            console.log('Toggle clicked!', toggleElement);
+            // Toggle the active state
+            toggleElement.classList.toggle('active');
+
+            const ruleCard = toggleElement.closest('.rule-card');
+            const ruleTitle = ruleCard.querySelector('h3').textContent;
+            const statusIndicator = toggleElement.nextElementSibling;
+            const isActive = toggleElement.classList.contains('active');
+
+            // Update status indicator
+            if (isActive) {
+                statusIndicator.className = 'status-indicator active';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Active';
+            } else {
+                statusIndicator.className = 'status-indicator inactive';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Inactive';
+            }
+
+            // Save state to localStorage
+            const ruleId = ruleTitle.replace(/\s+/g, '_').toLowerCase();
+            localStorage.setItem(`rule_${ruleId}`, isActive ? 'active' : 'inactive');
+
+            // Send to backend API
+            const ruleName = ruleMap[ruleTitle];
+            if (ruleName) {
+                try {
+                    const response = await fetch('/api/v1/rules/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rule_name: ruleName,
+                            enabled: isActive
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log(`${ruleTitle}: ${isActive ? 'Enabled' : 'Disabled'} - Backend synced`);
+                    } else {
+                        console.warn(`${ruleTitle}: UI updated but backend sync failed`);
+                    }
+                } catch (error) {
+                    console.error('Backend sync error:', error);
+                }
+            }
+
+            // Visual feedback
+            ruleCard.style.opacity = '0.7';
+            setTimeout(() => {
+                ruleCard.style.opacity = '1';
+            }, 200);
+        }
+
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        async function toggleRule(toggleElement) {
+            // Toggle the active state
+            toggleElement.classList.toggle('active');
+
+            const ruleCard = toggleElement.closest('.rule-card');
+            const ruleTitle = ruleCard.querySelector('h3').textContent;
+            const statusIndicator = toggleElement.nextElementSibling;
+            const isActive = toggleElement.classList.contains('active');
+
+            // Update status indicator
+            if (isActive) {
+                statusIndicator.className = 'status-indicator active';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Active';
+            } else {
+                statusIndicator.className = 'status-indicator inactive';
+                statusIndicator.innerHTML = '<span class="status-dot"></span>Inactive';
+            }
+
+            const ruleName = ruleMap[ruleTitle];
+
+            // Check if rule name was found
+            if (!ruleName) {
+                console.error('Unknown rule title:', ruleTitle);
+                alert(`Unknown rule: ${ruleTitle}`);
+                // Revert toggle
+                toggleElement.classList.toggle('active');
+                return;
+            }
+
+            // Send API request to backend
+            try {
+                const response = await fetch('/api/v1/rules/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rule_name: ruleName,
+                        enabled: isActive
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update rule');
+                }
+
+                const result = await response.json();
+                console.log(`${ruleTitle}: ${isActive ? 'Enabled' : 'Disabled'} - ${result.message}`);
+
+                // Save state to localStorage
+                const ruleId = ruleTitle.replace(/\s+/g, '_').toLowerCase();
+                localStorage.setItem(`rule_${ruleId}`, isActive ? 'active' : 'inactive');
+
+            } catch (error) {
+                console.error('Error toggling rule:', error);
+                // Revert toggle on error
+                toggleElement.classList.toggle('active');
+                const revertedActive = toggleElement.classList.contains('active');
+                if (revertedActive) {
+                    statusIndicator.className = 'status-indicator active';
+                    statusIndicator.innerHTML = '<span class="status-dot"></span>Active';
+                } else {
+                    statusIndicator.className = 'status-indicator inactive';
+                    statusIndicator.innerHTML = '<span class="status-dot"></span>Inactive';
+                }
+                alert(`Failed to update security rule: ${error.message}`);
+                return;
+            }
+
+            // Visual feedback
+            ruleCard.style.opacity = '0.7';
+            setTimeout(() => {
+                ruleCard.style.opacity = '1';
+            }, 200);
+        }
+
+        // Load saved toggle states on page load
+        function loadToggleStates() {
+            const ruleCards = document.querySelectorAll('.rule-card');
+            ruleCards.forEach(card => {
+                const ruleTitle = card.querySelector('h3').textContent;
+                const ruleId = ruleTitle.replace(/\s+/g, '_').toLowerCase();
+                const savedState = localStorage.getItem(`rule_${ruleId}`);
+
+                if (savedState !== null) {
+                    const toggle = card.querySelector('.toggle-switch');
+                    const statusIndicator = card.querySelector('.status-indicator');
+
+                    if (savedState === 'active') {
+                        toggle.classList.add('active');
+                        statusIndicator.className = 'status-indicator active';
+                        statusIndicator.innerHTML = '<span class="status-dot"></span>Active';
+                    } else {
+                        toggle.classList.remove('active');
+                        statusIndicator.className = 'status-indicator inactive';
+                        statusIndicator.innerHTML = '<span class="status-dot"></span>Inactive';
+                    }
+                }
+            });
+        }
+
+        // Fetch and update rule statistics
+        async function fetchRuleStats() {
+            try {
+                // Fetch threat data and metrics
+                const [threatsResponse, metricsResponse] = await Promise.all([
+                    fetch('/api/v1/threats'),
+                    fetch('/api/v1/metrics')
+                ]);
+
+                const threatsData = await threatsResponse.json();
+                const metricsData = await metricsResponse.json();
+
+                console.log('Threats data:', threatsData);
+                console.log('Metrics data:', metricsData);
+
+                // Extract threat counts from API response
+                const threatCounts = threatsData.threat_counts || {};
+                const totalRequests = metricsData.total_requests || 0;
+                const avgResponseTime = (metricsData.avg_response_time * 1000).toFixed(0); // Convert to ms
+
+                // Get individual threat counts
+                const sqlCount = threatCounts.sql_injection?.count || 0;
+                const xssCount = threatCounts.xss_attempt?.count || 0;
+                const pathCount = threatCounts.path_traversal?.count || 0;
+                const rateCount = threatCounts.rate_limit?.count || 0;
+                const fileCount = threatCounts.file_upload?.count || 0;
+
+                // Calculate total blocked
+                const totalBlocked = metricsData.blocked_requests || 0;
+
+                // Update SQL Injection metrics
+                document.getElementById('sql-blocked').textContent = sqlCount;
+                const sqlAccuracy = totalRequests > 0 ? ((totalRequests - sqlCount) / totalRequests * 100).toFixed(1) : 100;
+                document.getElementById('sql-accuracy').textContent = sqlAccuracy + '%';
+                document.getElementById('sql-response').textContent = avgResponseTime + 'ms';
+
+                // Update XSS Protection metrics
+                document.getElementById('xss-blocked').textContent = xssCount;
+                const xssAccuracy = totalRequests > 0 ? ((totalRequests - xssCount) / totalRequests * 100).toFixed(1) : 100;
+                document.getElementById('xss-accuracy').textContent = xssAccuracy + '%';
+                document.getElementById('xss-response').textContent = avgResponseTime + 'ms';
+
+                // Update Path Traversal metrics
+                document.getElementById('path-blocked').textContent = pathCount;
+                const pathAccuracy = totalRequests > 0 ? ((totalRequests - pathCount) / totalRequests * 100).toFixed(1) : 100;
+                document.getElementById('path-accuracy').textContent = pathAccuracy + '%';
+                document.getElementById('path-response').textContent = avgResponseTime + 'ms';
+
+                // Update Rate Limiting metrics
+                document.getElementById('rate-blocked').textContent = rateCount;
+                const rateAccuracy = totalRequests > 0 ? ((totalRequests - rateCount) / totalRequests * 100).toFixed(1) : 100;
+                document.getElementById('rate-accuracy').textContent = rateAccuracy + '%';
+
+                // Update File Upload Scanning metrics
+                document.getElementById('file-quarantined').textContent = fileCount;
+                const fileDetection = totalBlocked > 0 ? ((totalBlocked - fileCount) / totalBlocked * 100).toFixed(1) : 100;
+                document.getElementById('file-detection').textContent = fileDetection + '%';
+
+                // Fetch blocked IPs count
+                const blockedIpsResponse = await fetch('/api/v1/blocked-ips');
+                const blockedIpsData = await blockedIpsResponse.json();
+                const blockedIpsCount = blockedIpsData.count || 0;
+
+                document.getElementById('ip-blocked-count').textContent = blockedIpsCount;
+
+                // Calculate confidence based on block rate
+                const confidence = totalRequests > 0 && totalBlocked > 0 ? (totalBlocked / totalRequests * 100).toFixed(1) : 0;
+                document.getElementById('ip-confidence').textContent = confidence + '%';
+
+            } catch (error) {
+                console.error('Error fetching rule statistics:', error);
+            }
+        }
+
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function () {
+            // Load saved toggle states from localStorage
+            loadToggleStates();
+
+            // Animate rule cards on load
+            const ruleCards = document.querySelectorAll('.rule-card');
+            ruleCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Fetch initial data
+            fetchRuleStats();
+
+            // Auto-refresh every 5 seconds
+            setInterval(fetchRuleStats, 5000);
+        });
+    </script>
+</body>
+
+</html>

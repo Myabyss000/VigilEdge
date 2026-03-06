@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VigilEdge WAF - Access Control</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Cyber Color Palette */
+            --primary-bg: #0f0f23;
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --danger: #ff6b6b;
+            --text-primary: #ffffff;
+            --text-secondary: #e1e7f5;
+            --glass-bg: rgba(30, 30, 50, 0.7);
+            --glass-border: rgba(100, 200, 255, 0.3);
+            --radius-md: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-bg);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 255, 166, 0.1) 0%, transparent 50%);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Grid Background Effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: -1;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal), var(--cyber-purple));
+            animation: scan 3s linear infinite;
+            background-size: 200% 100%;
+        }
+
+        @keyframes scan {
+            0% {
+                background-position: 100% 0;
+            }
+
+            100% {
+                background-position: -100% 0;
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--cyber-blue);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 255, 166, 0.2));
+            border: 1px solid var(--cyber-blue);
+            border-radius: 6px;
+            color: var(--cyber-blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            background: var(--cyber-blue);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        }
+
+        .error-message {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .corner-deco {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--cyber-blue);
+            opacity: 0.5;
+        }
+
+        .top-left {
+            top: 10px;
+            left: 10px;
+            border-bottom: none;
+            border-right: none;
+        }
+
+        .top-right {
+            top: 10px;
+            right: 10px;
+            border-bottom: none;
+            border-left: none;
+        }
+
+        .bottom-left {
+            bottom: 10px;
+            left: 10px;
+            border-top: none;
+            border-right: none;
+        }
+
+        .bottom-right {
+            bottom: 10px;
+            right: 10px;
+            border-top: none;
+            border-left: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="corner-deco top-left"></div>
+        <div class="corner-deco top-right"></div>
+        <div class="corner-deco bottom-left"></div>
+        <div class="corner-deco bottom-right"></div>
+
+        <div class="logo">
+            <h1>VIGILEDGE</h1>
+            <p>Access Control System</p>
+        </div>
+
+        {% if error %}
+        <div class="error-message" style="display: flex;">
+            <span>⚠️</span> {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">OPERATOR_ID</label>
+                <input type="text" id="username" name="username" class="form-control" autocomplete="off" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">ACCESS_KEY</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn-login">
+                Authenticate >
+            </button>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="/auth/reset-password"
+                    style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; opacity: 0.7;">
+                    Forgot Password?
+                </a>
+            </div>
+        </form>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Settings - VigilEdge WAF</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Global Theme Manager -->
+    <script src="/static/js/theme.js"></script>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(100, 200, 255, 0.2);
+            --card-bg: rgba(30, 30, 50, 0.85);
+            --sidebar-bg: rgba(20, 25, 45, 0.95);
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --text-primary: #ffffff;
+            --text-secondary: #e1e7f5;
+            --text-muted: #94a3b8;
+            --success: #00ff87;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            background: transparent;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: var(--cyber-blue);
+            color: var(--primary-bg);
+            transform: translateY(-2px);
+        }
+
+        .btn.success {
+            background: var(--success);
+            color: var(--primary-bg);
+        }
+
+        .btn.danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Settings Layout */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .settings-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--cyber-blue);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .toggle-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .toggle-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 24px;
+            background: var(--glass-bg);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .toggle-slider {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+
+        /* Status Cards */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .status-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-card.online .status-value {
+            color: var(--success);
+        }
+
+        .status-card.warning .status-value {
+            color: var(--warning);
+        }
+
+        .status-card.error .status-value {
+            color: var(--danger);
+        }
+
+        /* Rule Editor */
+        .rule-editor {
+            grid-column: 1 / -1;
+        }
+
+        .rule-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rule-info {
+            flex: 1;
+        }
+
+        .rule-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .rule-description {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .rule-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .rule-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .rule-status.enabled {
+            background: rgba(0, 255, 135, 0.2);
+            color: var(--success);
+        }
+
+        .rule-status.disabled {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--danger);
+        }
+
+        /* Theme Selector */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .theme-option {
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .theme-option:hover {
+            border-color: var(--cyber-blue);
+        }
+
+        .theme-option.active {
+            border-color: var(--success);
+            background: rgba(0, 255, 135, 0.1);
+        }
+
+        .theme-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .theme-preview.dark {
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+        }
+
+        .theme-preview.light {
+            background: linear-gradient(45deg, #ffffff, #f8fafc);
+        }
+
+        .theme-preview.blue {
+            background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+        }
+
+        /* Backup Section */
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--glass-bg);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .backup-info {
+            flex: 1;
+        }
+
+        .backup-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .backup-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .backup-size {
+            color: var(--cyber-blue);
+            font-size: 0.9rem;
+            margin-right: 1rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+
+            html,
+            body {
+                font-size: 14px !important;
+                overflow-x: hidden !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+            }
+
+            .sidebar {
+                position: fixed !important;
+                left: -280px !important;
+                top: 0 !important;
+                height: 100vh !important;
+                width: 280px !important;
+                z-index: 9999 !important;
+                transition: left 0.3s ease !important;
+                overflow-y: auto !important;
+            }
+
+            .sidebar.active {
+                left: 0 !important;
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                padding: 1rem !important;
+                overflow-x: hidden !important;
+            }
+
+            .settings-header {
+                padding: 0.75rem !important;
+                flex-wrap: wrap !important;
+            }
+
+            .settings-header h1 {
+                font-size: 1.25rem !important;
+            }
+
+            .settings-container {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+                padding: 0.5rem !important;
+            }
+
+            .settings-section {
+                padding: 1rem !important;
+            }
+
+            .settings-section h2 {
+                font-size: 1.1rem !important;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            .status-card {
+                padding: 1rem !important;
+            }
+
+            .theme-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            .theme-option {
+                padding: 1rem !important;
+            }
+
+            .form-group {
+                margin-bottom: 1rem !important;
+            }
+
+            .form-input,
+            .form-select,
+            .form-textarea,
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+                padding: 0.75rem !important;
+                width: 100% !important;
+            }
+
+            .settings-footer {
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+                padding: 1rem !important;
+            }
+
+            button {
+                width: 100% !important;
+                padding: 0.75rem 1rem !important;
+                font-size: 0.9rem !important;
+                min-height: 44px !important;
+            }
+
+            /* Mobile menu toggle */
+            .mobile-menu-toggle {
+                display: block !important;
+                position: fixed !important;
+                top: 1rem !important;
+                left: 1rem !important;
+                z-index: 10000 !important;
+                background: rgba(0, 212, 255, 0.2) !important;
+                border: 1px solid rgba(0, 212, 255, 0.5) !important;
+                color: #00d4ff !important;
+                padding: 0.75rem 1rem !important;
+                border-radius: 8px !important;
+                font-size: 1.5rem !important;
+                cursor: pointer !important;
+            }
+
+            .logo h1 {
+                font-size: 1.3rem !important;
+            }
+
+            .logo p {
+                font-size: 0.75rem !important;
+            }
+
+            .nav-link {
+                padding: 0.75rem 1rem !important;
+                font-size: 0.9rem !important;
+            }
+
+            * {
+                max-width: 100vw !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            html,
+            body {
+                font-size: 13px !important;
+            }
+
+            .settings-header h1 {
+                font-size: 1.1rem !important;
+            }
+
+            .settings-section h2 {
+                font-size: 1rem !important;
+            }
+
+            .settings-container {
+                padding: 0.25rem !important;
+            }
+
+            .settings-section {
+                padding: 0.75rem !important;
+            }
+
+            button {
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Password Toggle */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            user-select: none;
+            background: none;
+            border: none;
+            padding: 0;
+            z-index: 5;
+        }
+
+        .password-toggle:hover {
+            color: var(--cyber-blue);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleSidebar()" style="display: none;">☰</button>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="logo">
+            <h1>🛡️ VigilEdge</h1>
+            <p>Security Operations</p>
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="/" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/security-rules" class="nav-link">
+                    <span class="nav-icon">🛡️</span>
+                    <span>Security Rules</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/threat-detection" class="nav-link">
+                    <span class="nav-icon">🚨</span>
+                    <span>Threat Detection</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/analytics" class="nav-link">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/network-monitor" class="nav-link">
+                    <span class="nav-icon">🌐</span>
+                    <span>Network Monitor</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/blocked-ips" class="nav-link">
+                    <span class="nav-icon">🚫</span>
+                    <span>Blocked IPs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/event-logs" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    <span>Event Logs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/settings" class="nav-link active">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/auth/setup-2fa" class="nav-link">
+                    <span class="nav-icon">🔐</span>
+                    <span>Setup 2FA</span>
+                </a>
+            </li>
+
+            <li class="nav-item"
+                style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                <a href="/logout" class="nav-link" style="color: #ff6b6b;">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">⚙️ Settings</h1>
+                <p class="page-subtitle">Configure your WAF system and security preferences</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn success" onclick="saveSettings()">💾 Save Changes</button>
+                <button class="btn danger" onclick="resetSettings()">🔄 Reset to Default</button>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="status-grid">
+            <div id="wafEngineCard" class="status-card online">
+                <div class="status-icon">🟢</div>
+                <div class="status-title">WAF Engine</div>
+                <div id="wafEngineStatus" class="status-value">Loading...</div>
+            </div>
+            <div id="networkMonitorCard" class="status-card online">
+                <div class="status-icon">📡</div>
+                <div class="status-title">Network Monitor</div>
+                <div id="networkMonitorStatus" class="status-value">Loading...</div>
+            </div>
+            <div id="databaseCard" class="status-card warning">
+                <div class="status-icon">⚠️</div>
+                <div class="status-title">Database</div>
+                <div id="databaseStatus" class="status-value">Loading...</div>
+            </div>
+            <div id="autoUpdatesCard" class="status-card online">
+                <div class="status-icon">🔄</div>
+                <div class="status-title">Auto Updates</div>
+                <div id="autoUpdatesStatus" class="status-value">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Settings Sections -->
+        <div class="settings-container">
+            <!-- Security Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">🛡️ Security Settings</h2>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Enable Real-time Threat Detection</span>
+                    <div id="threatDetectionEnabled" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Auto-block Suspicious IPs</span>
+                    <div id="autoBlockIps" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Rate Limiting</span>
+                    <div id="rateLimiting" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Rate Limit (requests/minute)</label>
+                    <input id="rateLimitValue" type="number" class="form-input" value="100" min="1" max="1000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Block Duration (minutes)</label>
+                    <input id="blockDuration" type="number" class="form-input" value="60" min="1" max="1440">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Threat Sensitivity</label>
+                    <select id="threatSensitivity" class="form-select">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="paranoid">Paranoid</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Authentication Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">🔐 Authentication Settings</h2>
+
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <div class="password-wrapper">
+                        <input id="currentPassword" type="password" class="form-input"
+                            placeholder="Enter current password">
+                        <button type="button" class="password-toggle"
+                            onclick="togglePassword('currentPassword')">👁️</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <div class="password-wrapper">
+                        <input id="newPassword" type="password" class="form-input" placeholder="Enter new password">
+                        <button type="button" class="password-toggle"
+                            onclick="togglePassword('newPassword')">👁️</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <div class="password-wrapper">
+                        <input id="confirmNewPassword" type="password" class="form-input"
+                            placeholder="Confirm new password">
+                        <button type="button" class="password-toggle"
+                            onclick="togglePassword('confirmNewPassword')">👁️</button>
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <button type="button" class="btn"
+                        style="background: rgba(124, 58, 237, 0.2); border-color: #7c3aed; color: #a855f7;"
+                        onclick="changePassword()">
+                        🔑 Update Password
+                    </button>
+                </div>
+            </div>
+
+            <!-- Network Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">🌐 Network Settings <span
+                        style="color: #ff6b6b; font-size: 0.8rem; margin-left: 0.5rem;">⚠️ Restart Required</span></h2>
+
+                <div class="form-group">
+                    <label class="form-label">Listen Port</label>
+                    <input id="listenPort" type="number" class="form-input" value="8000" min="1" max="65535">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Max Connections</label>
+                    <input id="maxConnections" type="number" class="form-input" value="1000" min="10" max="10000">
+                </div>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Enable SSL/TLS</span>
+                    <div id="sslEnabled" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">SSL Certificate Path</label>
+                    <input id="sslCertPath" type="text" class="form-input" value="/certs/server.crt">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">SSL Private Key Path</label>
+                    <input id="sslKeyPath" type="text" class="form-input" value="/certs/server.key">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Allowed Origins</label>
+                    <textarea id="allowedOrigins" class="form-textarea"
+                        placeholder="https://example.com&#10;https://app.example.com">https://localhost:8000
+https://127.0.0.1:8000</textarea>
+                </div>
+            </div>
+
+            <!-- Logging Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">📋 Logging Settings <span
+                        style="color: #ff6b6b; font-size: 0.8rem; margin-left: 0.5rem;">⚠️ Restart Required</span></h2>
+
+                <div class="form-group">
+                    <label class="form-label">Log Level</label>
+                    <select id="logLevel" class="form-select">
+                        <option value="DEBUG">Debug</option>
+                        <option value="INFO" selected>Info</option>
+                        <option value="WARNING">Warning</option>
+                        <option value="ERROR">Error</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                </div>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Log to File</span>
+                    <div id="logToFile" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Log File Path</label>
+                    <input id="logFilePath" type="text" class="form-input" value="./logs/vigiledge.log">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Max Log File Size (MB)</label>
+                    <input id="maxLogSize" type="number" class="form-input" value="100" min="1" max="1000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Log Retention (days)</label>
+                    <input id="logRetention" type="number" class="form-input" value="30" min="1" max="365">
+                </div>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Compress Old Logs</span>
+                    <div id="compressLogs" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Rules Management -->
+            <div class="settings-section rule-editor">
+                <h2 class="section-title">📜 Security Rules</h2>
+
+                <div class="rule-item">
+                    <div class="rule-info">
+                        <div class="rule-name">SQL Injection Protection</div>
+                        <div class="rule-description">Blocks common SQL injection patterns</div>
+                    </div>
+                    <div class="rule-actions">
+                        <span id="ruleSqlInjection" class="rule-status enabled">Enabled</span>
+                        <button class="btn" style="padding: 0.25rem 0.5rem;">Edit</button>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-info">
+                        <div class="rule-name">XSS Protection</div>
+                        <div class="rule-description">Prevents cross-site scripting attacks</div>
+                    </div>
+                    <div class="rule-actions">
+                        <span id="ruleXssProtection" class="rule-status enabled">Enabled</span>
+                        <button class="btn" style="padding: 0.25rem 0.5rem;">Edit</button>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-info">
+                        <div class="rule-name">Path Traversal Protection</div>
+                        <div class="rule-description">Blocks directory traversal attempts</div>
+                    </div>
+                    <div class="rule-actions">
+                        <span id="rulePathTraversal" class="rule-status enabled">Enabled</span>
+                        <button class="btn" style="padding: 0.25rem 0.5rem;">Edit</button>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-info">
+                        <div class="rule-name">Bot Detection</div>
+                        <div class="rule-description">Identifies and blocks malicious bots</div>
+                    </div>
+                    <div class="rule-actions">
+                        <span class="rule-status disabled">Disabled</span>
+                        <button class="btn" style="padding: 0.25rem 0.5rem;">Edit</button>
+                    </div>
+                </div>
+
+                <button class="btn" style="margin-top: 1rem;">➕ Add New Rule</button>
+            </div>
+
+            <!-- Save/Reset Buttons -->
+            <div class="settings-section"
+                style="display: flex; justify-content: flex-end; gap: 1rem; padding: 1.5rem; background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 16px;">
+                <button onclick="resetSettings()" class="btn danger"
+                    style="padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600;">
+                    🔄 Reset to Defaults
+                </button>
+                <button onclick="saveSettings()" class="btn"
+                    style="padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal)); border: none;">
+                    💾 Save Changes
+                </button>
+            </div>
+
+            <!-- Backup & Restore -->
+            <div class="settings-section">
+                <h2 class="section-title">💾 Backup & Restore</h2>
+
+                <div class="toggle-group">
+                    <span class="toggle-label">Auto Backup</span>
+                    <div id="autoBackup" class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Backup Frequency</label>
+                    <select id="backupFrequency" class="form-select">
+                        <option value="daily" selected>Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+
+                <div id="backupsList" style="margin-top: 1rem;">
+                    <!-- Backups will be loaded dynamically here -->
+                </div>
+
+                <button onclick="createBackupNow()" class="btn" style="margin-top: 1rem;">📦 Create Backup Now</button>
+            </div>
+
+            <!-- Interface Theme -->
+            <div class="settings-section">
+                <h2 class="section-title">🎨 Interface Theme</h2>
+
+                <div class="theme-grid">
+                    <div id="themeDark" class="theme-option active" onclick="selectTheme(this, 'dark')">
+                        <div class="theme-preview dark"></div>
+                        <div>Dark (Current)</div>
+                    </div>
+                    <div id="themeLight" class="theme-option" onclick="selectTheme(this, 'light')">
+                        <div class="theme-preview light"></div>
+                        <div>Light</div>
+                    </div>
+                    <div id="themeBlue" class="theme-option" onclick="selectTheme(this, 'blue')">
+                        <div class="theme-preview blue"></div>
+                        <div>Blue</div>
+                    </div>
+                </div>
+
+                <div class="toggle-group" style="margin-top: 1rem;">
+                    <span class="toggle-label">Auto Dark Mode</span>
+                    <div id="autoDarkMode" class="toggle-switch" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentSettings = {};
+        let currentTheme = 'dark';
+
+        // Load settings from API on page load
+        async function loadSettings() {
+            try {
+                console.log('📡 Loading settings from API...');
+                const response = await fetch('/api/v1/settings');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                currentSettings = await response.json();
+                console.log('✅ Settings loaded:', currentSettings);
+
+                // Populate form fields with loaded settings
+                populateSettings(currentSettings);
+
+                // Load system status after settings are loaded
+                loadSystemStatus();
+
+                showNotification('Settings loaded successfully', 'success');
+            } catch (error) {
+                console.error('❌ Error loading settings:', error);
+                showNotification('Failed to load settings: ' + error.message, 'error');
+            }
+        }
+
+        // Populate all form fields with settings data
+        function populateSettings(settings) {
+            // Security Settings
+            setToggle('threatDetectionEnabled', settings.security.threat_detection_enabled !== false);
+            setToggle('autoBlockIps', settings.security.auto_block_ips);
+            setToggle('rateLimiting', settings.security.rate_limiting);
+            setValue('rateLimitValue', settings.security.rate_limit_value);
+            setValue('blockDuration', settings.security.block_duration);
+            setValue('threatSensitivity', settings.security.threat_sensitivity);
+
+            // Network Settings
+            setValue('listenPort', settings.network.listen_port);
+            setValue('maxConnections', settings.network.max_connections);
+            setToggle('sslEnabled', settings.network.ssl_enabled);
+            setValue('sslCertPath', settings.network.ssl_cert_path);
+            setValue('sslKeyPath', settings.network.ssl_key_path);
+            setValue('allowedOrigins', settings.network.allowed_origins.join('\n'));
+
+            // Logging Settings
+            setValue('logLevel', settings.logging.log_level);
+            setToggle('logToFile', settings.logging.log_to_file);
+            setValue('logFilePath', settings.logging.log_file_path);
+            setValue('maxLogSize', settings.logging.max_log_size_mb);
+            setValue('logRetention', settings.logging.log_retention_days);
+            setToggle('compressLogs', settings.logging.compress_old_logs);
+
+            // Security Rules
+            updateRulesDisplay(settings.rules);
+
+            // Backup Settings
+            if (settings.backup) {
+                setToggle('autoBackup', settings.backup.auto_backup);
+                setValue('backupFrequency', settings.backup.backup_frequency);
+            }
+
+            // Theme Settings
+            if (settings.theme) {
+                applyTheme(settings.theme.selected_theme);
+                setToggle('autoDarkMode', settings.theme.auto_dark_mode);
+            }
+
+            // Load backups list
+            loadBackups();
+        }
+
+        // Helper function to set input/select values
+        function setValue(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value;
+            }
+        }
+
+        // Helper function to set toggle states
+        function setToggle(id, isActive) {
+            const element = document.getElementById(id);
+            if (element) {
+                if (isActive) {
+                    element.classList.add('active');
+                } else {
+                    element.classList.remove('active');
+                }
+            }
+        }
+
+        // Update security rules display
+        function updateRulesDisplay(rules) {
+            const ruleElements = {
+                'sql_injection': document.getElementById('ruleSqlInjection'),
+                'xss_protection': document.getElementById('ruleXssProtection'),
+                'path_traversal': document.getElementById('rulePathTraversal'),
+                'bot_detection': document.getElementById('ruleBotDetection')
+            };
+
+            for (const [ruleName, element] of Object.entries(ruleElements)) {
+                if (element && rules[ruleName] !== undefined) {
+                    element.textContent = rules[ruleName] ? 'Enabled' : 'Disabled';
+                    element.className = rules[ruleName] ? 'rule-status enabled' : 'rule-status disabled';
+                }
+            }
+        }
+
+        // Collect current settings from form
+        function collectSettings() {
+            return {
+                security: {
+                    threat_detection_enabled: isToggleActive('threatDetectionEnabled'),
+                    auto_block_ips: isToggleActive('autoBlockIps'),
+                    rate_limiting: isToggleActive('rateLimiting'),
+                    rate_limit_value: parseInt(getValue('rateLimitValue')),
+                    block_duration: parseInt(getValue('blockDuration')),
+                    threat_sensitivity: getValue('threatSensitivity')
+                },
+                network: {
+                    listen_port: parseInt(getValue('listenPort')),
+                    max_connections: parseInt(getValue('maxConnections')),
+                    ssl_enabled: isToggleActive('sslEnabled'),
+                    ssl_cert_path: getValue('sslCertPath'),
+                    ssl_key_path: getValue('sslKeyPath'),
+                    allowed_origins: getValue('allowedOrigins').split('\n').filter(o => o.trim())
+                },
+                logging: {
+                    log_level: getValue('logLevel'),
+                    log_to_file: isToggleActive('logToFile'),
+                    log_file_path: getValue('logFilePath'),
+                    max_log_size_mb: parseInt(getValue('maxLogSize')),
+                    log_retention_days: parseInt(getValue('logRetention')),
+                    compress_old_logs: isToggleActive('compressLogs')
+                },
+                rules: currentSettings.rules || {},
+                backup: {
+                    auto_backup: isToggleActive('autoBackup'),
+                    backup_frequency: getValue('backupFrequency')
+                },
+                theme: {
+                    selected_theme: currentTheme,
+                    auto_dark_mode: isToggleActive('autoDarkMode')
+                },
+                authentication: currentSettings.authentication || {}
+            };
+        }
+
+        // Helper function to get input values
+        function getValue(id) {
+            const element = document.getElementById(id);
+            return element ? element.value : '';
+        }
+
+        // Helper function to check toggle state
+        function isToggleActive(id) {
+            const element = document.getElementById(id);
+            return element ? element.classList.contains('active') : false;
+        }
+
+        // Save settings to API
+        async function saveSettings() {
+            try {
+                console.log('💾 Saving settings...');
+                const settings = collectSettings();
+                console.log('Settings to save:', JSON.stringify(settings, null, 2));
+
+                const response = await fetch('/api/v1/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    let error;
+                    try {
+                        error = JSON.parse(errorText);
+                    } catch {
+                        error = { detail: errorText };
+                    }
+                    throw new Error(error.detail || 'Failed to save settings');
+                }
+
+                const result = await response.json();
+                console.log('✅ Settings saved:', result);
+                currentSettings = settings;
+
+                // Check if restart is needed (network or logging changed)
+                const needsRestart = JSON.stringify(settings.network) !== JSON.stringify(currentSettings.network) ||
+                    JSON.stringify(settings.logging) !== JSON.stringify(currentSettings.logging);
+
+                if (needsRestart) {
+                    showNotification('Settings saved! ⚠️ Restart server to apply Network/Logging changes', 'warning');
+                } else {
+                    showNotification('Settings saved and applied successfully! ✅', 'success');
+                }
+            } catch (error) {
+                console.error('❌ Error saving settings:', error);
+                showNotification('Failed to save settings: ' + error.message, 'error');
+            }
+        }
+
+        // Reset settings to defaults
+        async function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to factory defaults? This cannot be undone.\n\nA backup will be created before resetting.')) {
+                try {
+                    console.log('Resetting settings to defaults...');
+
+                    const response = await fetch('/api/v1/settings/reset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    console.log('Reset response status:', response.status);
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Reset successful:', result);
+                        showNotification('Settings reset to factory defaults successfully', 'success');
+
+                        // Reload settings from server (which will now return defaults)
+                        await loadSettings();
+                    } else {
+                        const error = await response.json();
+                        console.error('Reset failed:', error);
+                        showNotification('Failed to reset settings: ' + (error.detail || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Error resetting settings:', error);
+                    showNotification('Error resetting settings: ' + error.message, 'error');
+                }
+            }
+        }        // Toggle switch handler
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        // Theme management
+        function selectTheme(element, theme) {
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+                const text = option.querySelector('div:last-child');
+                if (text) text.textContent = text.textContent.replace(' (Current)', '');
+            });
+            element.classList.add('active');
+            const text = element.querySelector('div:last-child');
+            if (text && !text.textContent.includes('(Current)')) {
+                text.textContent += ' (Current)';
+            }
+            currentTheme = theme;
+
+            // Use global theme manager
+            if (window.themeManager) {
+                window.themeManager.switchTheme(theme);
+            }
+
+            console.log('Theme changed to:', theme);
+        }
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+
+            // Use global theme manager
+            if (window.themeManager) {
+                window.themeManager.applyTheme(theme);
+            }
+
+            // Update theme option display
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            const themeElement = document.getElementById(`theme${theme.charAt(0).toUpperCase() + theme.slice(1)}`);
+            if (themeElement) {
+                themeElement.classList.add('active');
+            }
+        }
+
+        // Backup management
+        async function loadBackups() {
+            try {
+                const response = await fetch('/api/v1/backups');
+                if (!response.ok) throw new Error('Failed to load backups');
+
+                const data = await response.json();
+                displayBackups(data.backups);
+            } catch (error) {
+                console.error('Error loading backups:', error);
+                showNotification('Failed to load backups: ' + error.message, 'error');
+            }
+        }
+
+        function displayBackups(backups) {
+            const container = document.getElementById('backupsList');
+            if (!container) return;
+
+            if (backups.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">No backups available</p>';
+                return;
+            }
+
+            container.innerHTML = backups.map(backup => `
+                <div class="backup-item">
+                    <div class="backup-info">
+                        <div class="backup-name">${backup.name}</div>
+                        <div class="backup-date">${new Date(backup.date).toLocaleString()}</div>
+                    </div>
+                    <span class="backup-size">${backup.size_mb} MB</span>
+                    <div>
+                        <button onclick="downloadBackup('${backup.filename}')" class="btn" style="padding: 0.25rem 0.5rem;">Download</button>
+                        <button onclick="deleteBackup('${backup.filename}')" class="btn danger" style="padding: 0.25rem 0.5rem;">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function createBackupNow() {
+            try {
+                console.log('📦 Creating backup...');
+                const response = await fetch('/api/v1/backups/create', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to create backup');
+                }
+
+                const result = await response.json();
+                console.log('✅ Backup created:', result);
+                showNotification('Backup created successfully! 📦', 'success');
+
+                // Reload backups list
+                loadBackups();
+            } catch (error) {
+                console.error('❌ Error creating backup:', error);
+                showNotification('Failed to create backup: ' + error.message, 'error');
+            }
+        }
+
+        async function downloadBackup(filename) {
+            try {
+                window.location.href = `/api/v1/backups/download/${filename}`;
+                showNotification('Downloading backup...', 'success');
+            } catch (error) {
+                console.error('Error downloading backup:', error);
+                showNotification('Failed to download backup: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteBackup(filename) {
+            if (!confirm(`Are you sure you want to delete backup "${filename}"?`)) {
+                return;
+            }
+
+            try {
+                console.log('🗑️ Deleting backup:', filename);
+                const response = await fetch(`/api/v1/backups/delete/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to delete backup');
+                }
+
+                const result = await response.json();
+                console.log('✅ Backup deleted:', result);
+                showNotification('Backup deleted successfully! 🗑️', 'success');
+
+                // Reload backups list
+                loadBackups();
+            } catch (error) {
+                console.error('❌ Error deleting backup:', error);
+                showNotification('Failed to delete backup: ' + error.message, 'error');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                background: ${type === 'success' ? 'rgba(0, 255, 135, 0.2)' : type === 'error' ? 'rgba(255, 107, 107, 0.2)' : 'rgba(0, 212, 255, 0.2)'};
+                border: 1px solid ${type === 'success' ? '#00ff87' : type === 'error' ? '#ff6b6b' : '#00d4ff'};
+                color: white;
+                border-radius: 8px;
+                backdrop-filter: blur(10px);
+                z-index: 10000;
+                font-weight: 500;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Load system status from API
+        async function loadSystemStatus() {
+            try {
+                // Fetch system uptime and metrics
+                const response = await fetch('/api/v1/system/uptime');
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update WAF Engine status
+                    document.getElementById('wafEngineStatus').textContent = 'Online';
+                    document.getElementById('wafEngineCard').className = 'status-card online';
+
+                    // Update Network Monitor status
+                    const activeConnections = data.active_connections || 0;
+                    document.getElementById('networkMonitorStatus').textContent = activeConnections > 0 ? 'Active' : 'Idle';
+                    document.getElementById('networkMonitorCard').className = activeConnections > 0 ? 'status-card online' : 'status-card warning';
+
+                    // Update Database status (mock for now - can be replaced with real DB stats)
+                    const dbUsage = Math.min(95, Math.floor(data.total_requests / 1000 * 10));
+                    document.getElementById('databaseStatus').textContent = `${dbUsage}% Full`;
+                    document.getElementById('databaseCard').className = dbUsage > 80 ? 'status-card warning' : 'status-card online';
+
+                    // Update Auto Updates status (from settings)
+                    if (currentSettings.backup && currentSettings.backup.auto_backup) {
+                        document.getElementById('autoUpdatesStatus').textContent = 'Enabled';
+                        document.getElementById('autoUpdatesCard').className = 'status-card online';
+                    } else {
+                        document.getElementById('autoUpdatesStatus').textContent = 'Disabled';
+                        document.getElementById('autoUpdatesCard').className = 'status-card warning';
+                    }
+                } else {
+                    // Fallback to offline status
+                    document.getElementById('wafEngineStatus').textContent = 'Offline';
+                    document.getElementById('wafEngineCard').className = 'status-card danger';
+                }
+            } catch (error) {
+                console.error('Error loading system status:', error);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('⚙️ Settings page initialized - loading configuration...');
+            loadSettings();
+            loadSystemStatus();
+
+            // Refresh status every 10 seconds
+            setInterval(loadSystemStatus, 10000);
+        });
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(400px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(400px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+
+    <script>
+        // Mobile menu toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
+
+            // Add overlay for mobile
+            let overlay = document.querySelector('.sidebar-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: 9998;
+                    backdrop-filter: blur(4px);
+                `;
+                overlay.onclick = toggleSidebar;
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function (e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+
+            if (window.innerWidth <= 768 &&
+                !sidebar.contains(e.target) &&
+                !toggle.contains(e.target) &&
+                sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        });
+    </script>
+    <script>
+        // ... existing JS ...
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+            if (!currentPassword || !newPassword) {
+                showNotification('Please enter current and new password', 'warning');
+                return;
+            }
+
+            if (newPassword !== confirmNewPassword) {
+                showNotification('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                console.log('🔐 Changing password...');
+                const response = await fetch('/api/v1/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                console.log('Password update status:', response.status);
+
+                let data;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    data = { detail: text || 'Unknown error occurred' };
+                }
+
+                if (response.ok) {
+                    showNotification('Password updated successfully! Redirecting...', 'success');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmNewPassword').value = '';
+
+                    // Optional: Redirect to login page after short delay to force re-login
+                    setTimeout(() => {
+                        window.location.href = '/logout';
+                    }, 2000);
+                } else {
+                    console.error('Password update failed:', data);
+                    showNotification('Error: ' + (data.detail || data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showNotification('Failed to change password: ' + error.message, 'error');
+            }
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const btn = input.nextElementSibling;
+
+            if (input.type === "password") {
+                input.type = "text";
+                btn.textContent = "🔒";
+            } else {
+                input.type = "password";
+                btn.textContent = "👁️";
+            }
+        }
+    </script>
+</body>
+
+</html>

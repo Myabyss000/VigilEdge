@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VigilEdge WAF - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f2e;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a9c0;
+            --text-muted: #6b7280;
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --cyber-purple: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
+            --glow-teal: 0 0 20px rgba(0, 255, 166, 0.5);
+            --glow-purple: 0 0 20px rgba(124, 58, 237, 0.5);
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cyber-blue);
+        }
+
+        .logo p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 166, 0.1));
+            color: var(--text-primary);
+            border-left: 3px solid var(--cyber-blue);
+            box-shadow: var(--glow-blue);
+        }
+
+        .nav-icon {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+        }
+
+        /* Dashboard Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .header-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            border-radius: var(--radius-md);
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        /* Statistics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--glow-blue);
+            border-color: var(--cyber-blue);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-title {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            border-color: var(--cyber-blue);
+            box-shadow: var(--glow-blue);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chart-control {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-control:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .chart-control.active {
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            color: var(--text-primary);
+            border-color: var(--cyber-blue);
+        }
+
+        .chart-container {
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Security Events Feed */
+        .events-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .events-feed {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .event-type {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .event-type.security {
+            background: var(--danger);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .event-type.network {
+            background: var(--info);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .event-type.system {
+            background: var(--warning);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        .event-details {
+            flex: 1;
+        }
+
+        .event-message {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .event-meta {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .event-time {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 212, 255, 0.3);
+            border-top: 3px solid var(--cyber-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <div>
+                    <h1>🛡️ VigilEdge</h1>
+                    <p>Security Operations</p>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link active">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/security-rules" class="nav-link">
+                        <span class="nav-icon">🛡️</span>
+                        <span>Security Rules</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/threat-detection" class="nav-link">
+                        <span class="nav-icon">🚨</span>
+                        <span>Threat Detection</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/analytics" class="nav-link">
+                        <span class="nav-icon">📈</span>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/network-monitor" class="nav-link">
+                        <span class="nav-icon">🌐</span>
+                        <span>Network Monitor</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/blocked-ips" class="nav-link">
+                        <span class="nav-icon">🚫</span>
+                        <span>Blocked IPs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/event-logs" class="nav-link">
+                        <span class="nav-icon">📋</span>
+                        <span>Event Logs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/settings" class="nav-link">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Header -->
+            <header class="dashboard-header">
+                <div class="header-title">
+                    <h1>Security Operations Center</h1>
+                    <p>Real-time monitoring and threat protection dashboard</p>
+                </div>
+                <div class="header-actions">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span>System Operational</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Statistics Grid -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Total Requests</div>
+                        <div class="stat-icon">📈</div>
+                    </div>
+                    <div class="stat-value" id="total-requests">147,923</div>
+                    <div class="stat-change positive">
+                        <span>↗️ +12.5%</span>
+                        <span>vs last hour</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Blocked Threats</div>
+                        <div class="stat-icon">🛡️</div>
+                    </div>
+                    <div class="stat-value" id="blocked-threats">1,284</div>
+                    <div class="stat-change positive">
+                        <span>↗️ +5.2%</span>
+                        <span>vs last hour</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Active Connections</div>
+                        <div class="stat-icon">🌐</div>
+                    </div>
+                    <div class="stat-value" id="active-connections">8,456</div>
+                    <div class="stat-change positive">
+                        <span>↗️ +3.1%</span>
+                        <span>vs last hour</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Response Time</div>
+                        <div class="stat-icon">⚡</div>
+                    </div>
+                    <div class="stat-value" id="response-time">2.3ms</div>
+                    <div class="stat-change negative">
+                        <span>↘️ -0.8%</span>
+                        <span>vs last hour</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Grid -->
+            <section class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Request Traffic</h3>
+                        <div class="chart-controls">
+                            <button class="chart-control active">1H</button>
+                            <button class="chart-control">24H</button>
+                            <button class="chart-control">7D</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        📊 Real-time traffic analytics loading...
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Threat Types</h3>
+                        <div class="chart-controls">
+                            <button class="chart-control active">Today</button>
+                            <button class="chart-control">Week</button>
+                            <button class="chart-control">Month</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        🎯 Threat analysis loading...
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Geographic Threats</h3>
+                        <div class="chart-controls">
+                            <button class="chart-control active">Live</button>
+                            <button class="chart-control">1H</button>
+                            <button class="chart-control">24H</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        🌍 Geographic data loading...
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Security Score</h3>
+                        <div class="chart-controls">
+                            <button class="chart-control active">Current</button>
+                            <button class="chart-control">Trend</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        🏆 Security metrics loading...
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security Events Feed -->
+            <section class="events-section">
+                <h2 class="section-title">
+                    <span>🚨</span>
+                    Recent Security Events
+                </h2>
+                <div class="events-feed" id="events-feed">
+                    <div class="event-item">
+                        <div class="event-type security"></div>
+                        <div class="event-details">
+                            <div class="event-message">SQL injection attempt blocked</div>
+                            <div class="event-meta">IP: 192.168.1.45 • Rule: SQL_INJECTION_BASIC</div>
+                        </div>
+                        <div class="event-time">2 min ago</div>
+                    </div>
+                    <div class="event-item">
+                        <div class="event-type security"></div>
+                        <div class="event-details">
+                            <div class="event-message">Brute force attack detected</div>
+                            <div class="event-meta">IP: 203.45.127.89 • Multiple login attempts</div>
+                        </div>
+                        <div class="event-time">5 min ago</div>
+                    </div>
+                    <div class="event-item">
+                        <div class="event-type network"></div>
+                        <div class="event-details">
+                            <div class="event-message">High traffic from unusual source</div>
+                            <div class="event-meta">IP: 172.16.0.23 • Traffic spike detected</div>
+                        </div>
+                        <div class="event-time">8 min ago</div>
+                    </div>
+                    <div class="event-item">
+                        <div class="event-type system"></div>
+                        <div class="event-details">
+                            <div class="event-message">Security rules updated</div>
+                            <div class="event-meta">Updated 3 rules • Auto-sync completed</div>
+                        </div>
+                        <div class="event-time">12 min ago</div>
+                    </div>
+                    <div class="event-item">
+                        <div class="event-type security"></div>
+                        <div class="event-details">
+                            <div class="event-message">XSS attack prevented</div>
+                            <div class="event-meta">IP: 198.51.100.14 • Script injection blocked</div>
+                        </div>
+                        <div class="event-time">15 min ago</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // WebSocket connection for real-time updates
+        let wsConnection;
+
+        function connectWebSocket() {
+            try {
+                wsConnection = new WebSocket('ws://localhost:5000/ws');
+                
+                wsConnection.onopen = () => {
+                    console.log('🔌 WebSocket connected');
+                };
+                
+                wsConnection.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateDashboard(data);
+                    } catch (e) {
+                        console.log('📨 Raw message:', event.data);
+                    }
+                };
+                
+                wsConnection.onclose = () => {
+                    console.log('🔌 WebSocket disconnected. Attempting to reconnect...');
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                wsConnection.onerror = (error) => {
+                    console.error('🔌 WebSocket error:', error);
+                };
+            } catch (error) {
+                console.error('🔌 Failed to connect WebSocket:', error);
+                setTimeout(connectWebSocket, 5000);
+            }
+        }
+
+        function updateDashboard(data) {
+            if (data.type === 'stats') {
+                document.getElementById('total-requests').textContent = data.total_requests?.toLocaleString() || '147,923';
+                document.getElementById('blocked-threats').textContent = data.blocked_threats?.toLocaleString() || '1,284';
+                document.getElementById('active-connections').textContent = data.active_connections?.toLocaleString() || '8,456';
+                document.getElementById('response-time').textContent = `${data.response_time || 2.3}ms`;
+            }
+            
+            if (data.type === 'security_event') {
+                addSecurityEvent(data);
+            }
+        }
+
+        function addSecurityEvent(event) {
+            const eventsFeed = document.getElementById('events-feed');
+            const eventElement = document.createElement('div');
+            eventElement.className = 'event-item';
+            eventElement.style.opacity = '0';
+            eventElement.style.transform = 'translateY(-10px)';
+            
+            eventElement.innerHTML = `
+                <div class="event-type ${event.type || 'security'}"></div>
+                <div class="event-details">
+                    <div class="event-message">${event.message || 'Security event detected'}</div>
+                    <div class="event-meta">${event.meta || 'Processing details...'}</div>
+                </div>
+                <div class="event-time">Just now</div>
+            `;
+            
+            eventsFeed.insertBefore(eventElement, eventsFeed.firstChild);
+            
+            // Animate in
+            setTimeout(() => {
+                eventElement.style.transition = 'all 0.3s ease';
+                eventElement.style.opacity = '1';
+                eventElement.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Remove old events (keep only latest 10)
+            const events = eventsFeed.children;
+            if (events.length > 10) {
+                const oldEvent = events[events.length - 1];
+                oldEvent.style.transition = 'all 0.3s ease';
+                oldEvent.style.opacity = '0';
+                oldEvent.style.transform = 'translateY(10px)';
+                setTimeout(() => oldEvent.remove(), 300);
+            }
+        }
+
+        // Simulate data updates
+        function simulateDataUpdates() {
+            const stats = {
+                type: 'stats',
+                total_requests: 147923 + Math.floor(Math.random() * 100),
+                blocked_threats: 1284 + Math.floor(Math.random() * 10),
+                active_connections: 8456 + Math.floor(Math.random() * 200) - 100,
+                response_time: (2.3 + (Math.random() - 0.5) * 0.5).toFixed(1)
+            };
+            updateDashboard(stats);
+        }
+
+        function simulateSecurityEvents() {
+            const events = [
+                { type: 'security', message: 'SQL injection attempt blocked', meta: `IP: ${generateRandomIP()} • Rule: SQL_INJECTION_BASIC` },
+                { type: 'security', message: 'XSS attack prevented', meta: `IP: ${generateRandomIP()} • Script injection blocked` },
+                { type: 'network', message: 'Unusual traffic pattern detected', meta: `IP: ${generateRandomIP()} • Traffic analysis triggered` },
+                { type: 'system', message: 'Security rules updated', meta: 'Updated 2 rules • Auto-sync completed' },
+                { type: 'security', message: 'Brute force attack detected', meta: `IP: ${generateRandomIP()} • Multiple login attempts` }
+            ];
+            
+            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            addSecurityEvent(randomEvent);
+        }
+
+        function generateRandomIP() {
+            return `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            
+            // Update stats every 10 seconds
+            setInterval(simulateDataUpdates, 10000);
+            
+            // Add security events every 15-30 seconds
+            setInterval(simulateSecurityEvents, Math.random() * 15000 + 15000);
+            
+            // Chart control interactions
+            document.querySelectorAll('.chart-control').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const parent = e.target.closest('.chart-header');
+                    parent.querySelectorAll('.chart-control').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

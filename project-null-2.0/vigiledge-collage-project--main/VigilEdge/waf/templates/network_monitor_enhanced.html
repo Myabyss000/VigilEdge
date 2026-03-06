@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor - VigilEdge WAF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(100, 200, 255, 0.2);
+            --card-bg: rgba(30, 30, 50, 0.85);
+            --sidebar-bg: rgba(20, 25, 45, 0.95);
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --text-primary: #ffffff;
+            --text-secondary: #e1e7f5;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-bg);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            margin-right: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            width: calc(100% - 280px);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+        }
+
+        .container {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #00ffa6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.2);
+            padding-bottom: 10px;
+            overflow-x: auto;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 8px 8px 0 0;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                gap: 5px;
+            }
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 0.75rem;
+            }
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #00d4ff;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #00d4ff20, #00ffa620);
+            border-color: #00d4ff;
+            color: #00ffa6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-card {
+            background: rgba(30, 30, 50, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .stat-card {
+                padding: 12px;
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+        }
+
+        .stat-label {
+            font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            font-weight: 700;
+            color: #00ffa6;
+        }
+
+        .table-container {
+            background: rgba(30, 30, 50, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                padding: 10px;
+            }
+        }
+
+        .table-container h3 {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 0.75rem;
+                min-width: 500px;
+            }
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 8px;
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            font-weight: 600;
+            font-size: clamp(0.7rem, 1.5vw, 0.8125rem);
+            border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: clamp(0.7rem, 1.5vw, 0.8125rem);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(0, 255, 135, 0.2);
+            color: #00ff87;
+        }
+
+        .badge-danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .badge-warning {
+            background: rgba(255, 179, 71, 0.2);
+            color: #ffb347;
+        }
+
+        .badge-info {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+        }
+
+        .auto-refresh {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(30, 30, 50, 0.95);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            font-size: clamp(0.7rem, 1.5vw, 0.75rem);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .auto-refresh {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+                font-size: 0.65rem;
+            }
+        }
+
+        .websocket-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .websocket-status.connected {
+            background: #00ff87;
+            box-shadow: 0 0 10px #00ff87;
+        }
+
+        .websocket-status.disconnected {
+            background: #ff6b6b;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid #00d4ff;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .log-entry {
+                padding: 10px;
+                font-size: 0.75rem;
+            }
+        }
+
+        .log-entry.blocked {
+            border-left-color: #ff6b6b;
+        }
+
+        .log-timestamp {
+            font-size: clamp(0.65rem, 1.2vw, 0.6875rem);
+            color: #94a3b8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+        }
+
+        /* Better scrollbar for overflow areas */
+        .table-container::-webkit-scrollbar,
+        .tabs::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track,
+        .tabs::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb,
+        .tabs::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover,
+        .tabs::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="logo">
+            <h1>🛡️ VigilEdge</h1>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Professional WAF</p>
+        </div>
+        
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="/dashboard" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/security-rules" class="nav-link">
+                    <span class="nav-icon">🔒</span>
+                    <span>Security Rules</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/threat-detection" class="nav-link">
+                    <span class="nav-icon">⚠️</span>
+                    <span>Threat Detection</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/analytics" class="nav-link">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/network-monitor" class="nav-link active">
+                    <span class="nav-icon">🌐</span>
+                    <span>Network Monitor</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/blocked-ips" class="nav-link">
+                    <span class="nav-icon">🚫</span>
+                    <span>Blocked IPs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/event-logs" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    <span>Event Logs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/settings" class="nav-link">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="auto-refresh">
+            <span class="websocket-status" id="ws-status"></span>
+            <span id="refresh-text">Refreshing in <span id="countdown">10</span>s</span>
+        </div>
+
+        <div class="container">
+        <div class="header">
+            <h1>🌐 Network Monitor</h1>
+            <p style="color: #94a3b8;">Real-time Connection & Activity Monitoring</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('connections')">🔗 Live Connections</button>
+            <button class="tab-btn" onclick="switchTab('ips')">📍 IP Activity</button>
+            <button class="tab-btn" onclick="switchTab('logs')">📜 Session Logs</button>
+            <button class="tab-btn" onclick="switchTab('uptime')">⏱️ Uptime & Health</button>
+        </div>
+
+        <!-- Live Connections Tab -->
+        <div class="tab-content active" id="tab-connections">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Active Connections</div>
+                    <div class="stat-value" id="conn-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" id="conn-requests">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Unique IPs</div>
+                    <div class="stat-value" id="conn-ips">0</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3 style="margin-bottom: 20px;">Active Connections</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>First Seen</th>
+                            <th>Requests</th>
+                            <th>Methods</th>
+                            <th>Unique URLs</th>
+                            <th>User Agent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="connections-table">
+                        <tr><td colspan="6" class="loading">Loading connections...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- IP Activity Tab -->
+        <div class="tab-content" id="tab-ips">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total IPs Tracked</div>
+                    <div class="stat-value" id="ip-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Blocked IPs</div>
+                    <div class="stat-value" id="ip-blocked">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Clean IPs</div>
+                    <div class="stat-value" id="ip-clean">0</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3 style="margin-bottom: 20px;">IP Activity Tracker</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>Total Requests</th>
+                            <th>Blocked</th>
+                            <th>Allowed</th>
+                            <th>Block Rate</th>
+                            <th>First Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ips-table">
+                        <tr><td colspan="6" class="loading">Loading IP activity...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Session Logs Tab -->
+        <div class="tab-content" id="tab-logs">
+            <div class="table-container">
+                <h3 style="margin-bottom: 20px;">Session Replay Logs (Last 50 Events)</h3>
+                <div id="logs-container">
+                    <div class="loading">Loading logs...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Uptime Tab -->
+        <div class="tab-content" id="tab-uptime">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">WAF Uptime</div>
+                    <div class="stat-value" id="uptime-value">0h 0m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" id="uptime-requests">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Threats Detected</div>
+                    <div class="stat-value" id="uptime-threats">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">CPU Usage</div>
+                    <div class="stat-value" id="uptime-cpu">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Memory Usage</div>
+                    <div class="stat-value" id="uptime-memory">0 MB</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" style="color: #00ff87;">HEALTHY</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 10;
+        let currentTab = 'connections';
+        let ws = null;
+
+        // WebSocket connection for real-time updates
+        function connectWebSocket() {
+            ws = new WebSocket('ws://127.0.0.1:5000/ws');
+            
+            ws.onopen = () => {
+                document.getElementById('ws-status').className = 'websocket-status connected';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('ws-status').className = 'websocket-status disconnected';
+                console.log('WebSocket disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'metrics') {
+                        updateMetricsFromWebSocket(data.data);
+                    }
+                } catch (e) {
+                    console.error('WebSocket message error:', e);
+                }
+            };
+        }
+
+        function updateMetricsFromWebSocket(metrics) {
+            // Update uptime tab with WebSocket data
+            if (metrics.total_requests) {
+                document.getElementById('uptime-requests').textContent = metrics.total_requests;
+            }
+            if (metrics.blocked_requests) {
+                document.getElementById('uptime-threats').textContent = metrics.blocked_requests;
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load data for the switched tab immediately
+            loadData();
+        }
+
+        // Load data based on current tab
+        async function loadData() {
+            if (currentTab === 'connections') {
+                await loadConnections();
+            } else if (currentTab === 'ips') {
+                await loadIPActivity();
+            } else if (currentTab === 'logs') {
+                await loadLogs();
+            } else if (currentTab === 'uptime') {
+                await loadUptime();
+            }
+        }
+
+        // Load active connections
+        async function loadConnections() {
+            try {
+                const response = await fetch('/api/v1/connections/active');
+                const data = await response.json();
+                
+                document.getElementById('conn-total').textContent = data.total;
+                const totalRequests = data.connections.reduce((sum, conn) => sum + conn.request_count, 0);
+                document.getElementById('conn-requests').textContent = totalRequests;
+                document.getElementById('conn-ips').textContent = data.total;
+                
+                const tbody = document.getElementById('connections-table');
+                if (data.connections.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No active connections</td></tr>';
+                } else {
+                    tbody.innerHTML = data.connections.map(conn => `
+                        <tr>
+                            <td><span class="badge badge-info">${conn.ip}</span></td>
+                            <td>${new Date(conn.first_seen).toLocaleTimeString()}</td>
+                            <td>${conn.request_count}</td>
+                            <td>${conn.methods.join(', ')}</td>
+                            <td>${conn.unique_urls}</td>
+                            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${conn.user_agents[0] || 'Unknown'}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading connections:', error);
+            }
+        }
+
+        // Load IP activity
+        async function loadIPActivity() {
+            try {
+                const response = await fetch('/api/v1/ips/activity');
+                const data = await response.json();
+                
+                document.getElementById('ip-total').textContent = data.total;
+                const blockedCount = data.ips.filter(ip => (ip.blocked || 0) > 0).length;
+                document.getElementById('ip-blocked').textContent = blockedCount;
+                document.getElementById('ip-clean').textContent = data.total - blockedCount;
+                
+                const tbody = document.getElementById('ips-table');
+                if (data.ips.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No IP activity data</td></tr>';
+                } else {
+                    tbody.innerHTML = data.ips.map(ip => {
+                        const blocked = ip.blocked || 0;
+                        const allowed = ip.allowed || 0;
+                        const total = blocked + allowed;
+                        const blockRate = total > 0 ? ((blocked / total) * 100).toFixed(1) : '0.0';
+                        
+                        return `
+                            <tr>
+                                <td><span class="badge ${blocked > 0 ? 'badge-danger' : 'badge-success'}">${ip.ip}</span></td>
+                                <td>${ip.requests || total}</td>
+                                <td style="color: #ff6b6b;">${blocked}</td>
+                                <td style="color: #00ff87;">${allowed}</td>
+                                <td><span class="badge ${blockRate > 50 ? 'badge-danger' : blockRate > 10 ? 'badge-warning' : 'badge-success'}">${blockRate}%</span></td>
+                                <td>${ip.first_seen ? new Date(ip.first_seen).toLocaleString() : 'N/A'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error loading IP activity:', error);
+            }
+        }
+
+        // Load session logs
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/v1/connections/logs?limit=50');
+                const data = await response.json();
+                
+                const container = document.getElementById('logs-container');
+                if (data.logs.length === 0) {
+                    container.innerHTML = '<div class="loading">No logs available</div>';
+                } else {
+                    container.innerHTML = data.logs.map(log => `
+                        <div class="log-entry ${log.blocked ? 'blocked' : ''}">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span><strong>${log.ip}</strong> → ${log.url}</span>
+                                <span class="badge ${log.blocked ? 'badge-danger' : 'badge-success'}">${log.blocked ? 'BLOCKED' : 'ALLOWED'}</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 12px;">
+                                <div>Threat: <strong>${log.threat_type}</strong></div>
+                                <div>Level: <span class="badge badge-${log.threat_level === 'critical' ? 'danger' : log.threat_level === 'high' ? 'warning' : 'info'}">${log.threat_level.toUpperCase()}</span></div>
+                                <div>Action: <strong>${log.action}</strong></div>
+                                <div class="log-timestamp">Time: ${new Date(log.timestamp).toLocaleString()}</div>
+                            </div>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; color: #00d4ff;">View Details</summary>
+                                <pre style="background: rgba(0,0,0,0.3); padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto;">${JSON.stringify(log.details, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            }
+        }
+
+        // Load uptime data
+        async function loadUptime() {
+            try {
+                const response = await fetch('/api/v1/system/uptime');
+                const data = await response.json();
+                
+                document.getElementById('uptime-value').textContent = data.uptime_formatted;
+                document.getElementById('uptime-requests').textContent = data.total_requests;
+                document.getElementById('uptime-threats').textContent = data.threats_detected;
+                document.getElementById('uptime-cpu').textContent = data.cpu_percent.toFixed(1) + '%';
+                document.getElementById('uptime-memory').textContent = data.memory_mb.toFixed(1) + ' MB';
+            } catch (error) {
+                console.error('Error loading uptime:', error);
+            }
+        }
+
+        // Auto-refresh countdown
+        setInterval(() => {
+            countdown--;
+            document.getElementById('countdown').textContent = countdown;
+            
+            if (countdown <= 0) {
+                countdown = 10;  // Reset to 10 seconds as requested
+                loadData();
+            }
+        }, 1000);
+
+        // Initial load
+        connectWebSocket();
+        loadData();
+    </script>
+    </main>
+</body>
+</html>

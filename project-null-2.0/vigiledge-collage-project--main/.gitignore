@@ -14,7 +14,8 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
-*.html
+VigilEdge/tests/automated/*.html
+VigilEdge/tests/*.html
 
 # Logs
 logs/*.log

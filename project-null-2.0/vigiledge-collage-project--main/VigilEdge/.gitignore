@@ -14,7 +14,8 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
-*.html
+tests/automated/*.html
+tests/*.html
 
 # Logs
 logs/*.log
