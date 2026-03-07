@@ -18,16 +18,20 @@ for row in c.fetchall():
     flagged = ai.get('flagged', False)
     note = ai.get('note', 'N/A')
     flag_reasons = ai.get('flag_reasons', [])
+    refined_severity = ai.get('severity_refined') or ai.get('severity', 'N/A')
     
     # Model predictions
-    model_score = ai.get('model_score', 'N/A')
-    model_conf = ai.get('model_confidence', 'N/A')
-    model_label = ai.get('model_label', 'N/A')
+    model = ai.get('model', {}) if isinstance(ai.get('model'), dict) else {}
+    model_score = model.get('model_score', 'N/A')
+    model_conf = model.get('model_confidence', 'N/A')
+    model_label = model.get('predicted_label', 'N/A')
+    model_severity = model.get('suggested_severity', 'N/A')
     
     print(f"URL: {url[:70]}")
     print(f"  Threat: {threat_type}")
     print(f"  AI Score: {score}")
-    print(f"  Model Label: {model_label} | Model Score: {model_score} | Model Conf: {model_conf}")
+    print(f"  Refined Severity: {refined_severity}")
+    print(f"  Model Label: {model_label} | Model Severity: {model_severity} | Model Score: {model_score} | Model Conf: {model_conf}")
     print(f"  Flagged: {'🚩 YES' if flagged else 'No'} {flag_reasons}")
     print()
 

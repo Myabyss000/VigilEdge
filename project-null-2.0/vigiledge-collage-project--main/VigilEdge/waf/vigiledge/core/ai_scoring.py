@@ -9,17 +9,25 @@ and produces a normalized score. No external ML libraries required.
 
 Now includes LM Studio integration for advanced AI scoring.
 """
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple, Set
+import html
 import os
 import math
 import json
 import asyncio
+import re
+from urllib.parse import unquote_plus, urlparse, parse_qsl
 from enum import Enum
 
 try:
-    import joblib
+    import joblib  # type: ignore[import-not-found]
 except Exception:
     joblib = None
+
+try:
+    import pandas as pd
+except Exception:
+    pd = None
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -28,9 +36,10 @@ except Exception:
 
 try:
     import httpx
-    HAVE_HTTPX = True
 except Exception:
-    HAVE_HTTPX = False
+    httpx = None
+
+HAVE_HTTPX = httpx is not None
 
 
 class ScorerType(str, Enum):
@@ -40,8 +49,66 @@ class ScorerType(str, Enum):
     HYBRID = "hybrid"  # Uses both and averages
 
 
+SEVERITY_TO_INDEX = {
+    "info": 0,
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+    "critical": 4,
+}
+INDEX_TO_SEVERITY = {value: key for key, value in SEVERITY_TO_INDEX.items()}
+
+
+def normalize_severity_label(label: Any) -> str:
+    if label is None:
+        return "info"
+
+    raw = str(label).strip().lower()
+    legacy_numeric_map = {
+        "0": "info",
+        "1": "medium",
+        "2": "high",
+        "3": "critical",
+        "4": "critical",
+    }
+    legacy_aliases = {
+        "normal": "info",
+        "benign": "info",
+        "suspicious": "medium",
+        "attack": "high",
+    }
+
+    if raw in SEVERITY_TO_INDEX:
+        return raw
+    if raw in legacy_numeric_map:
+        return legacy_numeric_map[raw]
+    if raw in legacy_aliases:
+        return legacy_aliases[raw]
+
+    return "medium"
+
+
+def severity_to_index(label: Any) -> int:
+    return SEVERITY_TO_INDEX.get(normalize_severity_label(label), SEVERITY_TO_INDEX["medium"])
+
+
+def blend_severity_levels(heuristic_severity: Any, model_severity: Any, model_confidence: float) -> str:
+    heuristic_index = severity_to_index(heuristic_severity)
+    model_index = severity_to_index(model_severity)
+
+    if model_confidence < 0.55:
+        return INDEX_TO_SEVERITY[heuristic_index]
+
+    if model_confidence >= 0.8:
+        blended = round((heuristic_index + (model_index * 2)) / 3)
+    else:
+        blended = round(((heuristic_index * 2) + model_index) / 3)
+
+    return INDEX_TO_SEVERITY[max(0, min(4, blended))]
+
+
 # Global scorer configuration
-_scorer_config = {
+_scorer_config: Dict[str, Any] = {
     "active_scorer": ScorerType.HEURISTIC,
     "lm_studio_url": "http://localhost:1234/v1/chat/completions",
     "lm_studio_timeout": 10.0,
@@ -51,12 +118,12 @@ _scorer_config = {
 }
 
 
-def get_scorer_config() -> dict:
+def get_scorer_config() -> Dict[str, Any]:
     """Get current scorer configuration"""
     return _scorer_config.copy()
 
 
-def set_active_scorer(scorer_type: str) -> dict:
+def set_active_scorer(scorer_type: str) -> Dict[str, Any]:
     """Switch between scoring methods"""
     global _scorer_config
     try:
@@ -302,12 +369,14 @@ class HeuristicScorer:
         self.sql_patterns = [
             r"(?:union\s+select|select\s+.*\s+from|insert\s+into|delete\s+from|update\s+.*\s+set)",
             r"(?:or\s+1\s*=\s*1|and\s+1\s*=\s*1|or\s+'1'\s*=\s*'1'|or\s+\"1\"\s*=\s*\"1\")",
+            r"(?:'\s*or\s*'[^']+'\s*=\s*'[^']+'|\"\s*or\s*\"[^\"]+\"\s*=\s*\"[^\"]+\")",
             r"(?:drop\s+table|truncate\s+table|alter\s+table|create\s+table)",
             r"(?:exec\s*\(|execute\s*\(|sp_executesql|xp_cmdshell)",
             r"(?:concat\s*\(|char\s*\(|substring\s*\(|benchmark\s*\()",
             r"(?:sleep\s*\(\s*\d|waitfor\s+delay|pg_sleep)",
             r"(?:information_schema|mysql\.|sys\.)",
             r"(?:load_file|into\s+outfile|into\s+dumpfile)",
+            r"(?:--|#|/\*)\s*(?:union|select|or|and|waitfor|sleep|benchmark)",
         ]
         
         self.xss_patterns = [
@@ -321,6 +390,7 @@ class HeuristicScorer:
             r"eval\s*\(",
             r"<svg[^>]*\s+onload\s*=",
             r"data\s*:\s*text/html",
+            r"(?:srcdoc\s*=|expression\s*\(|innerhtml\s*=|outerhtml\s*=)",
         ]
         
         self.path_traversal_patterns = [
@@ -336,15 +406,16 @@ class HeuristicScorer:
         ]
         
         self.command_injection_patterns = [
-            r"[;&|`$]",
+            r"(?:;|&&|\|\|?|\n)\s*(?:ls|cat|id|whoami|pwd|uname|curl|wget|bash|sh|cmd|powershell)\b",
             r"\$\([^)]+\)",
             r"`[^`]+`",
-            r"(?:ls|cat|id|whoami|pwd|uname)\s",
+            r"(?:cmd(?:\.exe)?\s*/c|powershell(?:\.exe)?\b)",
             r"(?:wget|curl)\s+https?://",
             r"/bin/(?:sh|bash|zsh|ksh)",
             r"nc\s+-[elvp]",
             r"python\s+-c",
             r"perl\s+-e",
+            r"php\s+-r",
         ]
         
         self.ssrf_patterns = [
@@ -354,6 +425,7 @@ class HeuristicScorer:
             r"(?:file://)",
             r"(?:gopher://)",
             r"(?:dict://)",
+            r"(?:metadata\.google\.internal|host\.docker\.internal)",
         ]
         
         # Scanner/Bot signatures
@@ -379,72 +451,193 @@ class HeuristicScorer:
             r"/exec",
         ]
 
+        self._compiled_pattern_groups: Dict[str, List[Tuple[str, re.Pattern[str]]]] = {
+            "sql": self._compile_patterns(self.sql_patterns),
+            "xss": self._compile_patterns(self.xss_patterns),
+            "path": self._compile_patterns(self.path_traversal_patterns),
+            "cmd": self._compile_patterns(self.command_injection_patterns),
+            "ssrf": self._compile_patterns(self.ssrf_patterns),
+            "sensitive_endpoints": self._compile_patterns(self.sensitive_endpoints),
+        }
+
     def _clamp(self, v: float) -> float:
         return max(0.0, min(1.0, v))
 
-    def _check_patterns(self, text: str, patterns: list) -> tuple:
-        """Check text against regex patterns, return (score, matched_patterns)"""
-        import re
-        if not text:
-            return 0.0, []
-        
-        text_lower = text.lower()
-        matches = []
-        
+    def _compile_patterns(self, patterns: List[str]) -> List[Tuple[str, re.Pattern[str]]]:
+        compiled: List[Tuple[str, re.Pattern[str]]] = []
         for pattern in patterns:
             try:
-                if re.search(pattern, text_lower, re.IGNORECASE):
-                    matches.append(pattern[:30])
+                compiled.append((pattern, re.compile(pattern, re.IGNORECASE)))
             except Exception:
                 continue
-        
-        score = min(1.0, len(matches) * 0.3) if matches else 0.0
+        return compiled
+
+    def _normalize_text_variants(self, text: Any, max_rounds: int = 3) -> List[str]:
+        if text is None:
+            return []
+
+        current = str(text)
+        variants: List[str] = []
+        seen: Set[str] = set()
+
+        for _ in range(max_rounds):
+            cleaned = current.replace("\x00", " ").strip()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                variants.append(cleaned)
+
+            decoded = html.unescape(unquote_plus(current))
+            if decoded == current:
+                break
+            current = decoded
+
+        return variants
+
+    def _get_header_text(self, headers: Any) -> str:
+        if not isinstance(headers, dict):
+            return ""
+
+        interesting: List[str] = []
+        for key, value in headers.items():
+            key_text = str(key).lower()
+            if key_text in {"host", "referer", "origin", "x-forwarded-for", "x-original-url", "x-rewrite-url", "cookie"}:
+                interesting.append(f"{key}:{value}")
+        return " ".join(interesting)
+
+    def _build_payload_variants(self, url: str, body: str = "", headers: Optional[Dict[str, Any]] = None) -> List[str]:
+        payload_parts = [url or "", body or "", self._get_header_text(headers)]
+        variants: List[str] = []
+        seen: Set[str] = set()
+
+        for part in payload_parts:
+            for variant in self._normalize_text_variants(part):
+                lowered = variant.lower()
+                if lowered not in seen:
+                    seen.add(lowered)
+                    variants.append(lowered)
+
+        return variants
+
+    def _query_profile(self, url: str) -> Dict[str, float]:
+        profile = {
+            "param_count": 0.0,
+            "high_risk_params": 0.0,
+            "encoded_depth": 0.0,
+            "special_ratio": 0.0,
+        }
+        if not url:
+            return profile
+
+        variants = self._normalize_text_variants(url)
+        profile["encoded_depth"] = float(max(len(variants) - 1, 0))
+
+        parsed = urlparse(variants[-1] if variants else url)
+        query = parsed.query or ""
+        params = parse_qsl(query, keep_blank_values=True)
+        profile["param_count"] = float(len(params))
+
+        risky_names = {
+            "id", "user", "username", "admin", "token", "redirect", "url", "next",
+            "file", "path", "cmd", "exec", "password", "key",
+        }
+        high_risk = 0
+        for key, value in params:
+            key_lower = str(key).lower()
+            value_lower = str(value).lower()
+            if key_lower in risky_names or any(marker in value_lower for marker in ["../", "<script", "union select", "http://", "https://"]):
+                high_risk += 1
+        profile["high_risk_params"] = float(high_risk)
+
+        if query:
+            special_chars = sum(1 for ch in query if not ch.isalnum())
+            profile["special_ratio"] = special_chars / max(len(query), 1)
+
+        return profile
+
+    def _dedupe_keep_order(self, items: List[str], limit: int = 10) -> List[str]:
+        seen: Set[str] = set()
+        result: List[str] = []
+        for item in items:
+            if item not in seen:
+                seen.add(item)
+                result.append(item)
+            if len(result) >= limit:
+                break
+        return result
+
+    def _check_patterns(self, texts: List[str], compiled_patterns: List[Tuple[str, re.Pattern[str]]]) -> Tuple[float, List[str]]:
+        """Check text variants against compiled regex patterns, return (score, matched_patterns)"""
+        if not texts:
+            return 0.0, []
+
+        matches: List[str] = []
+
+        for label, compiled in compiled_patterns:
+            try:
+                if any(compiled.search(text) for text in texts):
+                    matches.append(label[:40])
+            except Exception:
+                continue
+
+        score = min(1.0, len(matches) * 0.22) if matches else 0.0
         return score, matches
 
-    def _analyze_payload(self, url: str, body: str = "", headers: dict = None) -> dict:
+    def _analyze_payload(self, url: str, body: str = "", headers: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Deep payload analysis for malicious patterns"""
-        full_payload = f"{url} {body}".lower()
+        payload_variants = self._build_payload_variants(url, body, headers)
+        query_profile = self._query_profile(url)
         
-        analysis = {
+        analysis: Dict[str, Any] = {
             "sql_injection": 0.0,
             "xss": 0.0,
             "path_traversal": 0.0,
             "command_injection": 0.0,
             "ssrf": 0.0,
+            "encoding_abuse": 0.0,
             "detected_patterns": [],
             "risk_factors": [],
         }
         
         # Check each attack type
-        sql_score, sql_matches = self._check_patterns(full_payload, self.sql_patterns)
+        sql_score, sql_matches = self._check_patterns(payload_variants, self._compiled_pattern_groups["sql"])
         if sql_score > 0:
             analysis["sql_injection"] = sql_score
             analysis["detected_patterns"].extend([f"SQL:{m}" for m in sql_matches])
             analysis["risk_factors"].append("sql_patterns_detected")
         
-        xss_score, xss_matches = self._check_patterns(full_payload, self.xss_patterns)
+        xss_score, xss_matches = self._check_patterns(payload_variants, self._compiled_pattern_groups["xss"])
         if xss_score > 0:
             analysis["xss"] = xss_score
             analysis["detected_patterns"].extend([f"XSS:{m}" for m in xss_matches])
             analysis["risk_factors"].append("xss_patterns_detected")
         
-        path_score, path_matches = self._check_patterns(full_payload, self.path_traversal_patterns)
+        path_score, path_matches = self._check_patterns(payload_variants, self._compiled_pattern_groups["path"])
         if path_score > 0:
             analysis["path_traversal"] = path_score
             analysis["detected_patterns"].extend([f"PATH:{m}" for m in path_matches])
             analysis["risk_factors"].append("path_traversal_detected")
         
-        cmd_score, cmd_matches = self._check_patterns(full_payload, self.command_injection_patterns)
+        cmd_score, cmd_matches = self._check_patterns(payload_variants, self._compiled_pattern_groups["cmd"])
         if cmd_score > 0:
             analysis["command_injection"] = cmd_score
             analysis["detected_patterns"].extend([f"CMD:{m}" for m in cmd_matches])
             analysis["risk_factors"].append("command_injection_detected")
         
-        ssrf_score, ssrf_matches = self._check_patterns(full_payload, self.ssrf_patterns)
+        ssrf_score, ssrf_matches = self._check_patterns(payload_variants, self._compiled_pattern_groups["ssrf"])
         if ssrf_score > 0:
             analysis["ssrf"] = ssrf_score
             analysis["detected_patterns"].extend([f"SSRF:{m}" for m in ssrf_matches])
             analysis["risk_factors"].append("ssrf_patterns_detected")
+
+        if query_profile["encoded_depth"] >= 2:
+            analysis["encoding_abuse"] = self._clamp(0.2 + (query_profile["encoded_depth"] * 0.15))
+            analysis["risk_factors"].append("multi_encoded_payload")
+        if query_profile["special_ratio"] > 0.35:
+            analysis["encoding_abuse"] = max(analysis["encoding_abuse"], 0.2)
+            analysis["risk_factors"].append("dense_special_chars")
+        if query_profile["high_risk_params"] >= 2:
+            analysis["encoding_abuse"] = max(analysis["encoding_abuse"], 0.25)
+            analysis["risk_factors"].append("multiple_high_risk_params")
         
         # Aggregate score (weighted by severity)
         analysis["total_score"] = self._clamp(
@@ -452,8 +645,12 @@ class HeuristicScorer:
             xss_score * 0.9 +
             path_score * 0.95 +
             cmd_score * 1.0 +
-            ssrf_score * 0.9
+            ssrf_score * 0.9 +
+            analysis["encoding_abuse"] * 0.45
         )
+
+        analysis["detected_patterns"] = self._dedupe_keep_order(analysis["detected_patterns"], limit=12)
+        analysis["risk_factors"] = self._dedupe_keep_order(analysis["risk_factors"], limit=12)
         
         return analysis
 
@@ -490,9 +687,8 @@ class HeuristicScorer:
         
         return {"score": 0.0, "type": "browser", "note": "normal_browser"}
 
-    def _analyze_context(self, method: str, url: str, headers: dict = None) -> dict:
+    def _analyze_context(self, method: str, url: str, headers: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Analyze request context for suspicious behavior"""
-        import re
         context = {
             "score": 0.0,
             "risk_factors": [],
@@ -503,9 +699,9 @@ class HeuristicScorer:
         url_lower = (url or "").lower()
         
         # Check sensitive endpoints
-        for pattern in self.sensitive_endpoints:
+        for pattern, compiled in self._compiled_pattern_groups["sensitive_endpoints"]:
             try:
-                if re.search(pattern, url_lower):
+                if compiled.search(url_lower):
                     context["score"] += 0.3
                     context["risk_factors"].append(f"sensitive_endpoint:{pattern[:20]}")
                     context["endpoint_type"] = "sensitive"
@@ -523,17 +719,129 @@ class HeuristicScorer:
             context["risk_factors"].append("post_to_query_endpoint")
         
         # Check for parameter tampering indicators
-        if "id=" in url_lower or "user=" in url_lower or "admin=" in url_lower:
-            context["score"] += 0.15
+        profile = self._query_profile(url)
+        if profile["high_risk_params"] > 0:
+            context["score"] += min(0.22, 0.08 * profile["high_risk_params"])
             context["risk_factors"].append("sensitive_params")
+        if profile["param_count"] >= 8:
+            context["score"] += 0.08
+            context["risk_factors"].append("many_query_params")
+        if profile["encoded_depth"] >= 2:
+            context["score"] += 0.12
+            context["risk_factors"].append("deeply_encoded_request")
         
         # Very long query strings
         if "?" in url and len(url.split("?", 1)[1]) > 500:
             context["score"] += 0.2
             context["risk_factors"].append("long_query_string")
+
+        header_text = self._get_header_text(headers).lower()
+        if any(marker in header_text for marker in ["127.0.0.1", "localhost", "169.254."]):
+            context["score"] += 0.18
+            context["risk_factors"].append("internal_host_header_reference")
+
+        context["risk_factors"] = self._dedupe_keep_order(context["risk_factors"], limit=10)
         
         context["score"] = self._clamp(context["score"])
         return context
+
+    def _infer_threat_score(self, threat_type: str) -> float:
+        if not threat_type or threat_type == "none":
+            return 0.0
+
+        threat_scores = {
+            "sql_injection": 1.0,
+            "command_injection": 1.0,
+            "ldap_injection": 0.95,
+            "xml_injection": 0.9,
+            "xpath_injection": 0.9,
+            "template_injection": 0.95,
+            "ssti": 0.95,
+            "nosql_injection": 0.95,
+            "code_injection": 1.0,
+            "xss_attempt": 0.9,
+            "stored_xss": 0.95,
+            "reflected_xss": 0.85,
+            "dom_xss": 0.85,
+            "csrf": 0.85,
+            "clickjacking": 0.7,
+            "path_traversal": 0.95,
+            "directory_traversal": 0.95,
+            "lfi": 0.95,
+            "rfi": 0.98,
+            "file_upload": 0.9,
+            "unrestricted_file_upload": 0.95,
+            "rce": 1.0,
+            "remote_code_execution": 1.0,
+            "deserialization": 0.95,
+            "unsafe_deserialization": 0.95,
+            "auth_bypass": 0.95,
+            "authentication_bypass": 0.95,
+            "session_hijacking": 0.9,
+            "session_fixation": 0.85,
+            "credential_stuffing": 0.8,
+            "brute_force": 0.75,
+            "password_spray": 0.75,
+            "ssrf": 0.95,
+            "xxe": 0.95,
+            "xml_bomb": 0.9,
+            "billion_laughs": 0.9,
+            "ddos_attack": 0.85,
+            "slowloris": 0.8,
+            "syn_flood": 0.85,
+            "udp_flood": 0.8,
+            "http_flood": 0.85,
+            "amplification_attack": 0.9,
+            "header_injection": 0.8,
+            "crlf_injection": 0.8,
+            "host_header_injection": 0.85,
+            "http_response_splitting": 0.85,
+            "http_smuggling": 0.9,
+            "directory_listing": 0.6,
+            "sensitive_data_exposure": 0.7,
+            "information_disclosure": 0.65,
+            "path_disclosure": 0.6,
+            "error_disclosure": 0.5,
+            "bot_attack": 0.7,
+            "web_scraping": 0.5,
+            "automated_scan": 0.6,
+            "vulnerability_scan": 0.7,
+            "scanner_detected": 0.7,
+            "api_abuse": 0.75,
+            "excessive_data_exposure": 0.7,
+            "broken_authentication": 0.9,
+            "broken_access_control": 0.85,
+            "mass_assignment": 0.8,
+            "security_misconfiguration": 0.7,
+            "rate_limit_exceeded": 0.6,
+            "resource_exhaustion": 0.75,
+            "zip_bomb": 0.8,
+            "regex_dos": 0.75,
+            "privilege_escalation": 0.95,
+            "idor": 0.85,
+            "forced_browsing": 0.7,
+            "parameter_tampering": 0.75,
+            "blocked_ip": 0.8,
+            "suspicious_behavior": 0.7,
+            "malicious_payload": 0.85,
+            "backdoor_attempt": 0.95,
+            "webshell": 0.98,
+            "crypto_mining": 0.9,
+        }
+
+        if threat_type in threat_scores:
+            return threat_scores[threat_type]
+
+        if any(marker in threat_type for marker in ["injection", "rce", "webshell"]):
+            return 0.9
+        if any(marker in threat_type for marker in ["xss", "csrf", "ssrf", "xxe", "traversal"]):
+            return 0.85
+        if any(marker in threat_type for marker in ["scan", "bot", "scrap", "brute"]):
+            return 0.65
+        if any(marker in threat_type for marker in ["rate", "flood", "dos"]):
+            return 0.7
+
+        return 0.5
 
     def _ua_suspicious(self, user_agent: str) -> float:
         """Legacy method for backwards compatibility"""
@@ -571,113 +879,7 @@ class HeuristicScorer:
         # 1. THREAT TYPE SCORING (Primary indicator)
         threat_score = 0.0
         if threat_type != "none":
-            threat_scores = {
-                # Injection Attacks (Critical)
-                "sql_injection": 1.0,
-                "command_injection": 1.0,
-                "ldap_injection": 0.95,
-                "xml_injection": 0.9,
-                "xpath_injection": 0.9,
-                "template_injection": 0.95,
-                "ssti": 0.95,
-                "nosql_injection": 0.95,
-                "code_injection": 1.0,
-                
-                # Cross-Site Attacks (High)
-                "xss_attempt": 0.9,
-                "stored_xss": 0.95,
-                "reflected_xss": 0.85,
-                "dom_xss": 0.85,
-                "csrf": 0.85,
-                "clickjacking": 0.7,
-                
-                # File & Path Attacks (High)
-                "path_traversal": 0.95,
-                "directory_traversal": 0.95,
-                "lfi": 0.95,
-                "rfi": 0.98,
-                "file_upload": 0.9,
-                "unrestricted_file_upload": 0.95,
-                
-                # Remote Execution (Critical)
-                "rce": 1.0,
-                "remote_code_execution": 1.0,
-                "deserialization": 0.95,
-                "unsafe_deserialization": 0.95,
-                
-                # Authentication & Session Attacks (High)
-                "auth_bypass": 0.95,
-                "authentication_bypass": 0.95,
-                "session_hijacking": 0.9,
-                "session_fixation": 0.85,
-                "credential_stuffing": 0.8,
-                "brute_force": 0.75,
-                "password_spray": 0.75,
-                
-                # Server Attacks (High)
-                "ssrf": 0.95,
-                "xxe": 0.95,
-                "xml_bomb": 0.9,
-                "billion_laughs": 0.9,
-                
-                # Network & DDoS Attacks (Medium-High)
-                "ddos_attack": 0.85,
-                "slowloris": 0.8,
-                "syn_flood": 0.85,
-                "udp_flood": 0.8,
-                "http_flood": 0.85,
-                "amplification_attack": 0.9,
-                
-                # Header & Protocol Attacks (Medium)
-                "header_injection": 0.8,
-                "crlf_injection": 0.8,
-                "host_header_injection": 0.85,
-                "http_response_splitting": 0.85,
-                "http_smuggling": 0.9,
-                
-                # Information Disclosure (Medium)
-                "directory_listing": 0.6,
-                "sensitive_data_exposure": 0.7,
-                "information_disclosure": 0.65,
-                "path_disclosure": 0.6,
-                "error_disclosure": 0.5,
-                
-                # Automated Attacks (Medium)
-                "bot_attack": 0.7,
-                "web_scraping": 0.5,
-                "automated_scan": 0.6,
-                "vulnerability_scan": 0.7,
-                "scanner_detected": 0.7,
-                
-                # API & Business Logic (Medium-High)
-                "api_abuse": 0.75,
-                "excessive_data_exposure": 0.7,
-                "broken_authentication": 0.9,
-                "broken_access_control": 0.85,
-                "mass_assignment": 0.8,
-                "security_misconfiguration": 0.7,
-                
-                # Rate & Resource Abuse (Low-Medium)
-                "rate_limit_exceeded": 0.6,
-                "resource_exhaustion": 0.75,
-                "zip_bomb": 0.8,
-                "regex_dos": 0.75,
-                
-                # Access Control (Medium-High)
-                "privilege_escalation": 0.95,
-                "idor": 0.85,
-                "forced_browsing": 0.7,
-                "parameter_tampering": 0.75,
-                
-                # Other Threats
-                "blocked_ip": 0.8,
-                "suspicious_behavior": 0.7,
-                "malicious_payload": 0.85,
-                "backdoor_attempt": 0.95,
-                "webshell": 0.98,
-                "crypto_mining": 0.9
-            }
-            threat_score = threat_scores.get(threat_type, 0.5)
+            threat_score = self._infer_threat_score(str(threat_type).lower())
             all_risk_factors.append(f"threat_detected:{threat_type}")
         
         component_scores["threat_type"] = threat_score
@@ -714,9 +916,21 @@ class HeuristicScorer:
             all_risk_factors.append("ip_blacklisted")
         component_scores["blacklist"] = blacklisted
         
+        payload_attack_count = sum(
+            1
+            for key in ["sql_injection", "xss", "path_traversal", "command_injection", "ssrf"]
+            if payload_analysis.get(key, 0) >= 0.2
+        )
+
+        corroboration_count = sum(
+            1
+            for score in [payload_score, ua_score, context_score, norm_ddos, blacklisted]
+            if score >= 0.25
+        )
+
         # 7. CALCULATE FINAL SCORE using weighted combination
         if threat_score > 0:
-            # If detected threat, use as base and add modifiers
+            # If detected threat, use as base and let corroborating indicators strengthen confidence.
             secondary_boost = (
                 payload_score * 0.15 +
                 ua_score * 0.1 +
@@ -724,16 +938,32 @@ class HeuristicScorer:
                 norm_ddos * 0.1 +
                 blacklisted * 0.15
             )
-            final_score = threat_score + (secondary_boost * (1 - threat_score))
+            corroboration_bonus = min(0.12, corroboration_count * 0.03)
+            final_score = threat_score + ((secondary_boost + corroboration_bonus) * (1 - threat_score))
         else:
-            # No explicit threat - calculate from all indicators
-            final_score = (
+            # No explicit threat: require broader evidence and reduce noisy single-signal spikes.
+            weighted_score = (
                 payload_score * self.weights["payload_analysis"] +
                 ua_score * self.weights["suspicious_ua"] +
                 context_score * self.weights["context_score"] +
                 norm_ddos * self.weights["ddos_score"] +
                 blacklisted * self.weights["blacklist"]
             )
+            corroboration_bonus = min(0.16, corroboration_count * 0.04)
+            payload_attack_bonus = min(0.22, payload_attack_count * 0.08)
+            single_signal_penalty = 0.08 if corroboration_count <= 1 and max(component_scores.values(), default=0) < 0.9 else 0.0
+            final_score = weighted_score + corroboration_bonus + payload_attack_bonus - single_signal_penalty
+
+            strong_payload_evidence = payload_attack_count >= 1 and (
+                payload_analysis.get("encoding_abuse", 0) >= 0.2 or
+                context_score >= 0.2 or
+                ua_score >= 0.5
+            )
+            multiple_attack_signals = payload_attack_count >= 2
+            if multiple_attack_signals:
+                final_score = max(final_score, 0.65)
+            elif strong_payload_evidence:
+                final_score = max(final_score, 0.55)
         
         final_score = self._clamp(final_score)
         
@@ -743,11 +973,11 @@ class HeuristicScorer:
         max_component = max(component_scores.values()) if component_scores else 0
         
         if threat_score > 0.7:
-            confidence = 0.85 + (0.15 * (indicator_count / 5))
+            confidence = 0.82 + (0.14 * (indicator_count / 5)) + min(0.04, corroboration_count * 0.01)
         elif final_score > 0.5:
-            confidence = 0.6 + (0.3 * max_component)
+            confidence = 0.58 + (0.26 * max_component) + min(0.1, corroboration_count * 0.03)
         else:
-            confidence = 0.4 + (0.4 * max_component)
+            confidence = 0.38 + (0.34 * max_component) + min(0.08, corroboration_count * 0.02)
         
         confidence = self._clamp(confidence)
         
@@ -782,6 +1012,9 @@ class HeuristicScorer:
         
         note = ", ".join(note_parts) if note_parts else "no_strong_indicators"
 
+        all_risk_factors = self._dedupe_keep_order(all_risk_factors, limit=10)
+        all_detected_patterns = self._dedupe_keep_order(all_detected_patterns, limit=10)
+
         return {
             "ai_score": round(final_score, 3),
             "ai_confidence": round(confidence, 3),
@@ -789,9 +1022,9 @@ class HeuristicScorer:
             "note": note,
             "scorer_type": "heuristic_enhanced",
             "component_scores": {k: round(v, 3) for k, v in component_scores.items()},
-            "risk_factors": all_risk_factors[:10],  # Limit to top 10
-            "detected_patterns": all_detected_patterns[:10],  # Limit to top 10
-            "analysis_version": "2.0"
+            "risk_factors": all_risk_factors,
+            "detected_patterns": all_detected_patterns,
+            "analysis_version": "2.1"
         }
 
 
@@ -813,6 +1046,8 @@ class ModelScorer:
         self.model = None
         self.embedder = None
         self.embedder_name = None
+        self.feature_version = "1.0"
+        self.model_kind = None
         self._load_model()
 
     def _load_model(self):
@@ -830,6 +1065,8 @@ class ModelScorer:
             # expected structure: {"model": <estimator>, "embedder_name": <str>}
             self.model = data.get("model") if isinstance(data, dict) else data
             self.embedder_name = data.get("embedder_name") if isinstance(data, dict) else None
+            self.feature_version = data.get("feature_version", "1.0") if isinstance(data, dict) else "1.0"
+            self.model_kind = data.get("model_kind") if isinstance(data, dict) else None
             
             print(f"✓ Model loaded successfully: {type(self.model).__name__}")
             
@@ -872,9 +1109,105 @@ class ModelScorer:
 
         return nums, text
 
+    def _build_feature_frame(self, event: Any):
+        if pd is None:
+            return None
+
+        details = getattr(event, "details", {}) or {}
+        target_url = getattr(event, "url", "") or getattr(event, "target_url", "") or ""
+        user_agent = getattr(event, "user_agent", details.get("user_agent", "")) or ""
+        threat_type = getattr(event, "threat_type", details.get("threat_type", "none")) or "none"
+        threat_level = getattr(getattr(event, "threat_level", None), "value", None) or details.get("threat_level", "INFO")
+        method = getattr(event, "method", details.get("method", "GET")) or "GET"
+        action = getattr(getattr(event, "action_taken", None), "value", None) or details.get("action", "allow")
+        blocked = float(bool(getattr(event, "blocked", details.get("blocked", False))))
+        ddos_score = float(details.get("ddos_score", 0) or 0)
+        ai_details = details.get("ai", {}) if isinstance(details.get("ai"), dict) else {}
+        ai_score = float(ai_details.get("ai_score", 0) or 0)
+        ai_confidence = float(ai_details.get("ai_confidence", 0) or 0)
+        payload_length = float(len(target_url))
+        text = f"{target_url} {user_agent}".strip()
+        combined_text = f"{target_url} {user_agent} {text} {threat_type} {threat_level} {method}".strip()
+
+        return pd.DataFrame([
+            {
+                "target_url": target_url,
+                "user_agent": user_agent,
+                "text": text,
+                "threat_type": str(threat_type or "none"),
+                "threat_level": str(threat_level or "INFO"),
+                "method": str(method or "GET"),
+                "action": str(action or "allow"),
+                "blocked": blocked,
+                "ddos_score": ddos_score,
+                "payload_length": payload_length,
+                "ai_score": ai_score,
+                "ai_confidence": ai_confidence,
+                "combined_text": combined_text,
+            }
+        ])
+
+    def _score_pipeline_model(self, event: Any) -> Optional[Dict[str, Any]]:
+        if self.model is None or pd is None:
+            return None
+
+        frame = self._build_feature_frame(event)
+        if frame is None:
+            return None
+
+        try:
+            if hasattr(self.model, "predict_proba"):
+                probs = self.model.predict_proba(frame)[0]
+                pred = self.model.predict(frame)[0]
+                confidence = float(max(probs))
+                classes = getattr(self.model, "classes_", None)
+                probability_map = {}
+                severity_score = 0.0
+
+                if classes is not None:
+                    for class_label, prob in zip(classes, probs):
+                        normalized = normalize_severity_label(class_label)
+                        probability_map[normalized] = round(float(prob), 3)
+                        severity_score += severity_to_index(class_label) * float(prob)
+                else:
+                    severity_score = severity_to_index(pred)
+
+                suggested_severity = normalize_severity_label(pred)
+                normalized_score = round(min(1.0, max(0.0, severity_score / 4.0)), 3)
+
+                return {
+                    "model_type": "supervised",
+                    "feature_version": self.feature_version,
+                    "predicted_label": str(pred),
+                    "model_confidence": round(confidence, 3),
+                    "model_score": normalized_score,
+                    "suggested_severity": suggested_severity,
+                    "class_probabilities": probability_map,
+                }
+
+            if hasattr(self.model, "predict"):
+                pred = self.model.predict(frame)[0]
+                suggested_severity = normalize_severity_label(pred)
+                return {
+                    "model_type": "predict_only",
+                    "feature_version": self.feature_version,
+                    "predicted_label": str(pred),
+                    "suggested_severity": suggested_severity,
+                    "model_score": round(severity_to_index(pred) / 4.0, 3),
+                }
+        except Exception:
+            return None
+
+        return None
+
     def score_event_with_model(self, event: Any) -> Optional[Dict[str, Any]]:
         if self.model is None:
             return None
+
+        if self.feature_version != "1.0":
+            result = self._score_pipeline_model(event)
+            if result is not None:
+                return result
 
         nums, text = self._make_features(event)
 
@@ -907,19 +1240,13 @@ class ModelScorer:
                 predicted_label = int(pred) if hasattr(pred, 'item') else int(pred) if isinstance(pred, (int, float)) else pred
 
                 # Map numeric labels to human-friendly severities when applicable
-                suggested_severity = None
-                try:
-                    # If label is numeric, map to default severity names
-                    val = int(predicted_label)
-                    severity_map = {0: 'low', 1: 'medium', 2: 'high', 3: 'critical'}
-                    suggested_severity = severity_map.get(val, str(predicted_label))
-                except Exception:
-                    suggested_severity = str(predicted_label)
+                suggested_severity = normalize_severity_label(predicted_label)
 
                 return {
                     "model_type": "supervised",
                     "predicted_label": predicted_label,
                     "model_confidence": round(confidence, 3),
+                    "model_score": round(severity_to_index(predicted_label) / 4.0, 3),
                     "suggested_severity": suggested_severity
                 }
 
@@ -1009,6 +1336,17 @@ class UnifiedScorer:
         model_result = self.model_scorer.score_event_with_model(event)
         if model_result:
             result["model"] = model_result
+            model_confidence = float(model_result.get("model_confidence", 0) or 0)
+            suggested_severity = model_result.get("suggested_severity")
+            if suggested_severity:
+                result["severity_refined"] = blend_severity_levels(
+                    result.get("severity"),
+                    suggested_severity,
+                    model_confidence,
+                )
+                result["severity_model_confidence"] = round(model_confidence, 3)
+                if model_confidence >= 0.55:
+                    result["severity"] = result["severity_refined"]
         
         return result
     

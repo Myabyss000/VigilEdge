@@ -1286,9 +1286,16 @@
                 
                 eventsList.innerHTML = data.events.map((event, index) => {
                     const ai = event.details?.ai || {};
+                    const model = ai.model || {};
                     const score = ai.ai_score || 0;
                     const confidence = ai.ai_confidence || 0;
                     const note = ai.note || 'N/A';
+                    const severity = ai.severity_refined || ai.severity || event.threat_level || 'UNKNOWN';
+                    const suggestedSeverity = model.suggested_severity || ai.severity_refined || ai.severity || null;
+                    const prediction = model.predicted_label ?? model.predicted ?? 'N/A';
+                    const modelConfidence = model.model_confidence ?? model.model_score;
+                    const modelType = model.model_type || (Object.keys(model).length ? 'available' : 'N/A');
+                    const classProbabilities = model.class_probabilities || {};
                     
                     let scoreClass = 'score-low';
                     let riskBadge = 'badge-success';
@@ -1310,6 +1317,47 @@
                     
                     const flaggedBadge = ai.flagged ? 
                         `<span class="badge badge-warning">🚩 FLAGGED</span>` : '';
+
+                    const modelSummary = Object.keys(model).length > 0 ? `
+                        <div class="ai-metrics" style="margin-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+                            <div class="ai-metric">
+                                <span class="metric-label">Severity</span>
+                                <span class="metric-value ${scoreClass}">${String(severity).toUpperCase()}</span>
+                            </div>
+                            <div class="ai-metric">
+                                <span class="metric-label">ML Prediction</span>
+                                <span class="metric-value">${prediction}</span>
+                            </div>
+                            <div class="ai-metric">
+                                <span class="metric-label">ML Confidence</span>
+                                <span class="metric-value">${modelConfidence !== null && modelConfidence !== undefined ? Number(modelConfidence).toFixed(3) : 'N/A'}</span>
+                            </div>
+                            <div class="ai-metric">
+                                <span class="metric-label">Suggested Severity</span>
+                                <span class="metric-value">${suggestedSeverity ? String(suggestedSeverity).toUpperCase() : 'N/A'}</span>
+                            </div>
+                            <div class="ai-metric">
+                                <span class="metric-label">ML Model Type</span>
+                                <span class="metric-value">${modelType}</span>
+                            </div>
+                        </div>
+                        ${Object.keys(classProbabilities).length > 0 ? `
+                            <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                ${Object.entries(classProbabilities).map(([label, value]) => `
+                                    <span class="badge ${value >= 0.5 ? 'badge-danger' : value >= 0.25 ? 'badge-warning' : 'badge-success'}">
+                                        ${label.toUpperCase()}: ${(Number(value) * 100).toFixed(1)}%
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <div class="ai-metrics" style="margin-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+                            <div class="ai-metric">
+                                <span class="metric-label">Severity</span>
+                                <span class="metric-value ${scoreClass}">${String(severity).toUpperCase()}</span>
+                            </div>
+                        </div>
+                    `;
                     
                     return `
                         <div class="event-item" style="animation-delay: ${index * 0.1}s;">
@@ -1356,6 +1404,7 @@
                                         <span class="metric-value" style="font-size: 0.875rem;">${note}</span>
                                     </div>
                                 </div>
+                                ${modelSummary}
                             </div>
                         </div>
                     `;

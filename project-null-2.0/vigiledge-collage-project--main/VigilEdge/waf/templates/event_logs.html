@@ -951,8 +951,9 @@
             
             recentEvents.forEach(event => {
                 const time = new Date(event.timestamp).toLocaleTimeString();
-                const level = event.blocked ? 'error' : (event.threat_level === 'medium' ? 'warn' : 'info');
-                const type = event.blocked ? 'error' : (event.threat_level === 'medium' ? 'warning' : 'info');
+                const normalizedThreatLevel = (event.threat_level || '').toLowerCase();
+                const level = event.blocked ? 'error' : (normalizedThreatLevel === 'medium' ? 'warn' : 'info');
+                const type = event.blocked ? 'error' : (normalizedThreatLevel === 'medium' ? 'warning' : 'info');
                 
                 const logEntry = document.createElement('div');
                 logEntry.className = `log-entry ${type}`;
@@ -1103,6 +1104,8 @@
             `;
             
             // Request Data Section
+            const httpMethod = event.method || event.details?.method || 'GET';
+
             html += `
                 <div class="detail-section">
                     <h4 class="detail-section-title">📤 Request Data</h4>
@@ -1113,7 +1116,7 @@
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">HTTP Method</div>
-                            <div class="detail-value">${event.method || 'GET'}</div>
+                            <div class="detail-value">${httpMethod}</div>
                         </div>
                         <div class="detail-item" style="grid-column: span 2;">
                             <div class="detail-label">URL / Endpoint</div>
@@ -1147,12 +1150,13 @@
             const model = aiDetails.model || {};
             const aiScore = aiDetails.ai_score;
             const aiConfidence = aiDetails.ai_confidence;
-            const severity = aiDetails.severity || 'unknown';
+            const severity = aiDetails.severity_refined || aiDetails.severity || 'unknown';
             const componentScores = aiDetails.component_scores || {};
             const riskFactors = aiDetails.risk_factors || [];
             const detectedPatterns = aiDetails.detected_patterns || [];
             const modelConfidence = model.model_confidence;
             const modelScore = model.model_score;
+            const classProbabilities = model.class_probabilities || {};
             
             // Determine what type of model prediction we have
             let predictionDisplay = 'N/A';
@@ -1275,9 +1279,25 @@
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Suggested Severity</div>
-                            <div class="detail-value warning">${model.suggested_severity || aiDetails.severity || 'N/A'}</div>
+                            <div class="detail-value warning">${model.suggested_severity || aiDetails.severity_refined || aiDetails.severity || 'N/A'}</div>
                         </div>
                     </div>
+
+                    ${Object.keys(classProbabilities).length > 0 ? `
+                    <div style="margin-top: 1rem;">
+                        <div class="detail-label" style="margin-bottom: 0.5rem;">📊 ML Class Probabilities</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${Object.entries(classProbabilities).map(([key, val]) => `
+                                <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem;">
+                                    <span style="color: var(--text-muted);">${key}:</span>
+                                    <span style="color: ${val >= 0.5 ? '#ff6464' : val >= 0.25 ? '#ffcc00' : '#00ff87'}; font-weight: 600;">
+                                        ${(val * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     ${flagReasons.length > 0 ? `
                     <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,51,102,0.1); border-radius: 8px; border: 1px solid rgba(255,51,102,0.3);">
