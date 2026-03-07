@@ -102,11 +102,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             "/api/v1/ai-scorer/config",
             "/api/v1/ai-scorer/switch",
             "/api/v1/ai-scorer/check-lm-studio",
-            "/api/v1/ai-scorer/test"
+            "/api/v1/ai-scorer/test",
+            "/api/v1/speed/",
+            "/api/v1/network/",
+            "/api/v1/activity/",
         ]
         
         # Check if path matches WAF management endpoints or their sub-paths
         if request.url.path in waf_management_endpoints or \
+              request.url.path.startswith("/api/v1/speed/") or \
+              request.url.path.startswith("/api/v1/network/") or \
+              request.url.path.startswith("/api/v1/activity/") or \
            request.url.path.startswith("/api/v1/backups/"):
             response = await call_next(request)
             return response

@@ -107,6 +107,7 @@ class WAFEngine:
     
     def __init__(self):
         self.settings = get_settings()
+        self.started_at = datetime.now()
         self.security_manager = SecurityManager()
         # Unified AI scorer with switching capability (heuristic/LM Studio/hybrid)
         try:
@@ -1027,6 +1028,9 @@ class WAFEngine:
             '/api/v1/system/uptime',
             '/api/v1/blocked-ips',
             '/api/v1/event-logs',
+            '/api/v1/network/',
+            '/api/v1/speed/',
+            '/api/v1/activity/',
             '/api/v1/chat',  # AI chatbot endpoint
             '/api/v1/chat-test',  # AI chatbot test endpoint  
             '/api/v1/chat-test-post',  # POST test
@@ -1511,6 +1515,12 @@ class WAFEngine:
     async def _check_rate_limit(self, ip: str) -> bool:
         """Advanced rate limiting with burst detection and adaptive throttling"""
         now = datetime.now()
+
+        if ip in {"127.0.0.1", "localhost", "::1"}:
+            startup_grace = max(0, int(self.settings.rate_limit_localhost_startup_grace_seconds))
+            if startup_grace and (now - self.started_at).total_seconds() < startup_grace:
+                return True
+
         window_start = now - timedelta(seconds=self.settings.rate_limit_window)
         
         if ip not in self.rate_limits:

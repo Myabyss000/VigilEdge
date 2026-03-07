@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=100, env="RATE_LIMIT_REQUESTS")
     rate_limit_window: int = Field(default=60, env="RATE_LIMIT_WINDOW")
     rate_limit_enabled: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
+    rate_limit_localhost_startup_grace_seconds: int = Field(default=20, env="RATE_LIMIT_LOCALHOST_STARTUP_GRACE_SECONDS")
     
     # WAF Security Settings
     sql_injection_protection: bool = Field(default=True, env="SQL_INJECTION_PROTECTION")

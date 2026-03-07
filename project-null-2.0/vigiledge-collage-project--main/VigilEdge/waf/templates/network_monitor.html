@@ -529,6 +529,13 @@
             font-weight: 500;
         }
 
+        .speed-gauge-meta {
+            margin-top: 0.35rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+        }
+
         .speed-test-panel {
             width: 320px;
             background: rgba(0, 0, 0, 0.3);
@@ -1165,12 +1172,14 @@
                         <div class="speed-gauge-value" id="realtimeDownload">0.00</div>
                         <div class="speed-gauge-unit">Mbps</div>
                         <div class="speed-gauge-label">Download Speed</div>
+                        <div class="speed-gauge-meta" id="downloadGaugeMeta">Live traffic</div>
                     </div>
                     <div class="speed-gauge upload">
                         <div class="speed-gauge-icon">⬆️</div>
                         <div class="speed-gauge-value" id="realtimeUpload">0.00</div>
                         <div class="speed-gauge-unit">Mbps</div>
                         <div class="speed-gauge-label">Upload Speed</div>
+                        <div class="speed-gauge-meta" id="uploadGaugeMeta">Live traffic</div>
                     </div>
                 </div>
 
@@ -1684,27 +1693,39 @@
         // ============= SPEED TEST FUNCTIONS =============
         
         let speedTestPolling = null;
+        let speedGaugeMode = 'realtime';
+
+        function setSpeedGaugeValues(download, upload, metaLabel) {
+            const downloadEl = document.getElementById('realtimeDownload');
+            const uploadEl = document.getElementById('realtimeUpload');
+            const downloadMeta = document.getElementById('downloadGaugeMeta');
+            const uploadMeta = document.getElementById('uploadGaugeMeta');
+
+            if (downloadEl) {
+                downloadEl.textContent = Number(download || 0).toFixed(2);
+                downloadEl.style.transform = 'scale(1.05)';
+                setTimeout(() => { downloadEl.style.transform = 'scale(1)'; }, 200);
+            }
+            if (uploadEl) {
+                uploadEl.textContent = Number(upload || 0).toFixed(2);
+                uploadEl.style.transform = 'scale(1.05)';
+                setTimeout(() => { uploadEl.style.transform = 'scale(1)'; }, 200);
+            }
+            if (downloadMeta) downloadMeta.textContent = metaLabel;
+            if (uploadMeta) uploadMeta.textContent = metaLabel;
+        }
 
         async function updateRealtimeSpeed() {
             try {
+                if (speedGaugeMode === 'test') {
+                    return;
+                }
+
                 const response = await fetch('/api/v1/speed/realtime');
                 const data = await response.json();
                 
                 if (data.success) {
-                    const downloadEl = document.getElementById('realtimeDownload');
-                    const uploadEl = document.getElementById('realtimeUpload');
-                    
-                    if (downloadEl) {
-                        downloadEl.textContent = data.download_speed.toFixed(2);
-                        // Add animation on change
-                        downloadEl.style.transform = 'scale(1.05)';
-                        setTimeout(() => { downloadEl.style.transform = 'scale(1)'; }, 200);
-                    }
-                    if (uploadEl) {
-                        uploadEl.textContent = data.upload_speed.toFixed(2);
-                        uploadEl.style.transform = 'scale(1.05)';
-                        setTimeout(() => { uploadEl.style.transform = 'scale(1)'; }, 200);
-                    }
+                    setSpeedGaugeValues(data.download_speed, data.upload_speed, 'Live traffic');
                 }
             } catch (error) {
                 console.error('Failed to update realtime speed:', error);
@@ -1734,10 +1755,12 @@
                 }
                 
                 // Update UI to running state
+                speedGaugeMode = 'test';
                 btn.classList.add('running');
                 btn.disabled = true;
                 btnIcon.textContent = '⏳';
                 btnText.textContent = 'Testing...';
+                setSpeedGaugeValues(0, 0, 'Speed test running');
                 
                 // Start polling for results
                 speedTestPolling = setInterval(pollSpeedTestStatus, 1000);
@@ -1771,6 +1794,12 @@
                 if (statusEl) {
                     statusEl.textContent = result.message || 'Testing...';
                 }
+
+                setSpeedGaugeValues(
+                    result.download || 0,
+                    result.upload || 0,
+                    result.status === 'completed' ? 'Latest speed test' : 'Speed test running'
+                );
                 
                 // Check if completed or error
                 if (result.status === 'completed' || result.status === 'error') {
@@ -1797,8 +1826,11 @@
                             new Date(result.timestamp).toLocaleTimeString() : 
                             new Date().toLocaleTimeString();
                         statusEl.textContent = `Last tested at ${timestamp} via ${result.server || 'HTTP test'}`;
+                        setSpeedGaugeValues(result.download || 0, result.upload || 0, 'Latest speed test');
                     } else {
+                        speedGaugeMode = 'realtime';
                         statusEl.textContent = result.message || 'Speed test failed';
+                        updateRealtimeSpeed();
                     }
                 }
                 

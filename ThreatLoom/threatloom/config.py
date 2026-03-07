@@ -1,8 +1,13 @@
 """
 Application configuration loaded from environment / .env file.
 """
+from pathlib import Path
 from typing import List
-from pydantic_settings import BaseSettings
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -51,6 +56,14 @@ class Settings(BaseSettings):
     NOTIFICATION_WEBHOOK_URL: str = ""
     NOTIFICATION_WEBHOOK_SECRET: str = ""
     BROWSER_NOTIFICATIONS_ENABLED: bool = True
+    NOTIFICATION_EMAIL_ENABLED: bool = False
+    NOTIFICATION_EMAIL_TO: str = ""
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
 
     # Detection engine
     DETECTION_SCAN_INTERVAL_SECONDS: int = 3
@@ -69,7 +82,11 @@ class Settings(BaseSettings):
     DEFAULT_ADMIN_USER: str = "admin"
     DEFAULT_ADMIN_PASS: str = "changeme"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()
