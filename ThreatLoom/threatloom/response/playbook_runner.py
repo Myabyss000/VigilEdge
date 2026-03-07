@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from threatloom.models.playbooks import Playbook, PlaybookExecution, PlaybookStatus
 from threatloom.models.alerts import Alert, AlertSeverity
 from threatloom.response.engine import ResponseEngine
+from threatloom.notifications.service import NotificationService
 
 logger = logging.getLogger("threatloom.response.playbook")
 
@@ -37,6 +38,7 @@ class PlaybookRunner:
 
     def __init__(self):
         self.response_engine = ResponseEngine()
+        self.notification_service = NotificationService()
 
     async def evaluate_alert(self, db: AsyncSession, alert: Alert):
         """
@@ -139,12 +141,29 @@ class PlaybookRunner:
                     })
 
                 elif action_type == "notify":
-                    # Notification stub - integrate with email/Slack/webhook
                     channel = action_def.get("channel", "soc")
+                    template = action_def.get("message", "{severity} alert from {src_ip}: {title}")
+                    message = template.format(
+                        severity=alert.severity.value if alert and alert.severity else "UNKNOWN",
+                        src_ip=alert.src_ip if alert and alert.src_ip else "unknown",
+                        attack_type=alert.attack_type if alert and alert.attack_type else "unknown",
+                        event_count=alert.event_count if alert else 0,
+                        title=alert.title if alert else playbook.name,
+                    )
                     logger.info(
                         f"PLAYBOOK NOTIFY [{channel}]: {playbook.name} "
                         f"triggered for alert {alert.id if alert else 'N/A'}"
                     )
+                    await self.notification_service.notify_playbook({
+                        "channel": channel,
+                        "playbook": playbook.name,
+                        "message": message,
+                        "alert_id": alert.id if alert else None,
+                        "severity": alert.severity.value if alert and alert.severity else None,
+                        "src_ip": alert.src_ip if alert else None,
+                        "attack_type": alert.attack_type if alert else None,
+                        "event_count": alert.event_count if alert else None,
+                    })
                     results.append({"action": "notify", "channel": channel, "status": "sent"})
 
                 elif action_type == "escalate":

@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     FIREWALL_WEBHOOK_SECRET: str = ""
     FIREWALL_WEBHOOK_ENABLED: bool = False
 
+    # Notifications
+    NOTIFICATIONS_ENABLED: bool = True
+    NOTIFICATION_MIN_SEVERITY: str = "HIGH"
+    NOTIFICATION_WEBHOOK_URL: str = ""
+    NOTIFICATION_WEBHOOK_SECRET: str = ""
+    BROWSER_NOTIFICATIONS_ENABLED: bool = True
+
+    # Detection engine
+    DETECTION_SCAN_INTERVAL_SECONDS: int = 3
+    DETECTION_LOOKBACK_SECONDS: int = 15
+
     # Firewall health check
     FIREWALL_HEALTH_URL: str = "http://localhost:5000"
     FIREWALL_STARTUP_CHECK: bool = True

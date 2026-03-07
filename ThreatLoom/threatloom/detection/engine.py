@@ -23,6 +23,9 @@ from threatloom.detection.behavioral.pattern_analyzer import PatternAnalyzer
 from threatloom.detection.correlation.ip_correlator import IPCorrelator
 from threatloom.detection.correlation.session_correlator import SessionCorrelator
 from threatloom.detection.correlation.time_window import TimeWindowCorrelator
+from threatloom.config import settings
+from threatloom.notifications.service import NotificationService
+from threatloom.websocket.manager import manager
 
 logger = logging.getLogger("threatloom.detection")
 
@@ -34,8 +37,7 @@ class DetectionEngine:
     Periodically scans recent logs, runs detection modules, and creates alerts.
     """
 
-    SCAN_INTERVAL_SECONDS = 10   # How often to scan for new events
-    LOOKBACK_SECONDS = 30        # How far back to scan each cycle
+    ALERT_GROUP_WINDOW_MINUTES = 15
 
     def __init__(self):
         self.rule_engine = RuleEngine()
@@ -45,6 +47,9 @@ class DetectionEngine:
         self.ip_correlator = IPCorrelator()
         self.session_correlator = SessionCorrelator()
         self.time_window = TimeWindowCorrelator()
+        self.notification_service = NotificationService()
+        self.scan_interval_seconds = max(1, int(settings.DETECTION_SCAN_INTERVAL_SECONDS))
+        self.lookback_seconds = max(self.scan_interval_seconds, int(settings.DETECTION_LOOKBACK_SECONDS))
         self._last_scan = datetime.utcnow()
 
     async def run(self):
@@ -58,11 +63,11 @@ class DetectionEngine:
                 return
             except Exception as e:
                 logger.error(f"Detection cycle error: {e}", exc_info=True)
-            await asyncio.sleep(self.SCAN_INTERVAL_SECONDS)
+            await asyncio.sleep(self.scan_interval_seconds)
 
     async def _scan_cycle(self):
         """Single scan cycle: fetch recent logs, run detectors, create alerts."""
-        cutoff = datetime.utcnow() - timedelta(seconds=self.LOOKBACK_SECONDS)
+        cutoff = datetime.utcnow() - timedelta(seconds=self.lookback_seconds)
         scan_from = max(cutoff, self._last_scan)
 
         async with async_session() as db:
@@ -126,11 +131,23 @@ class DetectionEngine:
         """Create an alert from a rule hit."""
         # Check for duplicate/similar recent alert
         existing = await self._find_similar_alert(
-            db, src_ip=log.src_ip, rule_id=hit.get("rule_id"), minutes=5
+            db,
+            src_ip=log.src_ip,
+            rule_id=hit.get("rule_id"),
+            attack_type=str(log.attack_type.value) if log.attack_type else None,
+            http_path=log.http_path,
+            detection_source=source,
+            minutes=self.ALERT_GROUP_WINDOW_MINUTES,
         )
         if existing:
-            existing.event_count += 1
-            existing.last_seen = datetime.utcnow()
+            self._merge_into_existing_alert(
+                existing,
+                event_increment=1,
+                log_ids=[log.id],
+                last_seen=datetime.utcnow(),
+                confidence=hit.get("confidence", 0.8),
+                http_path=log.http_path,
+            )
             return
 
         alert = Alert(
@@ -152,6 +169,8 @@ class DetectionEngine:
             confidence=hit.get("confidence", 0.8),
         )
         db.add(alert)
+        await db.flush()
+        await self._emit_alert(alert)
         logger.info(f"Alert created: {alert.title} [{alert.severity}] src={log.src_ip}")
 
         # Auto-escalate HIGH/CRITICAL alerts to incidents
@@ -163,11 +182,23 @@ class DetectionEngine:
     ):
         """Create alert from behavioral analysis output."""
         existing = await self._find_similar_alert(
-            db, src_ip=data.get("src_ip"), rule_id=source, minutes=10
+            db,
+            src_ip=data.get("src_ip"),
+            rule_id=source,
+            attack_type=data.get("attack_type"),
+            http_path=data.get("http_path"),
+            detection_source=source,
+            minutes=self.ALERT_GROUP_WINDOW_MINUTES,
         )
         if existing:
-            existing.event_count += data.get("event_count", 1)
-            existing.last_seen = datetime.utcnow()
+            self._merge_into_existing_alert(
+                existing,
+                event_increment=data.get("event_count", 1),
+                log_ids=data.get("log_ids", []),
+                last_seen=datetime.utcnow(),
+                confidence=data.get("confidence", 0.7),
+                http_path=data.get("http_path"),
+            )
             return
 
         alert = Alert(
@@ -186,11 +217,33 @@ class DetectionEngine:
             confidence=data.get("confidence", 0.7),
         )
         db.add(alert)
+        await db.flush()
+        await self._emit_alert(alert)
 
     async def _create_alert_from_correlation(
         self, db: AsyncSession, data: dict, source: str
     ):
         """Create alert from correlation output."""
+        existing = await self._find_similar_alert(
+            db,
+            src_ip=data.get("src_ip"),
+            rule_id=source,
+            attack_type=data.get("attack_type"),
+            http_path=data.get("http_path"),
+            detection_source=source,
+            minutes=self.ALERT_GROUP_WINDOW_MINUTES,
+        )
+        if existing:
+            self._merge_into_existing_alert(
+                existing,
+                event_increment=data.get("event_count", 1),
+                log_ids=data.get("log_ids", []),
+                last_seen=datetime.utcnow(),
+                confidence=data.get("confidence", 0.85),
+                http_path=data.get("http_path"),
+            )
+            return
+
         alert = Alert(
             alert_uid=str(uuid.uuid4()),
             title=data.get("title", f"Correlated event ({source})"),
@@ -207,26 +260,82 @@ class DetectionEngine:
             confidence=data.get("confidence", 0.85),
         )
         db.add(alert)
+        await db.flush()
+        await self._emit_alert(alert)
         logger.info(f"Correlation alert: {alert.title}")
 
     async def _find_similar_alert(
-        self, db: AsyncSession, src_ip: str = None, rule_id: str = None, minutes: int = 5
+        self,
+        db: AsyncSession,
+        src_ip: str = None,
+        rule_id: str = None,
+        attack_type: str = None,
+        http_path: str = None,
+        detection_source: str = None,
+        minutes: int = 5,
     ) -> Optional[Alert]:
         """Find a similar unresolved alert to deduplicate."""
         cutoff = datetime.utcnow() - timedelta(minutes=minutes)
         conditions = [
             Alert.created_at >= cutoff,
-            Alert.status.in_([AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]),
+            Alert.status.in_([
+                AlertStatus.NEW,
+                AlertStatus.ACKNOWLEDGED,
+                AlertStatus.IN_PROGRESS,
+                AlertStatus.ESCALATED,
+            ]),
         ]
         if src_ip:
             conditions.append(Alert.src_ip == src_ip)
         if rule_id:
             conditions.append(Alert.rule_id == rule_id)
+        if detection_source:
+            conditions.append(Alert.detection_source == detection_source)
+        if attack_type:
+            conditions.append(Alert.attack_type == attack_type)
+        if http_path:
+            conditions.append(Alert.http_path == http_path)
+        else:
+            conditions.append(Alert.http_path.is_(None))
 
         result = await db.execute(
-            select(Alert).where(and_(*conditions)).limit(1)
+            select(Alert).where(and_(*conditions)).order_by(Alert.created_at.desc()).limit(1)
         )
         return result.scalar_one_or_none()
+
+    def _merge_into_existing_alert(
+        self,
+        alert: Alert,
+        event_increment: int,
+        log_ids: list[int],
+        last_seen: datetime,
+        confidence: float,
+        http_path: Optional[str],
+    ):
+        alert.event_count += max(event_increment, 1)
+        alert.last_seen = last_seen
+        alert.updated_at = last_seen
+        alert.confidence = max(alert.confidence or 0.0, confidence or 0.0)
+        if not alert.http_path and http_path:
+            alert.http_path = http_path
+
+        existing_log_ids = []
+        if alert.correlated_log_ids:
+            try:
+                existing_log_ids = json.loads(alert.correlated_log_ids)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                existing_log_ids = []
+
+        merged_log_ids = []
+        seen = set()
+        for log_id in [*existing_log_ids, *log_ids]:
+            if log_id in (None, ""):
+                continue
+            if log_id in seen:
+                continue
+            seen.add(log_id)
+            merged_log_ids.append(log_id)
+        alert.correlated_log_ids = json.dumps(merged_log_ids)
 
     async def _auto_escalate(self, db: AsyncSession, alert: Alert):
         """Auto-create or attach to an incident for HIGH/CRITICAL alerts."""
@@ -279,6 +388,26 @@ class DetectionEngine:
             logger.info(f"Incident #{incident.id} created from alert: {alert.title}")
         except Exception as e:
             logger.error(f"Auto-escalation failed: {e}", exc_info=True)
+
+    async def _emit_alert(self, alert: Alert):
+        payload = {
+            "id": alert.id,
+            "alert_uid": alert.alert_uid,
+            "title": alert.title,
+            "severity": alert.severity.value if alert.severity else "MEDIUM",
+            "status": alert.status.value if alert.status else "NEW",
+            "src_ip": alert.src_ip,
+            "geo_country": alert.geo_country,
+            "attack_type": alert.attack_type,
+            "http_path": alert.http_path,
+            "detection_source": alert.detection_source,
+            "mitre_technique": alert.mitre_technique,
+            "event_count": alert.event_count,
+            "timestamp": (alert.created_at or datetime.utcnow()).isoformat(),
+            "description": alert.description,
+        }
+        await manager.broadcast_alert(payload)
+        await self.notification_service.notify_alert(payload)
 
     @staticmethod
     def _map_severity(sev: str) -> AlertSeverity:

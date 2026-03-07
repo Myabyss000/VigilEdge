@@ -3,24 +3,64 @@
 {% block nav_alerts %}text-white font-semibold{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h2 class="text-lg font-semibold text-white">Alert Management</h2>
-    <div class="flex gap-2">
-        <select id="filter-severity" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+<div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+    <div>
+        <h2 class="text-lg font-semibold text-white">Alert Management</h2>
+        <p class="text-sm text-gray-400 mt-1">Current window: {{ time_window_label }} • {{ result_count }} grouped alerts • {{ raw_alert_count }} raw alerts</p>
+    </div>
+    <div class="flex flex-col gap-3 lg:items-end">
+        <form method="get" class="flex flex-col gap-3" data-time-filter-form>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                Start
+                <input type="datetime-local" name="start" value="{{ time_filter_start }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                End
+                <input type="datetime-local" name="end" value="{{ time_filter_end }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <div class="flex gap-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded px-4 py-2 text-sm font-medium">Apply</button>
+                <button type="button" data-save-time-filter class="bg-emerald-700 hover:bg-emerald-600 text-white rounded px-4 py-2 text-sm font-medium">Save Window</button>
+                <a href="/alerts-view?clear_saved_time=1" data-clear-time-filter class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-4 py-2 text-sm font-medium">Reset</a>
+            </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <select name="severity" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
             <option value="">All Severities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
+            <option value="CRITICAL" {% if filters.severity == 'CRITICAL' %}selected{% endif %}>Critical</option>
+            <option value="HIGH" {% if filters.severity == 'HIGH' %}selected{% endif %}>High</option>
+            <option value="MEDIUM" {% if filters.severity == 'MEDIUM' %}selected{% endif %}>Medium</option>
+            <option value="LOW" {% if filters.severity == 'LOW' %}selected{% endif %}>Low</option>
         </select>
-        <select id="filter-status" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+        <select name="status" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
             <option value="">All Statuses</option>
-            <option value="NEW">New</option>
-            <option value="ACKNOWLEDGED">Acknowledged</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="FALSE_POSITIVE">False Positive</option>
+            <option value="NEW" {% if filters.status == 'NEW' %}selected{% endif %}>New</option>
+            <option value="ACKNOWLEDGED" {% if filters.status == 'ACKNOWLEDGED' %}selected{% endif %}>Acknowledged</option>
+            <option value="IN_PROGRESS" {% if filters.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+            <option value="RESOLVED" {% if filters.status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+            <option value="FALSE_POSITIVE" {% if filters.status == 'FALSE_POSITIVE' %}selected{% endif %}>False Positive</option>
         </select>
+        <input type="text" name="src_ip" value="{{ filters.src_ip }}" placeholder="Source IP"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="attack_type" value="{{ filters.attack_type }}" placeholder="Attack type"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="detection_source" value="{{ filters.detection_source }}" placeholder="Detection source"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="mitre_technique" value="{{ filters.mitre_technique }}" placeholder="MITRE technique"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="incident_id" value="{{ filters.incident_id }}" placeholder="Incident ID"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <select name="group_window" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+            <option value="5" {% if filters.group_window == '5' %}selected{% endif %}>5 min grouping</option>
+            <option value="15" {% if filters.group_window == '15' %}selected{% endif %}>15 min grouping</option>
+            <option value="30" {% if filters.group_window == '30' %}selected{% endif %}>30 min grouping</option>
+            <option value="60" {% if filters.group_window == '60' %}selected{% endif %}>60 min grouping</option>
+        </select>
+        <input type="text" name="search" value="{{ filters.search }}" placeholder="Search title, path, IP, MITRE..."
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm xl:col-span-2">
+            </div>
+        </form>
     </div>
 </div>
 
@@ -29,78 +69,98 @@
         <thead>
             <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
                 <th class="text-left px-4 py-3">Severity</th>
-                <th class="text-left px-4 py-3">Title</th>
+                <th class="text-left px-4 py-3">Grouped Alert</th>
                 <th class="text-left px-4 py-3">Source IP</th>
                 <th class="text-left px-4 py-3">Attack Type</th>
-                <th class="text-left px-4 py-3">Source</th>
-                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">Target Path</th>
+                <th class="text-left px-4 py-3">Sources</th>
+                <th class="text-left px-4 py-3">Window</th>
                 <th class="text-left px-4 py-3">MITRE</th>
                 <th class="text-left px-4 py-3">Events</th>
-                <th class="text-left px-4 py-3">Time</th>
+                <th class="text-left px-4 py-3">Last Seen</th>
             </tr>
         </thead>
         <tbody>
-            {% for alert in alerts %}
-            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition cursor-pointer alert-row"
-                data-severity="{{ alert.severity.value }}" data-status="{{ alert.status.value }}">
+            {% for group in grouped_alerts %}
+            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition align-top">
                 <td class="px-4 py-2">
                     <span class="inline-block w-2 h-2 rounded-full mr-2
-                        {% if alert.severity.value == 'CRITICAL' %}bg-red-500
-                        {% elif alert.severity.value == 'HIGH' %}bg-orange-500
-                        {% elif alert.severity.value == 'MEDIUM' %}bg-yellow-500
+                        {% if group.highest_severity and group.highest_severity.value == 'CRITICAL' %}bg-red-500
+                        {% elif group.highest_severity and group.highest_severity.value == 'HIGH' %}bg-orange-500
+                        {% elif group.highest_severity and group.highest_severity.value == 'MEDIUM' %}bg-yellow-500
                         {% else %}bg-blue-500{% endif %}"></span>
                     <span class="text-xs font-medium
-                        {% if alert.severity.value == 'CRITICAL' %}text-red-400
-                        {% elif alert.severity.value == 'HIGH' %}text-orange-400
-                        {% elif alert.severity.value == 'MEDIUM' %}text-yellow-400
-                        {% else %}text-blue-400{% endif %}">{{ alert.severity.value }}</span>
+                        {% if group.highest_severity and group.highest_severity.value == 'CRITICAL' %}text-red-400
+                        {% elif group.highest_severity and group.highest_severity.value == 'HIGH' %}text-orange-400
+                        {% elif group.highest_severity and group.highest_severity.value == 'MEDIUM' %}text-yellow-400
+                        {% else %}text-blue-400{% endif %}">{{ group.highest_severity.value if group.highest_severity else 'LOW' }}</span>
                 </td>
-                <td class="px-4 py-2 text-gray-200 max-w-xs truncate">{{ alert.title }}</td>
-                <td class="px-4 py-2 font-mono text-red-400 text-xs">{{ alert.src_ip or '-' }}</td>
-                <td class="px-4 py-2 text-xs">{{ alert.attack_type or '-' }}</td>
-                <td class="px-4 py-2 text-xs text-gray-400">{{ alert.detection_source }}</td>
-                <td class="px-4 py-2">
-                    <span class="text-xs px-2 py-0.5 rounded
-                        {% if alert.status.value == 'NEW' %}bg-blue-900 text-blue-300
-                        {% elif alert.status.value == 'ACKNOWLEDGED' %}bg-yellow-900 text-yellow-300
-                        {% elif alert.status.value == 'IN_PROGRESS' %}bg-purple-900 text-purple-300
-                        {% elif alert.status.value == 'RESOLVED' %}bg-green-900 text-green-300
-                        {% else %}bg-gray-700 text-gray-300{% endif %}">
-                        {{ alert.status.value }}
-                    </span>
+                <td class="px-4 py-2 text-gray-200 min-w-72">
+                    <details>
+                        <summary class="cursor-pointer list-none">
+                            <div class="font-medium hover:text-white transition">{{ group.primary_alert.title }}</div>
+                            <div class="text-xs text-gray-500 mt-1">1 grouped alert / {{ group.total_events }} events / {{ group.alert_count }} alert records</div>
+                        </summary>
+                        <div class="mt-3 space-y-2 rounded border border-gray-800 bg-gray-950/50 p-3">
+                            {% for member in group.members %}
+                            <div class="rounded border border-gray-800 bg-gray-900/40 p-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <div class="text-sm text-gray-200">{{ member.title }}</div>
+                                        <div class="text-xs text-gray-500 mt-1">{{ member.detection_source }} • {{ member.created_at.strftime('%m-%d %H:%M:%S') if member.created_at else '' }}</div>
+                                    </div>
+                                    <div class="text-xs font-mono text-gray-400">{{ member.event_count }} events</div>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-3 text-xs text-gray-400">
+                                    {% if member.src_ip %}<a href="/logs-view?src_ip={{ member.src_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-red-300 transition">src {{ member.src_ip }}</a>{% endif %}
+                                    {% if member.http_path %}<a href="/logs-view?http_path={{ member.http_path|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-white transition">path {{ member.http_path }}</a>{% endif %}
+                                    {% if member.attack_type %}<a href="/logs-view?attack_type={{ member.attack_type|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-blue-300 transition">attack {{ member.attack_type }}</a>{% endif %}
+                                    {% if member.mitre_technique %}<a href="/logs-view?mitre_technique={{ member.mitre_technique|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-200 transition">MITRE {{ member.mitre_technique }}</a>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </td>
+                <td class="px-4 py-2 font-mono text-red-400 text-xs">
+                    {% if group.src_ip %}
+                    <div><a href="/alerts-view?src_ip={{ group.src_ip }}&group_window={{ filters.group_window }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-red-300 transition">{{ group.src_ip }}</a></div>
+                    <div><a href="/logs-view?src_ip={{ group.src_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="text-gray-500 hover:text-gray-300 transition">pivot logs</a></div>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-2 text-xs">
+                    {% if group.attack_type %}
+                    <a href="/alerts-view?attack_type={{ group.attack_type|urlencode }}&group_window={{ filters.group_window }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="text-blue-300 hover:text-blue-200 transition">{{ group.attack_type }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-2 text-xs text-gray-400 max-w-56 truncate">
+                    {% if group.http_path %}
+                    <a href="/logs-view?http_path={{ group.http_path|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-white transition">{{ group.http_path }}</a>
+                    {% else %}-{% endif %}
                 </td>
                 <td class="px-4 py-2 text-xs text-gray-400">
-                    {{ alert.mitre_technique or '-' }}
+                    {{ group.detection_sources|join(', ') }}
                 </td>
-                <td class="px-4 py-2 text-xs font-mono">{{ alert.event_count }}</td>
                 <td class="px-4 py-2 text-xs text-gray-400">
-                    {{ alert.created_at.strftime('%m-%d %H:%M:%S') if alert.created_at else '' }}
+                    {% if group.first_seen and group.last_seen %}
+                    {{ group.first_seen.strftime('%H:%M') }} - {{ group.last_seen.strftime('%H:%M') }}
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {% if group.mitre_techniques %}{{ group.mitre_techniques|join(', ') }}{% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-2 text-xs font-mono">{{ group.total_events }}</td>
+                <td class="px-4 py-2 text-xs text-gray-400">
+                    {{ group.last_seen.strftime('%m-%d %H:%M:%S') if group.last_seen else '' }}
                 </td>
             </tr>
             {% endfor %}
-            {% if not alerts %}
-            <tr><td colspan="9" class="px-4 py-8 text-center text-gray-500">No alerts found</td></tr>
+            {% if not grouped_alerts %}
+            <tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">No alerts found</td></tr>
             {% endif %}
         </tbody>
     </table>
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    // Client-side filtering
-    ['filter-severity', 'filter-status'].forEach(id => {
-        document.getElementById(id).addEventListener('change', filterAlerts);
-    });
-
-    function filterAlerts() {
-        const sev = document.getElementById('filter-severity').value;
-        const status = document.getElementById('filter-status').value;
-        document.querySelectorAll('.alert-row').forEach(row => {
-            const matchSev = !sev || row.dataset.severity === sev;
-            const matchStatus = !status || row.dataset.status === status;
-            row.style.display = (matchSev && matchStatus) ? '' : 'none';
-        });
-    }
-</script>
-{% endblock %}
+{% block scripts %}{% endblock %}

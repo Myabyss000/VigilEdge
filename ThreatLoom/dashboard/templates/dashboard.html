@@ -3,10 +3,34 @@
 {% block nav_dashboard %}text-white font-semibold{% endblock %}
 
 {% block content %}
+<div class="bg-soc-panel border border-soc-border rounded-lg p-4 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-semibold text-white">SOC Dashboard</h2>
+            <p class="text-sm text-gray-400 mt-1">Current window: {{ time_window_label }}</p>
+        </div>
+        <form method="get" class="flex flex-col sm:flex-row gap-3 sm:items-end" data-time-filter-form>
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                Start
+                <input type="datetime-local" name="start" value="{{ time_filter_start }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                End
+                <input type="datetime-local" name="end" value="{{ time_filter_end }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <div class="flex gap-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded px-4 py-2 text-sm font-medium">Apply</button>
+                <button type="button" data-save-time-filter class="bg-emerald-700 hover:bg-emerald-600 text-white rounded px-4 py-2 text-sm font-medium">Save Window</button>
+                <a href="/?clear_saved_time=1" data-clear-time-filter class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-4 py-2 text-sm font-medium">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- KPI Cards -->
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
     <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
-        <div class="text-xs text-gray-400 uppercase tracking-wide">Logs (24h)</div>
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Logs</div>
         <div class="text-2xl font-bold text-white mt-1">{{ "{:,}".format(total_logs) }}</div>
     </div>
     <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
@@ -14,7 +38,7 @@
         <div class="text-2xl font-bold text-red-400 mt-1">{{ "{:,}".format(total_blocked) }}</div>
     </div>
     <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
-        <div class="text-xs text-gray-400 uppercase tracking-wide">Alerts (24h)</div>
+        <div class="text-xs text-gray-400 uppercase tracking-wide">Alerts</div>
         <div class="text-2xl font-bold text-yellow-400 mt-1">{{ total_alerts }}</div>
     </div>
     <div class="bg-soc-panel border border-soc-border rounded-lg p-4">
@@ -47,9 +71,16 @@
                     {% elif alert.severity.value == 'MEDIUM' %}bg-yellow-500
                     {% else %}bg-blue-500{% endif %}"></span>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm text-gray-200 truncate">{{ alert.title }}</div>
+                    <div class="text-sm text-gray-200 truncate">
+                        <a href="/alerts-view?search={{ alert.title|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-white transition">{{ alert.title }}</a>
+                    </div>
                     <div class="text-xs text-gray-500">
-                        {{ alert.src_ip or 'N/A' }} &middot;
+                        {% if alert.src_ip %}
+                        <a href="/logs-view?src_ip={{ alert.src_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="font-mono text-red-400 hover:text-red-300 transition">{{ alert.src_ip }}</a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                        &middot;
                         {{ alert.detection_source }} &middot;
                         {{ alert.created_at.strftime('%H:%M:%S') if alert.created_at else '' }}
                     </div>
@@ -95,7 +126,7 @@
     <!-- Attack Type Distribution -->
     <div class="bg-soc-panel border border-soc-border rounded-lg">
         <div class="px-4 py-3 border-b border-soc-border">
-            <h2 class="text-sm font-semibold text-white">Attack Type Distribution (24h)</h2>
+            <h2 class="text-sm font-semibold text-white">Attack Type Distribution</h2>
         </div>
         <div class="p-4">
             <canvas id="attackChart" height="240"></canvas>
@@ -105,7 +136,7 @@
     <!-- Top Attackers -->
     <div class="bg-soc-panel border border-soc-border rounded-lg">
         <div class="px-4 py-3 border-b border-soc-border">
-            <h2 class="text-sm font-semibold text-white">Top Attackers (24h)</h2>
+            <h2 class="text-sm font-semibold text-white">Top Attackers</h2>
         </div>
         <div class="overflow-y-auto max-h-80">
             <table class="w-full text-sm">
@@ -121,7 +152,9 @@
                     {% for attacker in top_attackers %}
                     <tr class="border-b border-gray-800 hover:bg-gray-800/50">
                         <td class="px-4 py-2 text-gray-500">{{ loop.index }}</td>
-                        <td class="px-4 py-2 font-mono text-red-400">{{ attacker.ip }}</td>
+                        <td class="px-4 py-2 font-mono text-red-400">
+                            <a href="/logs-view?src_ip={{ attacker.ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-red-300 transition">{{ attacker.ip }}</a>
+                        </td>
                         <td class="px-4 py-2">{{ attacker.country }}</td>
                         <td class="px-4 py-2 text-right font-semibold">{{ attacker.count }}</td>
                     </tr>
@@ -212,11 +245,11 @@
             <div class="col-span-2 mt-4">
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div class="bg-gray-800 rounded px-3 py-2">
-                        <span class="text-gray-400">Total Logs 24h</span>
+                        <span class="text-gray-400">Total Logs</span>
                         <span class="float-right font-mono">{{ "{:,}".format(total_logs) }}</span>
                     </div>
                     <div class="bg-gray-800 rounded px-3 py-2">
-                        <span class="text-gray-400">Blocked 24h</span>
+                        <span class="text-gray-400">Blocked</span>
                         <span class="float-right font-mono text-red-400">{{ "{:,}".format(total_blocked) }}</span>
                     </div>
                     <div class="bg-gray-800 rounded px-3 py-2">

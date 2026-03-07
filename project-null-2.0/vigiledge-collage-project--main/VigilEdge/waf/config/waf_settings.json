@@ -41,5 +41,9 @@
     "selected_theme": "dark",
     "auto_dark_mode": false
   },
-  "authentication": {}
+  "authentication": {
+    "totp_secret": "6A7CAN474H3OEJKOW6BQVKDI3R6L4Z7V",
+    "2fa_enabled": true,
+    "admin_password": "12345"
+  }
 }

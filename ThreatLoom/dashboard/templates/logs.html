@@ -3,30 +3,128 @@
 {% block nav_logs %}text-white font-semibold{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h2 class="text-lg font-semibold text-white">Firewall Log Viewer</h2>
-    <div class="flex gap-2">
-        <select id="filter-action" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+<div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+    <div>
+        <h2 class="text-lg font-semibold text-white">Firewall Log Viewer</h2>
+        <p class="text-sm text-gray-400 mt-1">Current window: {{ time_window_label }} • {{ result_count }} results</p>
+    </div>
+    <div class="flex flex-col gap-3 lg:items-end">
+        <form method="get" class="flex flex-col gap-3" data-time-filter-form>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                Start
+                <input type="datetime-local" name="start" value="{{ time_filter_start }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <label class="text-xs text-gray-400 uppercase tracking-wide">
+                End
+                <input type="datetime-local" name="end" value="{{ time_filter_end }}" class="mt-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100">
+            </label>
+            <div class="flex gap-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded px-4 py-2 text-sm font-medium">Apply</button>
+                <button type="button" data-save-time-filter class="bg-emerald-700 hover:bg-emerald-600 text-white rounded px-4 py-2 text-sm font-medium">Save Window</button>
+                <a href="/logs-view?clear_saved_time=1" data-clear-time-filter class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-4 py-2 text-sm font-medium">Reset</a>
+            </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+        <select name="action" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
             <option value="">All Actions</option>
-            <option value="ALLOWED">Allowed</option>
-            <option value="BLOCKED">Blocked</option>
-            <option value="RATE_LIMITED">Rate Limited</option>
-            <option value="DROPPED">Dropped</option>
+            <option value="ALLOWED" {% if filters.action == 'ALLOWED' %}selected{% endif %}>Allowed</option>
+            <option value="BLOCKED" {% if filters.action == 'BLOCKED' %}selected{% endif %}>Blocked</option>
+            <option value="RATE_LIMITED" {% if filters.action == 'RATE_LIMITED' %}selected{% endif %}>Rate Limited</option>
+            <option value="DROPPED" {% if filters.action == 'DROPPED' %}selected{% endif %}>Dropped</option>
         </select>
-        <select id="filter-attack" class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm">
+        <select name="attack_type" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
             <option value="">All Types</option>
-            <option value="NONE">Clean</option>
-            <option value="SQLI">SQLi</option>
-            <option value="XSS">XSS</option>
-            <option value="RCE">RCE</option>
-            <option value="LFI">LFI</option>
-            <option value="BRUTE_FORCE">Brute Force</option>
-            <option value="PORT_SCAN">Port Scan</option>
-            <option value="DDOS">DDoS</option>
-            <option value="BOT">Bot</option>
+            <option value="NONE" {% if filters.attack_type == 'NONE' %}selected{% endif %}>Clean</option>
+            <option value="SQLI" {% if filters.attack_type == 'SQLI' %}selected{% endif %}>SQLi</option>
+            <option value="XSS" {% if filters.attack_type == 'XSS' %}selected{% endif %}>XSS</option>
+            <option value="RCE" {% if filters.attack_type == 'RCE' %}selected{% endif %}>RCE</option>
+            <option value="LFI" {% if filters.attack_type == 'LFI' %}selected{% endif %}>LFI</option>
+            <option value="BRUTE_FORCE" {% if filters.attack_type == 'BRUTE_FORCE' %}selected{% endif %}>Brute Force</option>
+            <option value="PORT_SCAN" {% if filters.attack_type == 'PORT_SCAN' %}selected{% endif %}>Port Scan</option>
+            <option value="DDOS" {% if filters.attack_type == 'DDOS' %}selected{% endif %}>DDoS</option>
+            <option value="BOT" {% if filters.attack_type == 'BOT' %}selected{% endif %}>Bot</option>
+            <option value="SSRF" {% if filters.attack_type == 'SSRF' %}selected{% endif %}>SSRF</option>
+            <option value="XXE" {% if filters.attack_type == 'XXE' %}selected{% endif %}>XXE</option>
         </select>
-        <input type="text" id="filter-ip" placeholder="Filter by IP..."
-            class="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm w-36">
+        <select name="severity" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+            <option value="">All Severities</option>
+            <option value="INFO" {% if filters.severity == 'INFO' %}selected{% endif %}>Info</option>
+            <option value="LOW" {% if filters.severity == 'LOW' %}selected{% endif %}>Low</option>
+            <option value="MEDIUM" {% if filters.severity == 'MEDIUM' %}selected{% endif %}>Medium</option>
+            <option value="HIGH" {% if filters.severity == 'HIGH' %}selected{% endif %}>High</option>
+            <option value="CRITICAL" {% if filters.severity == 'CRITICAL' %}selected{% endif %}>Critical</option>
+        </select>
+        <input type="text" name="src_ip" value="{{ filters.src_ip }}" placeholder="Source IP"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="dst_ip" value="{{ filters.dst_ip }}" placeholder="Destination IP"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="http_method" value="{{ filters.http_method }}" placeholder="HTTP method"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="http_status" value="{{ filters.http_status }}" placeholder="Response code"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="http_path" value="{{ filters.http_path }}" placeholder="Path contains"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm xl:col-span-2">
+        <select name="protocol" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+            <option value="">All Protocols</option>
+            <option value="HTTP" {% if filters.protocol == 'HTTP' %}selected{% endif %}>HTTP</option>
+            <option value="HTTPS" {% if filters.protocol == 'HTTPS' %}selected{% endif %}>HTTPS</option>
+            <option value="TCP" {% if filters.protocol == 'TCP' %}selected{% endif %}>TCP</option>
+            <option value="UDP" {% if filters.protocol == 'UDP' %}selected{% endif %}>UDP</option>
+            <option value="DNS" {% if filters.protocol == 'DNS' %}selected{% endif %}>DNS</option>
+            <option value="ICMP" {% if filters.protocol == 'ICMP' %}selected{% endif %}>ICMP</option>
+            <option value="OTHER" {% if filters.protocol == 'OTHER' %}selected{% endif %}>Other</option>
+        </select>
+        <input type="text" name="country" value="{{ filters.country }}" placeholder="Country code"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="user_agent" value="{{ filters.user_agent }}" placeholder="User-Agent contains"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm xl:col-span-2">
+        <input type="text" name="mitre_technique" value="{{ filters.mitre_technique }}" placeholder="MITRE technique"
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+        <input type="text" name="search" value="{{ filters.search }}" placeholder="Search path, payload, UA, rule..."
+            class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm xl:col-span-2">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="bg-soc-panel border border-soc-border rounded-lg p-4 mb-6">
+    <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+        <form method="get" id="hunt-form" class="flex-1 flex flex-col gap-3">
+            <input type="hidden" name="start" value="{{ time_filter_start }}">
+            <input type="hidden" name="end" value="{{ time_filter_end }}">
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 items-end">
+                <label class="text-xs text-gray-400 uppercase tracking-wide">
+                    Hunt Query
+                    <input type="text" name="q" value="{{ filters.q }}" placeholder='src:1.2.3.4 attack:SQLI status:403 ua:"python-httpx" path:"/admin"'
+                        class="mt-1 w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100 font-mono">
+                </label>
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white rounded px-4 py-2 text-sm font-medium h-[42px]">Run Hunt</button>
+                <button type="button" id="save-search-btn" class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-4 py-2 text-sm font-medium h-[42px]">Save View</button>
+            </div>
+            <div class="text-xs text-gray-500">
+                Tokens: <span class="font-mono">src:</span>, <span class="font-mono">dst:</span>, <span class="font-mono">country:</span>, <span class="font-mono">method:</span>, <span class="font-mono">status:</span>, <span class="font-mono">attack:</span>, <span class="font-mono">severity:</span>, <span class="font-mono">action:</span>, <span class="font-mono">path:</span>, <span class="font-mono">ua:</span>, <span class="font-mono">protocol:</span>, <span class="font-mono">mitre:</span>, <span class="font-mono">text:</span>
+            </div>
+        </form>
+        <div class="xl:w-[26rem] flex flex-col gap-3">
+            <div>
+                <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Bookmarked Analyst Views</div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <a href="/logs-view?action=BLOCKED&search=attack{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5">Blocked Attacks</a>
+                    <a href="/logs-view?severity=HIGH{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5">High Severity</a>
+                    <a href="/logs-view?attack_type=SQLI{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5">SQLi Hunt</a>
+                    <a href="/logs-view?http_status=403{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5">403 Responses</a>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs text-gray-400 uppercase tracking-wide">Saved Searches</div>
+                    <button type="button" id="copy-search-link-btn" class="text-xs text-blue-300 hover:text-blue-200">Copy Link</button>
+                </div>
+                <div id="saved-searches" class="flex flex-wrap gap-2"></div>
+                <div id="saved-searches-empty" class="text-xs text-gray-500">No saved searches yet.</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -51,28 +149,42 @@
             </thead>
             <tbody>
                 {% for log in logs %}
-                <tr class="border-b border-gray-800 hover:bg-gray-800/30 transition log-row"
-                    data-action="{{ log.action.value if log.action else '' }}"
-                    data-attack="{{ log.attack_type.value if log.attack_type else '' }}"
-                    data-ip="{{ log.src_ip }}">
+                <tr class="border-b border-gray-800 hover:bg-gray-800/30 transition">
                     <td class="px-3 py-1.5 font-mono text-gray-400">
                         {{ log.timestamp.strftime('%H:%M:%S.%f')[:-3] if log.timestamp else '' }}
                     </td>
                     <td class="px-3 py-1.5 font-mono
                         {% if log.attack_type and log.attack_type.value != 'NONE' %}text-red-400{% else %}text-gray-300{% endif %}">
-                        {{ log.src_ip }}{% if log.src_port %}:{{ log.src_port }}{% endif %}
+                        <div><a href="/logs-view?src_ip={{ log.src_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-red-300 transition">{{ log.src_ip }}</a>{% if log.src_port %}:{{ log.src_port }}{% endif %}</div>
+                        <div><a href="/alerts-view?src_ip={{ log.src_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="text-gray-500 hover:text-gray-300 transition">pivot alerts</a></div>
                     </td>
                     <td class="px-3 py-1.5 font-mono text-gray-400">
-                        {{ log.dst_ip or '-' }}{% if log.dst_port %}:{{ log.dst_port }}{% endif %}
+                        {% if log.dst_ip %}
+                        <a href="/logs-view?dst_ip={{ log.dst_ip }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-200 transition">{{ log.dst_ip }}</a>{% if log.dst_port %}:{{ log.dst_port }}{% endif %}
+                        {% else %}-{% endif %}
                     </td>
-                    <td class="px-3 py-1.5 text-gray-400">{{ log.protocol.value if log.protocol else '-' }}</td>
-                    <td class="px-3 py-1.5 text-blue-400">{{ log.http_method or '-' }}</td>
-                    <td class="px-3 py-1.5 text-gray-300 max-w-xs truncate">{{ log.http_path or '-' }}</td>
+                    <td class="px-3 py-1.5 text-gray-400">
+                        {% if log.protocol %}
+                        <a href="/logs-view?protocol={{ log.protocol.value }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-200 transition">{{ log.protocol.value }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5 text-blue-400">
+                        {% if log.http_method %}
+                        <a href="/logs-view?http_method={{ log.http_method }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-blue-300 transition">{{ log.http_method }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5 text-gray-300 max-w-xs truncate">
+                        {% if log.http_path %}
+                        <a href="/logs-view?http_path={{ log.http_path|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-white transition">{{ log.http_path }}</a>
+                        {% else %}-{% endif %}
+                    </td>
                     <td class="px-3 py-1.5 font-mono
                         {% if log.http_status and log.http_status >= 400 %}text-red-400
                         {% elif log.http_status and log.http_status >= 300 %}text-yellow-400
                         {% else %}text-green-400{% endif %}">
-                        {{ log.http_status or '-' }}
+                        {% if log.http_status %}
+                        <a href="/logs-view?http_status={{ log.http_status }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-inherit transition">{{ log.http_status }}</a>
+                        {% else %}-{% endif %}
                     </td>
                     <td class="px-3 py-1.5">
                         <span class="px-1.5 py-0.5 rounded text-xs
@@ -84,7 +196,7 @@
                     </td>
                     <td class="px-3 py-1.5">
                         {% if log.attack_type and log.attack_type.value != 'NONE' %}
-                        <span class="px-1.5 py-0.5 rounded bg-red-900 text-red-300 text-xs">{{ log.attack_type.value }}</span>
+                        <a href="/logs-view?attack_type={{ log.attack_type.value }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="px-1.5 py-0.5 rounded bg-red-900 text-red-300 text-xs hover:bg-red-800 transition">{{ log.attack_type.value }}</a>
                         {% else %}-{% endif %}
                     </td>
                     <td class="px-3 py-1.5">
@@ -96,9 +208,26 @@
                             {{ log.severity.value if log.severity else '-' }}
                         </span>
                     </td>
-                    <td class="px-3 py-1.5 text-gray-400">{{ log.geo_country or '-' }}</td>
-                    <td class="px-3 py-1.5 text-gray-500">{{ log.mitre_technique or '-' }}</td>
+                    <td class="px-3 py-1.5 text-gray-400">
+                        {% if log.geo_country %}
+                        <a href="/logs-view?country={{ log.geo_country }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-200 transition">{{ log.geo_country }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-3 py-1.5 text-gray-500">
+                        {% if log.mitre_technique %}
+                        <a href="/alerts-view?mitre_technique={{ log.mitre_technique|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-300 transition">{{ log.mitre_technique }}</a>
+                        {% else %}-{% endif %}
+                    </td>
                 </tr>
+                {% if log.http_user_agent %}
+                <tr class="border-b border-gray-900 bg-gray-950/30">
+                    <td></td>
+                    <td colspan="11" class="px-3 pb-2 text-[11px] text-gray-500 truncate">
+                        UA:
+                        <a href="/logs-view?user_agent={{ log.http_user_agent|urlencode }}{% if time_filter_query %}&{{ time_filter_query }}{% endif %}" class="hover:text-gray-300 transition">{{ log.http_user_agent }}</a>
+                    </td>
+                </tr>
+                {% endif %}
                 {% endfor %}
                 {% if not logs %}
                 <tr><td colspan="12" class="px-4 py-8 text-center text-gray-500">No logs found</td></tr>
@@ -111,22 +240,83 @@
 
 {% block scripts %}
 <script>
-    ['filter-action', 'filter-attack'].forEach(id => {
-        document.getElementById(id).addEventListener('change', filterLogs);
-    });
-    document.getElementById('filter-ip').addEventListener('input', filterLogs);
+(() => {
+    const storageKey = 'threatloom_saved_log_searches';
+    const savedSearchesContainer = document.getElementById('saved-searches');
+    const emptyState = document.getElementById('saved-searches-empty');
+    const saveButton = document.getElementById('save-search-btn');
+    const copyLinkButton = document.getElementById('copy-search-link-btn');
 
-    function filterLogs() {
-        const action = document.getElementById('filter-action').value;
-        const attack = document.getElementById('filter-attack').value;
-        const ip = document.getElementById('filter-ip').value.toLowerCase();
+    function loadSavedSearches() {
+        try {
+            return JSON.parse(localStorage.getItem(storageKey) || '[]');
+        } catch {
+            return [];
+        }
+    }
 
-        document.querySelectorAll('.log-row').forEach(row => {
-            const matchAction = !action || row.dataset.action === action;
-            const matchAttack = !attack || row.dataset.attack === attack;
-            const matchIp = !ip || row.dataset.ip.toLowerCase().includes(ip);
-            row.style.display = (matchAction && matchAttack && matchIp) ? '' : 'none';
+    function saveSavedSearches(items) {
+        localStorage.setItem(storageKey, JSON.stringify(items));
+    }
+
+    function renderSavedSearches() {
+        const items = loadSavedSearches();
+        savedSearchesContainer.innerHTML = '';
+        emptyState.style.display = items.length ? 'none' : '';
+
+        items.forEach((item, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex items-center gap-1 bg-gray-800 rounded px-2 py-1';
+
+            const link = document.createElement('a');
+            link.href = item.url;
+            link.className = 'text-xs text-gray-200 hover:text-white transition';
+            link.textContent = item.name;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'text-xs text-gray-500 hover:text-red-300 transition';
+            deleteBtn.textContent = '×';
+            deleteBtn.addEventListener('click', () => {
+                const next = loadSavedSearches();
+                next.splice(index, 1);
+                saveSavedSearches(next);
+                renderSavedSearches();
+            });
+
+            wrapper.appendChild(link);
+            wrapper.appendChild(deleteBtn);
+            savedSearchesContainer.appendChild(wrapper);
         });
     }
+
+    saveButton.addEventListener('click', () => {
+        const currentUrl = `${location.pathname}${location.search}`;
+        const name = window.prompt('Saved view name');
+        if (!name) {
+            return;
+        }
+
+        const items = loadSavedSearches();
+        items.unshift({ name, url: currentUrl });
+        saveSavedSearches(items.slice(0, 12));
+        renderSavedSearches();
+    });
+
+    copyLinkButton.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(location.href);
+            copyLinkButton.textContent = 'Copied';
+        } catch {
+            copyLinkButton.textContent = 'Copy Failed';
+        }
+
+        setTimeout(() => {
+            copyLinkButton.textContent = 'Copy Link';
+        }, 1200);
+    });
+
+    renderSavedSearches();
+})();
 </script>
 {% endblock %}

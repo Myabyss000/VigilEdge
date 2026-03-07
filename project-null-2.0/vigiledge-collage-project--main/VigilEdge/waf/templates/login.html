@@ -259,6 +259,18 @@
         </div>
         {% endif %}
 
+        {% if message %}
+        <div class="error-message" style="display: flex; color: var(--cyber-teal); border-color: var(--cyber-teal); background: rgba(0, 255, 166, 0.08);">
+            <span>✓</span> {{ message }}
+        </div>
+        {% endif %}
+
+        {% if show_setup_2fa %}
+        <div class="error-message" style="display: flex; color: var(--cyber-blue); border-color: var(--cyber-blue); background: rgba(0, 212, 255, 0.08);">
+            <span>🔐</span> 2FA is not configured yet. <a href="/auth/setup-2fa" style="color: var(--cyber-blue); margin-left: 0.35rem;">Set it up now</a>
+        </div>
+        {% endif %}
+
         <form action="/login" method="POST">
             <div class="form-group">
                 <label for="username">OPERATOR_ID</label>
@@ -279,6 +291,14 @@
                     Forgot Password?
                 </a>
             </div>
+            {% if show_setup_2fa %}
+            <div style="text-align: center; margin-top: 0.75rem;">
+                <a href="/auth/setup-2fa"
+                    style="color: var(--cyber-blue); text-decoration: none; font-size: 0.9rem; opacity: 0.9;">
+                    First-time 2FA Setup
+                </a>
+            </div>
+            {% endif %}
         </form>
     </div>
 

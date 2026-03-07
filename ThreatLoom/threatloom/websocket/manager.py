@@ -23,6 +23,7 @@ class ConnectionManager:
             "logs": set(),
             "incidents": set(),
             "metrics": set(),
+            "notifications": set(),
         }
 
     async def connect(self, websocket: WebSocket, channel: str = "alerts"):
@@ -78,6 +79,15 @@ class ConnectionManager:
             "timestamp": datetime.utcnow().isoformat(),
             "data": metrics,
         })
+
+    async def broadcast_notification(self, notification_data: dict):
+        """Broadcast a notification event."""
+        await self.broadcast("notifications", {
+            "type": "notification",
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": notification_data,
+        })
+
 
 
 # Singleton manager

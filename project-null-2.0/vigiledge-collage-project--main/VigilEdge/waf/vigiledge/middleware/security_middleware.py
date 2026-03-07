@@ -68,6 +68,12 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/protected"):
             response = await call_next(request)
             return response
+
+        # Skip middleware body inspection for auth routes that parse HTML form posts.
+        # These endpoints need the raw request body intact for FastAPI form handling.
+        if request.url.path.startswith("/auth/"):
+            response = await call_next(request)
+            return response
         
         # Skip WAF checks ONLY for internal WAF management API endpoints
         # But still check vulnerable app endpoints and test endpoints
@@ -133,7 +139,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             
             # Update metrics - Incoming
             if hasattr(self.waf_engine, 'metrics'):
-                self.waf_engine.metrics.incoming_bytes += incoming_size
+                self.waf_engine.metrics.incoming_bytes = getattr(
+                    self.waf_engine.metrics,
+                    "incoming_bytes",
+                    0,
+                ) + incoming_size
             
             # Process through WAF engine
             allowed, security_event = await self.waf_engine.process_request(
@@ -193,7 +203,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             
             # Update metrics - Outgoing
             if hasattr(self.waf_engine, 'metrics'):
-                self.waf_engine.metrics.outgoing_bytes += outgoing_size
+                self.waf_engine.metrics.outgoing_bytes = getattr(
+                    self.waf_engine.metrics,
+                    "outgoing_bytes",
+                    0,
+                ) + outgoing_size
             
             return response
             

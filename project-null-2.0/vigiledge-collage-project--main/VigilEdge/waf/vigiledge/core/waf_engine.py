@@ -78,7 +78,14 @@ class RequestMetrics:
     allowed_requests: int = 0
     threats_detected: int = 0
     avg_response_time: float = 0.0
+    incoming_bytes: int = 0
+    outgoing_bytes: int = 0
     last_reset: datetime = field(default_factory=datetime.now)
+
+    @property
+    def uptime_seconds(self) -> float:
+        """Return the number of seconds since the metrics were last reset."""
+        return max(0.0, (datetime.now() - self.last_reset).total_seconds())
     
     def reset(self):
         """Reset metrics"""
@@ -87,6 +94,8 @@ class RequestMetrics:
         self.allowed_requests = 0
         self.threats_detected = 0
         self.avg_response_time = 0.0
+        self.incoming_bytes = 0
+        self.outgoing_bytes = 0
         self.last_reset = datetime.now()
 
 
@@ -108,6 +117,16 @@ class WAFEngine:
             self.model_scorer = ModelScorer()
         except Exception:
             self.model_scorer = None
+        try:
+            from services.threatloom_integration import ThreatLoomIntegrator
+            self.threatloom_integrator = ThreatLoomIntegrator(
+                api_url=self.settings.threatloom_api_url,
+                api_key=self.settings.threatloom_api_key,
+                enabled=self.settings.threatloom_enabled,
+            )
+        except Exception as exc:
+            self.threatloom_integrator = None
+            print(f"⚠️ ThreatLoom integration not available: {exc}")
         self.metrics = RequestMetrics()
         self.blocked_ips: Dict[str, datetime] = {}
         self.rate_limits: Dict[str, List[datetime]] = {}
@@ -123,22 +142,6 @@ class WAFEngine:
         except Exception as e:
             self.defender_integration = None
             print(f"⚠️ Windows Defender integration not available: {e}")
-        
-        # ThreatLoom SOC Integration
-        try:
-            from services.threatloom_integration import ThreatLoomIntegrator
-            self.threatloom = ThreatLoomIntegrator(
-                api_url=self.settings.threatloom_api_url,
-                api_key=self.settings.threatloom_api_key,
-                enabled=self.settings.threatloom_enabled,
-            )
-            if self.settings.threatloom_enabled:
-                print(f"🔗 ThreatLoom SOC integration enabled → {self.settings.threatloom_api_url}")
-            else:
-                print("🔗 ThreatLoom SOC integration loaded (disabled)")
-        except Exception as e:
-            self.threatloom = None
-            print(f"⚠️ ThreatLoom integration not available: {e}")
         
         # Use absolute path for database
         self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "vulnerable.db")
@@ -1031,6 +1034,7 @@ class WAFEngine:
             '/api/v1/ai-events',  # AI events
             '/api/v1/victims',  # Victim tracking endpoint
             '/api/log-victim',  # Victim logging endpoint (vulnerable app)
+            '/api/v1/activity/log',  # Internal activity logging from vulnerable app
             # '/admin/login' - REMOVED from whitelist to demonstrate WAF blocking XSS/SQL injection in login form
             '/admin/logout',     # Whitelist admin logout endpoint
             '/health',
@@ -1386,7 +1390,7 @@ class WAFEngine:
             
             # SSRF detection (exempt internal API calls from localhost)
             is_localhost = client_ip in ['127.0.0.1', 'localhost', '::1']
-            is_api_route = url.startswith('/api/v1/')
+            is_api_route = url_path.startswith('/api/v1/')
             
             if not (is_localhost and is_api_route):
                 ssrf_detected = await self._detect_ssrf(url, body)
@@ -2390,20 +2394,20 @@ class WAFEngine:
             conn.commit()
             conn.close()
             print(f"✅ Event logged successfully to {self.db_path}")
+
+            if (
+                getattr(self, "threatloom_integrator", None) is not None
+                and getattr(self.settings, "threatloom_enabled", False)
+                and (security_event.blocked or security_event.threat_type != "none")
+            ):
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.threatloom_integrator.send_event(security_event))
+                except RuntimeError:
+                    logger.warning(
+                        "ThreatLoom forwarding skipped because no running event loop was available",
+                        event_id=security_event.id,
+                    )
         except Exception as e:
             print(f"❌ Failed to log event: {e}")
             logger.error("Failed to log event to database", error=str(e), event_id=security_event.id)
-        
-        # Forward event to ThreatLoom SOC (fire-and-forget)
-        if getattr(self, "threatloom", None) is not None:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self.threatloom.send_event(security_event))
-                    print(f"🔗 ThreatLoom: event queued for forwarding")
-                else:
-                    asyncio.run(self.threatloom.send_event(security_event))
-                    print(f"🔗 ThreatLoom: event sent (sync)")
-            except Exception as e:
-                print(f"⚠️ ThreatLoom forwarding failed: {e}")
-

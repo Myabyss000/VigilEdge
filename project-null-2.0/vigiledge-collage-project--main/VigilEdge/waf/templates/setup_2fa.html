@@ -282,6 +282,58 @@
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
         }
 
+        .status-message {
+            margin: 0 auto 1.5rem;
+            max-width: 560px;
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0, 212, 255, 0.08);
+            color: var(--text-secondary);
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .status-message.error {
+            border-color: rgba(255, 107, 107, 0.6);
+            background: rgba(255, 107, 107, 0.08);
+            color: #ffd1d1;
+        }
+
+        .password-note {
+            margin: 0.75rem auto 1.5rem;
+            max-width: 360px;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .field-label {
+            display: block;
+            margin: 0 auto 0.5rem;
+            max-width: 360px;
+            text-align: left;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .field-help {
+            margin: 0.5rem auto 1.25rem;
+            max-width: 360px;
+            text-align: left;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+
+        .submit-note {
+            margin: 1rem auto 0;
+            max-width: 360px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -341,10 +393,24 @@
     <main class="main-content">
         <div class="page-header">
             <h1 class="page-title">🔐 Two-Factor Authentication</h1>
-            <p class="page-subtitle">Enhance your account security with Google Authenticator</p>
+            <p class="page-subtitle">Secure password recovery with one QR scan and one verification code</p>
         </div>
 
         <div class="setup-container">
+            {% if error %}
+            <div class="status-message error">⚠️ {{ error }}</div>
+            {% endif %}
+
+            {% if bootstrap_mode %}
+            <div class="status-message">
+                This is the first-time 2FA bootstrap. Enter the current admin password once, scan the QR code in Google Authenticator, then confirm with the current 6-digit code.
+            </div>
+            {% else %}
+            <div class="status-message">
+                Scan the QR code in Google Authenticator or Authy, then enter the live 6-digit code to activate recovery-based password resets.
+            </div>
+            {% endif %}
+
             <div class="step-indicator">
                 <div class="step active">
                     <div class="step-number">1</div>
@@ -381,12 +447,29 @@
             <form action="/auth/verify-2fa" method="POST">
                 <input type="hidden" name="secret" value="{{ secret }}">
 
+                {% if bootstrap_mode %}
+                <label class="field-label" for="current_password">Current Admin Password</label>
+                <div class="input-group" style="max-width: 360px; margin-top: 0;">
+                    <input type="password" id="current_password" name="current_password" class="code-input"
+                        style="letter-spacing: normal; font-size: 1rem; text-align: left;" placeholder="Enter current admin password"
+                        autocomplete="current-password" required>
+                </div>
+                <div class="field-help">
+                    This is required once for first-time setup. It prevents anyone on the network from enrolling their own authenticator without knowing the existing admin password.
+                </div>
+                {% endif %}
+
+                <label class="field-label" for="totp_code">Authenticator Code</label>
                 <div class="input-group">
-                    <input type="text" name="code" class="code-input" placeholder="000 000" maxlength="6" required
-                        autocomplete="off" autofocus>
+                    <input type="text" id="totp_code" name="code" class="code-input" placeholder="000 000" maxlength="7" required
+                        autocomplete="one-time-code" inputmode="numeric" pattern="[0-9 ]{6,7}" autofocus>
+                </div>
+                <div class="field-help">
+                    Open Google Authenticator, use the current 6-digit code for VigilEdge, and type it here. Spaces are optional.
                 </div>
 
-                <button type="submit" class="btn-cyber">Enable 2FA 🛡️</button>
+                <button type="submit" class="btn-cyber" id="enable-2fa-btn">Enable 2FA 🛡️</button>
+                <div class="submit-note">If the button appears to do nothing, the most common cause is a missing current admin password or an expired 6-digit code.</div>
             </form>
         </div>
     </main>
@@ -405,6 +488,33 @@
                     element.style.borderColor = "var(--glass-border)";
                     element.style.color = "var(--cyber-teal)";
                 }, 1500);
+            });
+        }
+
+        const setupForm = document.querySelector('form[action="/auth/verify-2fa"]');
+        const totpInput = document.getElementById('totp_code');
+        const submitButton = document.getElementById('enable-2fa-btn');
+
+        if (totpInput) {
+            totpInput.addEventListener('input', () => {
+                const digitsOnly = totpInput.value.replace(/\D/g, '').slice(0, 6);
+                if (digitsOnly.length > 3) {
+                    totpInput.value = `${digitsOnly.slice(0, 3)} ${digitsOnly.slice(3)}`;
+                } else {
+                    totpInput.value = digitsOnly;
+                }
+            });
+        }
+
+        if (setupForm) {
+            setupForm.addEventListener('submit', () => {
+                if (totpInput) {
+                    totpInput.value = totpInput.value.replace(/\s+/g, '');
+                }
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Enabling 2FA...';
+                }
             });
         }
     </script>

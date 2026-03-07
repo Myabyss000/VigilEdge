@@ -45,6 +45,12 @@
             </div>
         </div>
         <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-xs text-gray-400">
+                <button id="notification-bell" type="button" class="relative rounded border border-gray-700 px-2 py-1 hover:text-white transition" title="Notifications">
+                    Alerts
+                    <span id="notification-count" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] leading-5 text-center hidden">0</span>
+                </button>
+            </div>
             <div id="live-indicator" class="flex items-center gap-2">
                 <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                 <span class="text-xs text-gray-400">LIVE</span>
@@ -58,6 +64,8 @@
         {% block content %}{% endblock %}
     </main>
 
+    <div id="notification-toasts" class="fixed top-20 right-4 z-50 flex w-[24rem] max-w-[calc(100vw-2rem)] flex-col gap-2"></div>
+
     <script>
         // Live clock
         function updateClock() {
@@ -65,6 +73,134 @@
         }
         setInterval(updateClock, 1000);
         updateClock();
+
+        (() => {
+            const storageKey = 'threatloom.savedTimeFilter';
+            const clearParam = 'clear_saved_time';
+            const currentUrl = new URL(window.location.href);
+
+            function readSavedWindow() {
+                try {
+                    const raw = localStorage.getItem(storageKey);
+                    return raw ? JSON.parse(raw) : null;
+                } catch {
+                    return null;
+                }
+            }
+
+            function writeSavedWindow(start, end) {
+                localStorage.setItem(storageKey, JSON.stringify({ start, end }));
+            }
+
+            function clearSavedWindow() {
+                localStorage.removeItem(storageKey);
+            }
+
+            if (currentUrl.searchParams.get(clearParam) === '1') {
+                clearSavedWindow();
+                currentUrl.searchParams.delete(clearParam);
+                window.location.replace(currentUrl.pathname + (currentUrl.search ? `?${currentUrl.searchParams.toString()}` : ''));
+                return;
+            }
+
+            const timeFilterForms = Array.from(document.querySelectorAll('[data-time-filter-form]'));
+            if (!timeFilterForms.length) {
+                return;
+            }
+
+            const hasExplicitWindow = currentUrl.searchParams.has('start') || currentUrl.searchParams.has('end');
+            const savedWindow = readSavedWindow();
+
+            if (!hasExplicitWindow && savedWindow?.start && savedWindow?.end) {
+                currentUrl.searchParams.set('start', savedWindow.start);
+                currentUrl.searchParams.set('end', savedWindow.end);
+                window.location.replace(currentUrl.pathname + `?${currentUrl.searchParams.toString()}`);
+                return;
+            }
+
+            timeFilterForms.forEach((form) => {
+                const startInput = form.querySelector('input[name="start"]');
+                const endInput = form.querySelector('input[name="end"]');
+                const saveButton = form.querySelector('[data-save-time-filter]');
+                const clearButton = form.querySelector('[data-clear-time-filter]');
+
+                if (!startInput || !endInput) {
+                    return;
+                }
+
+                saveButton?.addEventListener('click', () => {
+                    if (!startInput.value || !endInput.value) {
+                        return;
+                    }
+                    writeSavedWindow(startInput.value, endInput.value);
+                    saveButton.textContent = 'Saved';
+                    setTimeout(() => {
+                        saveButton.textContent = 'Save Window';
+                    }, 1500);
+                });
+
+                clearButton?.addEventListener('click', () => {
+                    clearSavedWindow();
+                });
+            });
+        })();
+
+        (() => {
+            const bell = document.getElementById('notification-bell');
+            const countBadge = document.getElementById('notification-count');
+            const toastHost = document.getElementById('notification-toasts');
+            let unreadCount = 0;
+
+            function setUnreadCount(value) {
+                unreadCount = Math.max(0, value);
+                countBadge.textContent = unreadCount;
+                countBadge.classList.toggle('hidden', unreadCount === 0);
+            }
+
+            function showToast(title, message, tone) {
+                const toast = document.createElement('div');
+                const toneClass = tone === 'CRITICAL' ? 'border-red-500' : tone === 'HIGH' ? 'border-orange-500' : 'border-blue-500';
+                toast.className = `rounded-lg border ${toneClass} bg-soc-panel px-4 py-3 shadow-lg`;
+                toast.innerHTML = `<div class="text-sm font-semibold text-white">${title}</div><div class="mt-1 text-xs text-gray-300">${message}</div>`;
+                toastHost.prepend(toast);
+                setTimeout(() => toast.remove(), 6000);
+            }
+
+            bell.addEventListener('click', async () => {
+                setUnreadCount(0);
+                if ('Notification' in window && Notification.permission === 'default') {
+                    try {
+                        await Notification.requestPermission();
+                    } catch {}
+                }
+            });
+
+            const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+            const ws = new WebSocket(`${protocol}://${location.host}/ws/notifications`);
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type !== 'notification') {
+                        return;
+                    }
+                    const data = msg.data || {};
+                    const title = data.notification_title || (data.kind === 'playbook' ? `Playbook: ${data.playbook || 'Notification'}` : (data.title || 'New Alert'));
+                    const body = data.message || (data.kind === 'playbook'
+                        ? 'Playbook action triggered'
+                        : `${data.severity || 'INFO'} • ${data.src_ip || 'unknown'} • ${data.attack_type || 'activity'}${data.event_count ? ` • ${data.event_count} events` : ''}`);
+
+                    setUnreadCount(unreadCount + 1);
+                    showToast(title, body, data.severity || 'LOW');
+
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification(title, { body });
+                    }
+                } catch {}
+            };
+            ws.onclose = () => {
+                showToast('Notifications Offline', 'Realtime notification channel disconnected.', 'HIGH');
+            };
+        })();
     </script>
     {% block scripts %}{% endblock %}
 </body>

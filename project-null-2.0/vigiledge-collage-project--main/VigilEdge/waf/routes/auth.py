@@ -3,6 +3,9 @@ Authentication Routes
 Handles login/logout functionality for the WAF dashboard.
 """
 
+from urllib.parse import parse_qs
+from typing import Any, Dict
+
 from fastapi import APIRouter, Request, Response, Form, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -27,6 +30,53 @@ templates = Jinja2Templates(directory=templates_dir)
 settings = get_settings()
 
 COOKIE_NAME = "vigiledge_auth"
+SETTINGS_PATH = Path("config/waf_settings.json")
+
+
+def load_settings_file() -> Dict[str, Any]:
+    """Load persisted WAF settings from disk."""
+    if SETTINGS_PATH.exists():
+        with open(SETTINGS_PATH, "r") as settings_file:
+            return json.load(settings_file)
+    return {}
+
+
+def save_settings_file(data: Dict[str, Any]) -> None:
+    """Persist WAF settings to disk."""
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(SETTINGS_PATH, "w") as settings_file:
+        json.dump(data, settings_file, indent=2)
+
+
+def get_auth_config() -> Dict[str, Any]:
+    """Return the authentication section from persisted settings."""
+    return load_settings_file().get("authentication", {})
+
+
+def is_2fa_configured() -> bool:
+    """Return whether a TOTP secret has already been enrolled."""
+    return bool(get_auth_config().get("totp_secret"))
+
+
+def get_effective_admin_credentials(request: Request) -> tuple[str, str]:
+    """Resolve the current admin username/password from app state or persisted settings."""
+    app_settings = request.app.state.settings
+    auth_config = get_auth_config()
+    admin_username = auth_config.get("admin_username") or app_settings.admin_username
+    admin_password = auth_config.get("admin_password") or app_settings.admin_password
+    return admin_username, admin_password
+
+
+def qr_b64_from_secret(secret: str) -> str:
+    """Generate a base64-encoded QR image for a TOTP secret."""
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name="Admin",
+        issuer_name="VigilEdge WAF",
+    )
+    img = qrcode.make(uri)
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -34,7 +84,24 @@ async def login_page(request: Request):
     # If already logged in, redirect to dashboard
     if request.cookies.get(COOKIE_NAME):
         return RedirectResponse(url="/admin/dashboard", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request})
+
+    query_params = parse_qs(request.url.query)
+    message = None
+    if query_params.get("msg") == ["password_reset"]:
+        message = "Password updated successfully. You can now sign in with your new password."
+    elif query_params.get("msg") == ["2fa_enabled"]:
+        message = "Two-factor authentication is enabled. You can now use password recovery with your authenticator code."
+    elif query_params.get("msg") == ["2fa_bootstrap_required"]:
+        message = "Sign in first to manage 2FA. If 2FA has not been configured yet, use the setup link below."
+
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "message": message,
+            "show_setup_2fa": not is_2fa_configured(),
+        },
+    )
 
 
 @router.post("/login", response_class=HTMLResponse)
@@ -45,34 +112,14 @@ async def login(
     password: str = Form(...)
 ):
     """Handle login form submission."""
-    # Get latest settings from app state (ensures password updates are seen immediately)
     app_settings = request.app.state.settings
-    
-    # Verify credentials
-    # 1. Check against in-memory settings (fastest)
-    if username == app_settings.admin_username and password == app_settings.admin_password:
-        auth_success = True
-    else:
-        # 2. Fallback: Check config file directly (robust against reload/memory sync issues)
-        # This handles cases where file updated but app state is stale
-        auth_success = False
-        try:
-            import json
-            from pathlib import Path
-            settings_path = Path("config/waf_settings.json")
-            if settings_path.exists():
-                with open(settings_path, "r") as f:
-                    file_settings = json.load(f)
-                    file_auth = file_settings.get("authentication", {})
-                    # Check if file has matching credentials
-                    if (file_auth.get("admin_username") == username and 
-                        file_auth.get("admin_password") == password):
-                        auth_success = True
-                        # Self-repair: Update memory to match file
-                        app_settings.admin_password = password
-                        print("Resync: Updated memory from file during login")
-        except Exception as e:
-            print(f"Auth fallback error: {e}")
+    effective_username, effective_password = get_effective_admin_credentials(request)
+    auth_success = username == effective_username and password == effective_password
+
+    if auth_success:
+        # Self-repair: keep app state aligned with persisted settings.
+        app_settings.admin_username = effective_username
+        app_settings.admin_password = effective_password
 
     if auth_success:
         # Create response with redirect
@@ -111,7 +158,15 @@ async def logout(response: Response):
 @router.get("/auth/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request):
     """Serve the password reset page."""
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    setup_required = not is_2fa_configured()
+
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "setup_required": setup_required,
+        },
+    )
 
 @router.post("/auth/reset-password", response_class=HTMLResponse)
 async def reset_password_action(
@@ -131,15 +186,13 @@ async def reset_password_action(
 
     # 2. Verify TOTP
     try:
-        settings_path = Path("config/waf_settings.json")
-        if not settings_path.exists():
+        if not SETTINGS_PATH.exists():
              return templates.TemplateResponse(
                 "reset_password.html",
                 {"request": request, "error": "System not initialized (Settings file missing)"}
             )
             
-        with open(settings_path, "r") as f:
-            file_settings = json.load(f)
+        file_settings = load_settings_file()
             
         auth_config = file_settings.get("authentication", {})
         secret = auth_config.get("totp_secret")
@@ -147,24 +200,28 @@ async def reset_password_action(
         if not secret:
             return templates.TemplateResponse(
                 "reset_password.html",
-                {"request": request, "error": "2FA is not set up on this server. Run system setup first."}
+                {
+                    "request": request,
+                    "error": "2FA is not set up on this server yet. Sign in with the current admin password and open Setup 2FA first, or run the local setup_2fa.py bootstrap script.",
+                    "setup_required": True,
+                }
             )
             
         totp = pyotp.TOTP(secret)
         if not totp.verify(totp_code.replace(" ", "")): # Handle spaces if user types them
             return templates.TemplateResponse(
                 "reset_password.html",
-                {"request": request, "error": "Invalid Authentication Code"}
+                {"request": request, "error": "Invalid Authentication Code", "setup_required": False}
             )
             
         # 3. Success - Update Password
         if "authentication" not in file_settings:
             file_settings["authentication"] = {}
-            
+
+        file_settings["authentication"]["admin_username"] = request.app.state.settings.admin_username
         file_settings["authentication"]["admin_password"] = new_password
         
-        with open(settings_path, "w") as f:
-            json.dump(file_settings, f, indent=2)
+        save_settings_file(file_settings)
             
         # Update memory state if available
         if hasattr(request.app.state, "settings"):
@@ -176,7 +233,7 @@ async def reset_password_action(
         print(f"Reset Error: {e}")
         return templates.TemplateResponse(
             "reset_password.html",
-            {"request": request, "error": f"System Error: {str(e)}"}
+            {"request": request, "error": f"System Error: {str(e)}", "setup_required": False}
         )
 
 # --- 2FA Setup Routes (New) ---
@@ -184,66 +241,90 @@ async def reset_password_action(
 @router.get("/auth/setup-2fa", response_class=HTMLResponse)
 async def setup_2fa_page(request: Request):
     """Serve the 2FA setup page with a new QR code."""
-    if not check_auth(request):
-        return RedirectResponse(url="/login", status_code=302)
+    authenticated = check_auth(request)
+    already_configured = is_2fa_configured()
+
+    if not authenticated and already_configured:
+        return RedirectResponse(url="/login?msg=2fa_bootstrap_required", status_code=302)
         
     # Generate new secret
     secret = pyotp.random_base32()
     
-    # Generate QR URI
-    uri = pyotp.totp.TOTP(secret).provisioning_uri(
-        name="Admin", 
-        issuer_name="VigilEdge WAF"
-    )
-    
-    # Generate Image to Base64
-    img = qrcode.make(uri)
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    qr_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    qr_b64 = qr_b64_from_secret(secret)
     
     return templates.TemplateResponse("setup_2fa.html", {
         "request": request, 
         "secret": secret,
-        "qr_b64": qr_b64
+        "qr_b64": qr_b64,
+        "bootstrap_mode": not authenticated,
+        "already_configured": already_configured,
     })
 
 @router.post("/auth/verify-2fa", response_class=HTMLResponse)
 async def verify_2fa_setup(
     request: Request,
     secret: str = Form(...),
-    code: str = Form(...)
+    code: str = Form(...),
+    current_password: str = Form(default=""),
 ):
     """Verify and save the new 2FA secret."""
-    if not check_auth(request):
+    authenticated = check_auth(request)
+    already_configured = is_2fa_configured()
+
+    if not authenticated and already_configured:
         return RedirectResponse(url="/login", status_code=302)
+
+    if not authenticated:
+        _, admin_password = get_effective_admin_credentials(request)
+        if current_password != admin_password:
+            return templates.TemplateResponse(
+                "setup_2fa.html",
+                {
+                    "request": request,
+                    "secret": secret,
+                    "qr_b64": qr_b64_from_secret(secret),
+                    "bootstrap_mode": True,
+                    "already_configured": False,
+                    "error": "Current admin password is required to activate 2FA.",
+                },
+                status_code=401,
+            )
         
     totp = pyotp.TOTP(secret)
-    if totp.verify(code.replace(" ", "")):
+    normalized_code = code.replace(" ", "")
+    if totp.verify(normalized_code, valid_window=1):
         # Valid! Save to settings
         try:
-            settings_path = Path("config/waf_settings.json")
-            if settings_path.exists():
-                with open(settings_path, "r") as f:
-                    settings = json.load(f)
-            else:
-                settings = {}
+            settings_data = load_settings_file()
                 
-            if "authentication" not in settings:
-                settings["authentication"] = {}
-                
-            settings["authentication"]["totp_secret"] = secret
-            settings["authentication"]["2fa_enabled"] = True
+            if "authentication" not in settings_data:
+                settings_data["authentication"] = {}
+
+            settings_data["authentication"]["admin_username"] = request.app.state.settings.admin_username
+            settings_data["authentication"]["totp_secret"] = secret
+            settings_data["authentication"]["2fa_enabled"] = True
             
-            with open(settings_path, "w") as f:
-                json.dump(settings, f, indent=2)
+            save_settings_file(settings_data)
                 
-            return RedirectResponse(url="/admin/dashboard?msg=2fa_enabled", status_code=303)
+            if authenticated:
+                return RedirectResponse(url="/admin/dashboard?msg=2fa_enabled", status_code=303)
+            return RedirectResponse(url="/login?msg=2fa_enabled", status_code=303)
             
         except Exception as e:
             return HTMLResponse(f"Error saving settings: {e}", status_code=500)
     else:
-        return HTMLResponse("Invalid Code. Please try again.", status_code=400)
+        return templates.TemplateResponse(
+            "setup_2fa.html",
+            {
+                "request": request,
+                "secret": secret,
+                "qr_b64": qr_b64_from_secret(secret),
+                "bootstrap_mode": not authenticated,
+                "already_configured": already_configured,
+                "error": "Invalid authentication code. Check the current 6-digit code and try again.",
+            },
+            status_code=400,
+        )
 
 # --- End 2FA Routes ---
 
