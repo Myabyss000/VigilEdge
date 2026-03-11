@@ -103,9 +103,12 @@ Implemented in code:
 - Pattern-based detection for SQL injection, XSS, command injection, path traversal, and related payload families
 - Rate limiting, dynamic IP blocking, request metrics, and event logging
 - Admin dashboard pages for threats, analytics, AI analysis, network monitoring, blocked IPs, event logs, and settings
-- Session-cookie login for the WAF dashboard
+- Signed JWT-backed admin session cookies for the WAF dashboard
 - First-run WAF admin bootstrap with optional bootstrap token
-- 2FA bootstrap and TOTP-backed password reset pages
+- Google Authenticator compatible 2FA enrollment and TOTP-backed password reset pages
+- CSRF protection for WAF bootstrap, login, password reset, and 2FA setup forms
+- Authenticated WAF control-plane APIs and protected dashboard WebSocket channels
+- Trusted reverse-proxy-aware client IP handling for forwarded IP headers
 - AI threat scoring with heuristic scoring, optional LM Studio scoring, and a hybrid mode
 - ThreatLoom integration hooks for forwarding WAF events to the SOC
 - Network-monitoring and activity telemetry endpoints
@@ -130,6 +133,7 @@ Implemented in code:
 - Alerts, incidents, responses, playbooks, users, and firewall status APIs
 - JWT authentication and RBAC
 - First-run ThreatLoom admin bootstrap and authenticated ingest endpoints
+- ThreatLoom firewall status route protection and docs gated by debug mode
 - Server-rendered dashboard pages plus WebSocket streaming
 - Retention manager and audit-oriented backend structure
 
@@ -144,122 +148,24 @@ Useful ThreatLoom routes:
 ### Demo Website
 
 Implemented in code:
-# VigilEdge Security Platform
 
-VigilEdge Security Platform is a local-first defensive stack for protecting and monitoring web applications without depending on a cloud WAF. This workspace combines a reverse-proxy web application firewall, a lightweight SOC layer, an optional AI analysis path, and a demo target for local security testing.
+- Local e-commerce-style test surface for attack simulation and WAF validation
+- Reachable directly on port 8080 or through the WAF on `/protected`
+- Separate application credentials and data model from the WAF and ThreatLoom control planes
+- Intentionally insecure behavior for testing WAF detections and dashboards
 
-It is designed around a practical use case: small and medium teams that need inspection, visibility, and explainability on their own infrastructure, while keeping traffic and security data under local control.
+## Security Highlights
 
-## Overview
+Recent security work now reflected in the codebase includes:
 
-This repository contains four main parts:
-
-| Component | Role | Framework | Default Port |
-|---|---|---|---:|
-| VigilEdge WAF | Reverse-proxy firewall, request inspection, admin dashboard | FastAPI | 5000 |
-| ThreatLoom | SOC-style ingestion, detection, incidents, dashboard | FastAPI | 8443 |
-| Chatbot Server | AI-assisted explanation layer for WAF activity | Flask | 5001 |
-| Demo Website | Intentionally insecure test target for validation | FastAPI | 8080 |
-
-The main productized mode is to place your own website behind the WAF. The demo website is optional and should only be used for testing.
-
-## Why This Project Exists
-
-Most smaller teams cannot justify the cost or operational model of enterprise edge products. This project aims to provide:
-
-- local traffic inspection and visibility
-- deployable protection for a custom upstream website
-- explainable AI-assisted threat context without mandatory cloud APIs
-- a bundled SOC component for alerts and incident tracking
-- a demo environment for validation and training
-
-## Core Capabilities
-
-### VigilEdge WAF
-
-- Reverse-proxy protection for a selected upstream website at `/`, `/protected`, or both
-- Detection for SQL injection, XSS, command injection, path traversal, suspicious payloads, and rate abuse
-- Dynamic blocking, request metrics, event logging, and administrative dashboards
-- Authentication for the WAF dashboard with 2FA setup and password reset flows
-- Optional forwarding of WAF events into ThreatLoom
-- Custom upstream routing support for either a real website or the bundled demo target
-
-### ThreatLoom
-
-- Log and event ingestion pipelines
-- Rule-based, behavioral, and correlation-based detection layers
-- Alert and incident management
-- JWT and RBAC-backed APIs
-- Web dashboard plus WebSocket-backed live updates
-
-### AI Features
-
-The AI layer is intentionally local-first and assistive.
-
-- Heuristic AI scoring is available directly inside the WAF request analysis pipeline
-- Optional LM Studio integration adds model-backed scoring and operator-facing explanations
-- The chatbot is restricted to WAF and security-analysis use cases rather than acting as a general assistant
-- AI output is used to enrich context and prioritization; core firewall rules still remain the primary enforcement path
-- If LM Studio is not available, the platform continues operating with heuristic scoring and guidance-only fallback behavior
-
-### Demo Website
-
-- Local e-commerce-style test surface for attack simulation
-- Useful for validating proxying, blocking, dashboards, and AI explanations
-- Intentionally insecure and not suitable for internet exposure
-
-## AI Architecture
-
-The AI implementation in this workspace is split into two practical layers:
-
-| AI Layer | Purpose | Dependency | Behavior |
-|---|---|---|---|
-| Heuristic scorer | Fast inline risk scoring during request analysis | Built into VigilEdge | Always available when AI is enabled |
-| LM Studio integration | Local model-backed explanation and enhanced scoring | LM Studio on port 1234 | Optional |
-| Chatbot interface | WAF-focused operator assistance and threat explanation | Chatbot server + LM Studio | Optional |
-
-Current AI behavior, based on the implemented code:
-
-- heuristic scoring remains the baseline path
-- multi-encoded payloads are normalized before scoring
-- AI-related event fields are written into WAF event details for later analysis
-- model availability is optional and the system degrades gracefully when local model services are offline
-- chatbot responses are scoped to recent WAF data and security-oriented prompts
-
-This means the platform can still inspect and protect traffic without a running LLM, while offering richer explanations when a local model is available.
-
-## Request Flow
-
-1. A browser sends traffic to VigilEdge WAF on port 5000.
-2. The WAF inspects the request before forwarding it to the selected upstream website.
-3. Events are logged locally and can be forwarded to ThreatLoom.
-4. ThreatLoom performs downstream analysis, alerting, and incident handling.
-5. The chatbot can query recent WAF event context and send narrowly scoped prompts to LM Studio.
-
-## Repository Layout
-
-```text
-vigiledge part 3/
-├── README.md
-├── chatbot_server.py
-├── start_demo.bat
-├── start_custom_website.bat
-├── ThreatLoom/
-└── project-null-2.0/
-    └── vigiledge-collage-project--main/
-        └── VigilEdge/
-            ├── vulnerable-app/
-            ├── waf/
-            ├── docs/
-            └── tests/
-```
-
-Key implementation areas:
-
-- WAF application: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/`
-- ThreatLoom service: `ThreatLoom/`
-- Chatbot bridge: `chatbot_server.py`
-- Demo target: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/vulnerable-app/`
+- Signed JWT-backed WAF admin sessions instead of a placeholder auth cookie
+- CSRF protection on WAF bootstrap, login, password reset, and 2FA setup forms
+- Automatic WAF session invalidation when the admin password changes
+- Protected WAF dashboard WebSocket and control-plane APIs using either admin session auth or configured service tokens
+- Authenticated ThreatLoom ingest endpoints using bearer service tokens or authorized JWT users
+- First-run bootstrap for both VigilEdge and ThreatLoom instead of public default admin credentials
+- ThreatLoom docs hidden unless debug mode is enabled
+- Trusted reverse-proxy-aware client IP handling so `X-Forwarded-For` is only honored from configured proxy peers
 
 ## Getting Started
 
@@ -333,11 +239,11 @@ cd "."
 project-null-2.0\vigiledge-collage-project--main\VigilEdge\venv\Scripts\python.exe chatbot_server.py
 ```
 
-## Default Access
+## Access and Authentication
 
 | Service | URL | Notes |
 |---|---|---|
-| WAF login | `http://localhost:5000/login` | Uses the persisted local admin account, or redirects to first-run bootstrap if still uninitialized |
+| WAF login | `http://localhost:5000/login` | Uses the persisted local admin account or redirects to first-run bootstrap when uninitialized |
 | WAF dashboard | `http://localhost:5000/admin/dashboard` | Main operator UI |
 | Protected website via root | `http://localhost:5000/` | Active when root mode is enabled |
 | Protected website via subpath | `http://localhost:5000/protected` | Compatibility path |
@@ -348,6 +254,7 @@ project-null-2.0\vigiledge-collage-project--main\VigilEdge\venv\Scripts\python.e
 Current authentication model:
 
 - WAF: local admin credentials come from persisted WAF settings or first-run bootstrap
+- WAF 2FA: Google Authenticator compatible TOTP enrollment and password-recovery flow remain available
 - ThreatLoom: the first privileged account is created through bootstrap, not a public default password
 - Demo app admin data is separate from WAF and ThreatLoom credentials
 
@@ -366,6 +273,7 @@ Important WAF settings include:
 - `CONTROL_PLANE_API_TOKENS`
 - `BOOTSTRAP_ADMIN_TOKEN`
 - `CORS_ORIGINS`
+- `TRUSTED_REVERSE_PROXIES`
 - `RATE_LIMIT_ENABLED`
 - `RATE_LIMIT_REQUESTS`
 - `SQL_INJECTION_PROTECTION`
@@ -373,6 +281,7 @@ Important WAF settings include:
 - `DDOS_PROTECTION`
 - `THREATLOOM_ENABLED`
 - `THREATLOOM_API_URL`
+- `THREATLOOM_API_KEY`
 - `UPSTREAM_PUBLIC_MODE`
 - `UPSTREAM_USE_DEMO_TARGET`
 - `UPSTREAM_CUSTOM_TARGET_URL`
@@ -416,23 +325,24 @@ python project-null-2.0\vigiledge-collage-project--main\VigilEdge\test_ai_querie
 
 ## Current Project Status
 
-This repository is a strong local prototype and demo platform, but it should not yet be described as production-ready.
+This repository is a strong local-first prototype and demo platform with materially improved control-plane security, but it should still not be described as production-ready.
 
 What is already real:
 
-- local reverse-proxy WAF behavior
-- working operator dashboard
-- local event capture and forwarding
-- SOC-style analysis component
-- optional AI assistance without mandatory cloud dependency
+- local reverse-proxy WAF behavior for a real upstream website or the bundled demo target
+- working operator dashboard and live WebSocket updates
+- signed WAF admin sessions with CSRF-protected form flows
+- authenticated WAF control-plane APIs and authenticated ThreatLoom ingest
+- first-run bootstrap flows for both products
+- local event capture, ThreatLoom forwarding, SOC-style analysis, and optional AI assistance
 
 What still needs hardening for production use:
 
-- stronger authentication and session handling
-- secret management and first-run setup
-- authenticated control-plane APIs and ingestion paths
-- TLS and deployment defaults
-- production-grade persistence and operational monitoring
+- end-to-end TLS termination and deployment defaults
+- more formal secret rotation and secure secret storage
+- production-grade persistence, backup, and recovery procedures
+- broader automated tests for auth, proxy trust, and operational edge cases
+- deployment guidance for real reverse proxies, containers, and observability
 
 ## Troubleshooting
 
@@ -472,17 +382,21 @@ Check that:
 
 That is expected unless `DEBUG=True` is enabled.
 
+### Wrong Client IP Is Recorded
+
+If the WAF is behind a real reverse proxy, set `TRUSTED_REVERSE_PROXIES` to the proxy IPs or CIDR ranges. If this value is empty, the WAF intentionally ignores `X-Forwarded-For` and uses the socket peer IP.
+
 ## Security Notice
 
 The bundled demo website is intentionally vulnerable and exists only for local testing. Do not expose it to the public internet.
 
 Before any serious deployment:
 
-- change all default credentials
-- replace default secrets
-- disable or isolate the demo application
-- review WAF and ThreatLoom configuration
+- replace local secrets and bootstrap tokens
+- isolate or disable the demo application
+- review WAF and ThreatLoom configuration, including trusted reverse proxies
 - deploy behind proper TLS and operational monitoring
+- verify that service tokens are configured for machine-to-machine flows
 
 ## Additional Documentation
 

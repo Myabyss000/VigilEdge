@@ -18,6 +18,7 @@ from vigiledge.utils.upstream_config import (
     should_proxy_root_request,
     upstream_subpath_enabled,
 )
+from vigiledge.utils.client_ip import get_effective_client_ip
 from .auth import require_control_plane_access
 
 router = APIRouter(tags=["Proxy"])
@@ -147,16 +148,8 @@ async def _track_visitor(client_ip: str, user_agent: str, url: str):
 
 
 def _get_client_ip(request: Request) -> str:
-    """Get real client IP, honoring forwarded headers when present."""
-    client_ip = request.headers.get('X-Forwarded-For')
-    if client_ip:
-        return client_ip.split(',')[0].strip()
-
-    client_ip = request.headers.get('X-Real-IP')
-    if client_ip:
-        return client_ip.strip()
-
-    return request.client.host if request.client else "unknown"
+    """Resolve the real client IP using trusted reverse-proxy rules."""
+    return get_effective_client_ip(request, settings_obj=getattr(request.app.state, "settings", None))
 
 
 def _wants_json_response(headers: dict) -> bool:

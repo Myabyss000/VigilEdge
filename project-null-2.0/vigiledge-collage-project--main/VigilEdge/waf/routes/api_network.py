@@ -15,6 +15,7 @@ from typing import Dict, Optional, List
 from fastapi import APIRouter, Request, BackgroundTasks, Depends
 import httpx
 from vigiledge.config import get_settings
+from vigiledge.utils.client_ip import get_effective_client_ip
 from .auth import require_control_plane_access
 
 # Import psutil for real network monitoring
@@ -473,14 +474,7 @@ async def api_log_victim(request: Request):
         import json
         victim_data = json.loads(body) if body else {}
         
-        # Get client's real IP (from headers or direct connection)
-        client_ip = request.headers.get("X-Forwarded-For", 
-                    request.headers.get("X-Real-IP", 
-                    request.client.host if request.client else "unknown"))
-        
-        # If X-Forwarded-For contains multiple IPs, take the first (real client)
-        if "," in client_ip:
-            client_ip = client_ip.split(",")[0].strip()
+        client_ip = get_effective_client_ip(request, settings_obj=getattr(request.app.state, "settings", None))
         
         # Track this user in our system
         user_agent = request.headers.get("User-Agent", "Unknown")
@@ -1051,12 +1045,7 @@ async def api_log_user_activity(request: Request):
         # Otherwise fall back to header-based detection
         client_ip = body.get("ip")
         if not client_ip or client_ip == "unknown":
-            client_ip = request.headers.get("X-Forwarded-For", 
-                        request.headers.get("X-Real-IP", 
-                        request.client.host if request.client else "unknown"))
-            
-            if "," in client_ip:
-                client_ip = client_ip.split(",")[0].strip()
+            client_ip = get_effective_client_ip(request, settings_obj=getattr(request.app.state, "settings", None))
         
         activity = {
             "id": len(USER_ACTIVITY_LOG) + 1,

@@ -19,6 +19,7 @@ except ImportError:
     JSONResponse = object
 
 from ..core.waf_engine import WAFEngine
+from ..utils.client_ip import get_effective_client_ip
 from ..utils.upstream_config import should_proxy_root_request
 
 
@@ -241,26 +242,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP address from request"""
-        # Check for IP in various headers (reverse proxy scenarios)
-        headers_to_check = [
-            "X-Forwarded-For",
-            "X-Real-IP", 
-            "X-Forwarded-Host",
-            "CF-Connecting-IP",  # Cloudflare
-            "True-Client-IP",    # CloudFlare
-        ]
-        
-        for header in headers_to_check:
-            if header.lower() in request.headers:
-                ip = request.headers[header.lower()].split(",")[0].strip()
-                if ip and ip != "unknown":
-                    return ip
-        
-        # Fall back to direct client host
-        try:
-            return request.client.host if request.client else "unknown"
-        except AttributeError:
-            return "unknown"
+        return get_effective_client_ip(request, settings_obj=getattr(request.app.state, "settings", None))
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -319,10 +301,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP address"""
-        try:
-            return request.client.host if request.client else "unknown"
-        except AttributeError:
-            return "unknown"
+        return get_effective_client_ip(request, settings_obj=getattr(request.app.state, "settings", None))
     
     def _cleanup_old_entries(self, current_time: float):
         """Remove old request entries outside the time window"""

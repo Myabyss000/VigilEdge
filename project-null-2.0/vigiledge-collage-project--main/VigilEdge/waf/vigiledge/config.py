@@ -4,6 +4,7 @@ Handles environment variables and application settings
 """
 
 import os
+import ipaddress
 from typing import Optional, List
 from pydantic import Field, validator
 from pydantic_settings import BaseSettings
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
     control_plane_api_tokens: str = Field(default="", env="CONTROL_PLANE_API_TOKENS")
     bootstrap_admin_token: str = Field(default="", env="BOOTSTRAP_ADMIN_TOKEN")
     cors_origins: str = Field(default="http://127.0.0.1:5000,http://localhost:5000", env="CORS_ORIGINS")
+    trusted_reverse_proxies: str = Field(default="", env="TRUSTED_REVERSE_PROXIES")
     
     # Database Configuration
     database_url: str = Field(default="sqlite:///./vigiledge.db", env="DATABASE_URL")
@@ -190,3 +192,19 @@ def get_cors_origins() -> list[str]:
     """Return configured CORS origins for the WAF UI and trusted local tools."""
     settings = get_settings()
     return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+
+
+def get_trusted_reverse_proxies() -> list[str]:
+    """Return configured trusted reverse-proxy IPs or CIDR ranges."""
+    settings = get_settings()
+    trusted_entries: list[str] = []
+    for raw_entry in settings.trusted_reverse_proxies.split(","):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        try:
+            ipaddress.ip_network(entry, strict=False)
+        except ValueError:
+            continue
+        trusted_entries.append(entry)
+    return trusted_entries
