@@ -132,6 +132,7 @@ class WAFEngine:
         self.blocked_ips: Dict[str, datetime] = {}
         self.rate_limits: Dict[str, List[datetime]] = {}
         self.security_events: List[SecurityEvent] = []
+        self._background_tasks: set[asyncio.Task[Any]] = set()
         print(f"🔧 WAF Engine initialized! Instance ID: {id(self)}, Metrics ID: {id(self.metrics)}")
         
         # Windows Defender Integration
@@ -2371,17 +2372,18 @@ class WAFEngine:
                 security_event.details["ai"] = ai_result
             except Exception:
                 pass
-    
-    def _log_event_to_db(self, security_event: SecurityEvent):
-        """Log security event to database"""
-        # Re-score with AI if threat was detected
-        self._update_ai_score(security_event)
-        
+
+    def _track_background_task(self, task: asyncio.Task[Any]):
+        """Keep a strong reference to background tasks until they finish."""
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+    def _persist_event_to_db_sync(self, security_event: SecurityEvent):
+        """Persist a security event to SQLite without blocking the request coroutine."""
+        conn = sqlite3.connect(self.db_path)
         try:
-            print(f"💾 Logging event to DB: {security_event.threat_type} | {security_event.target_url}")
-            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             import json
             cursor.execute('''
                 INSERT INTO security_events 
@@ -2400,24 +2402,35 @@ class WAFEngine:
                 1 if security_event.blocked else 0,
                 json.dumps(security_event.details)
             ))
-            
+
             conn.commit()
+        finally:
             conn.close()
-            print(f"✅ Event logged successfully to {self.db_path}")
+
+    async def _write_event_artifacts(self, security_event: SecurityEvent):
+        """Write event data and forward qualifying alerts without delaying the response."""
+        try:
+            await asyncio.to_thread(self._persist_event_to_db_sync, security_event)
 
             if (
                 getattr(self, "threatloom_integrator", None) is not None
                 and getattr(self.settings, "threatloom_enabled", False)
                 and (security_event.blocked or security_event.threat_type != "none")
             ):
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(self.threatloom_integrator.send_event(security_event))
-                except RuntimeError:
-                    logger.warning(
-                        "ThreatLoom forwarding skipped because no running event loop was available",
-                        event_id=security_event.id,
-                    )
+                await self.threatloom_integrator.send_event(security_event)
         except Exception as e:
-            print(f"❌ Failed to log event: {e}")
+            logger.error("Background event processing failed", error=str(e), event_id=security_event.id)
+    
+    def _log_event_to_db(self, security_event: SecurityEvent):
+        """Log security event to database"""
+        # Re-score with AI if threat was detected
+        self._update_ai_score(security_event)
+        
+        try:
+            loop = asyncio.get_running_loop()
+            task = loop.create_task(self._write_event_artifacts(security_event))
+            self._track_background_task(task)
+        except RuntimeError:
+            self._persist_event_to_db_sync(security_event)
+        except Exception as e:
             logger.error("Failed to log event to database", error=str(e), event_id=security_event.id)

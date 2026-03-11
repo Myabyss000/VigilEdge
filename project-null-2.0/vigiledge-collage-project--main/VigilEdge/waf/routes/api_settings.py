@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Response, Request
 from fastapi.responses import JSONResponse
 
 from .auth import check_auth
+from vigiledge.utils.upstream_config import normalize_proxy_path
 
 router = APIRouter(prefix="/api/v1", tags=["Settings"])
 
@@ -98,12 +99,12 @@ DEFAULT_SETTINGS = {
         "threat_sensitivity": "medium"
     },
     "network": {
-        "listen_port": 8000,
+        "listen_port": 5000,
         "max_connections": 1000,
-        "ssl_enabled": True,
+        "ssl_enabled": False,
         "ssl_cert_path": "/certs/server.crt",
         "ssl_key_path": "/certs/server.key",
-        "allowed_origins": ["https://localhost:8000", "https://127.0.0.1:8000"]
+        "allowed_origins": ["http://localhost:5000", "http://127.0.0.1:5000"]
     },
     "logging": {
         "log_level": "INFO",
@@ -124,6 +125,13 @@ DEFAULT_SETTINGS = {
         "auto_backup": True,
         "backup_frequency": "daily"
     },
+    "upstream": {
+        "use_demo_target": False,
+        "custom_target_url": "http://localhost:3000",
+        "demo_target_url": "http://localhost:8080",
+        "public_mode": "both",
+        "public_subpath": "/protected"
+    },
     "theme": {
         "selected_theme": "dark",
         "auto_dark_mode": False
@@ -135,6 +143,17 @@ DEFAULT_SETTINGS = {
 }
 
 
+def merge_settings_with_defaults(settings: dict, defaults: dict) -> dict:
+    """Deep merge stored settings onto the default template."""
+    merged = defaults.copy()
+    for key, value in settings.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = merge_settings_with_defaults(value, merged[key])
+        else:
+            merged[key] = value
+    return merged
+
+
 @router.get("/settings")
 async def get_settings(request: Request):
     """Get all WAF settings from configuration file."""
@@ -144,7 +163,7 @@ async def get_settings(request: Request):
         settings_file = Path("config/waf_settings.json")
         if settings_file.exists():
             with open(settings_file, 'r') as f:
-                settings = json.load(f)
+                settings = merge_settings_with_defaults(json.load(f), DEFAULT_SETTINGS)
         else:
             settings = DEFAULT_SETTINGS.copy()
             
@@ -179,10 +198,12 @@ async def save_settings(request: Request):
         settings_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Validate settings structure
-        required_sections = ["security", "network", "logging", "rules", "backup", "theme", "authentication"]
+        required_sections = ["security", "network", "logging", "rules", "backup", "theme", "authentication", "upstream"]
         for section in required_sections:
             if section not in settings:
                 raise HTTPException(status_code=400, detail=f"Missing required section: {section}")
+
+        settings["upstream"]["public_subpath"] = normalize_proxy_path(settings["upstream"].get("public_subpath", "/protected"))
         
         # MERGE STRATEGY: Preserve sensitive data (passwords) not found in request
         if settings_file.exists():
@@ -227,6 +248,30 @@ async def save_settings(request: Request):
             for rule_name, enabled in settings["rules"].items():
                 if hasattr(waf_engine, f"{rule_name}_enabled"):
                     setattr(waf_engine, f"{rule_name}_enabled", enabled)
+
+            if hasattr(waf_engine, "settings"):
+                waf_engine.settings.upstream_use_demo_target = settings["upstream"].get("use_demo_target", False)
+                waf_engine.settings.upstream_custom_target_url = settings["upstream"].get("custom_target_url", waf_engine.settings.upstream_custom_target_url)
+                waf_engine.settings.upstream_demo_target_url = settings["upstream"].get("demo_target_url", waf_engine.settings.upstream_demo_target_url)
+                waf_engine.settings.upstream_public_mode = settings["upstream"].get("public_mode", waf_engine.settings.upstream_public_mode)
+                waf_engine.settings.vulnerable_app_proxy_path = settings["upstream"].get("public_subpath", waf_engine.settings.vulnerable_app_proxy_path)
+                waf_engine.settings.vulnerable_app_url = (
+                    waf_engine.settings.upstream_demo_target_url
+                    if waf_engine.settings.upstream_use_demo_target
+                    else waf_engine.settings.upstream_custom_target_url
+                )
+
+            if request and hasattr(request.app.state, "settings"):
+                request.app.state.settings.upstream_use_demo_target = settings["upstream"].get("use_demo_target", False)
+                request.app.state.settings.upstream_custom_target_url = settings["upstream"].get("custom_target_url", request.app.state.settings.upstream_custom_target_url)
+                request.app.state.settings.upstream_demo_target_url = settings["upstream"].get("demo_target_url", request.app.state.settings.upstream_demo_target_url)
+                request.app.state.settings.upstream_public_mode = settings["upstream"].get("public_mode", request.app.state.settings.upstream_public_mode)
+                request.app.state.settings.vulnerable_app_proxy_path = settings["upstream"].get("public_subpath", request.app.state.settings.vulnerable_app_proxy_path)
+                request.app.state.settings.vulnerable_app_url = (
+                    request.app.state.settings.upstream_demo_target_url
+                    if request.app.state.settings.upstream_use_demo_target
+                    else request.app.state.settings.upstream_custom_target_url
+                )
             
             logging.info("Settings saved and applied successfully")
         except Exception as e:

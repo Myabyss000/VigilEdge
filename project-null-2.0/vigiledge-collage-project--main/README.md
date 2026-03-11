@@ -16,6 +16,8 @@
 
 ---
 
+> Launchers updated at the workspace root: use `start_demo.bat` for the original full demo stack and `start_custom_website.bat` for protecting your own website. Older references to `start_both.bat` in this document are legacy text.
+
 ## 📋 Table of Contents
 
 - [🚀 Quick Start](#-quick-start)

@@ -662,7 +662,7 @@
 
         <ul class="nav-menu">
             <li class="nav-item">
-                <a href="/" class="nav-link">
+                <a href="/admin/dashboard" class="nav-link">
                     <span class="nav-icon">📊</span>
                     <span>Dashboard</span>
                 </a>
@@ -851,6 +851,46 @@
                         onclick="changePassword()">
                         🔑 Update Password
                     </button>
+                </div>
+            </div>
+
+            <!-- Upstream Website Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">🌍 Protected Website</h2>
+
+                <div class="form-group">
+                    <label class="form-label">Active Upstream Target</label>
+                    <select id="upstreamTargetType" class="form-select">
+                        <option value="custom" selected>Custom Website</option>
+                        <option value="demo">Demo Website</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Custom Website URL</label>
+                    <input id="customTargetUrl" type="text" class="form-input" value="http://localhost:3000"
+                        placeholder="http://localhost:3000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Demo Website URL</label>
+                    <input id="demoTargetUrl" type="text" class="form-input" value="http://localhost:8080"
+                        placeholder="http://localhost:8080">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Public Exposure Mode</label>
+                    <select id="upstreamPublicMode" class="form-select">
+                        <option value="protected">Subpath Only (`/protected`)</option>
+                        <option value="root">Root Only (`/`)</option>
+                        <option value="both" selected>Both `/` and `/protected`</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Protected Subpath</label>
+                    <input id="upstreamPublicSubpath" type="text" class="form-input" value="/protected"
+                        placeholder="/protected">
                 </div>
             </div>
 
@@ -1098,6 +1138,14 @@ https://127.0.0.1:8000</textarea>
             setValue('blockDuration', settings.security.block_duration);
             setValue('threatSensitivity', settings.security.threat_sensitivity);
 
+            // Upstream Website Settings
+            const upstream = settings.upstream || {};
+            setValue('upstreamTargetType', upstream.use_demo_target ? 'demo' : 'custom');
+            setValue('customTargetUrl', upstream.custom_target_url || 'http://localhost:3000');
+            setValue('demoTargetUrl', upstream.demo_target_url || 'http://localhost:8080');
+            setValue('upstreamPublicMode', upstream.public_mode || 'both');
+            setValue('upstreamPublicSubpath', upstream.public_subpath || '/protected');
+
             // Network Settings
             setValue('listenPort', settings.network.listen_port);
             setValue('maxConnections', settings.network.max_connections);
@@ -1181,6 +1229,13 @@ https://127.0.0.1:8000</textarea>
                     block_duration: parseInt(getValue('blockDuration')),
                     threat_sensitivity: getValue('threatSensitivity')
                 },
+                upstream: {
+                    use_demo_target: getValue('upstreamTargetType') === 'demo',
+                    custom_target_url: getValue('customTargetUrl').trim(),
+                    demo_target_url: getValue('demoTargetUrl').trim(),
+                    public_mode: getValue('upstreamPublicMode'),
+                    public_subpath: getValue('upstreamPublicSubpath').trim() || '/protected'
+                },
                 network: {
                     listen_port: parseInt(getValue('listenPort')),
                     max_connections: parseInt(getValue('maxConnections')),
@@ -1253,11 +1308,13 @@ https://127.0.0.1:8000</textarea>
 
                 const result = await response.json();
                 console.log('✅ Settings saved:', result);
-                currentSettings = settings;
 
                 // Check if restart is needed (network or logging changed)
-                const needsRestart = JSON.stringify(settings.network) !== JSON.stringify(currentSettings.network) ||
-                    JSON.stringify(settings.logging) !== JSON.stringify(currentSettings.logging);
+                const previousSettings = currentSettings;
+                const needsRestart = JSON.stringify(settings.network) !== JSON.stringify(previousSettings.network) ||
+                    JSON.stringify(settings.logging) !== JSON.stringify(previousSettings.logging);
+
+                currentSettings = settings;
 
                 if (needsRestart) {
                     showNotification('Settings saved! ⚠️ Restart server to apply Network/Logging changes', 'warning');

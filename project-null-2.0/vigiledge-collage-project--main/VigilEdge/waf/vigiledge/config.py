@@ -91,9 +91,13 @@ class Settings(BaseSettings):
     threatloom_api_key: str = Field(default="", env="THREATLOOM_API_KEY")
     
     # Vulnerable App Protection Configuration
-    vulnerable_app_url: str = Field(default="http://localhost:8080", env="VULNERABLE_APP_URL")
+    vulnerable_app_url: str = Field(default="http://localhost:3000", env="VULNERABLE_APP_URL")
     vulnerable_app_enabled: bool = Field(default=True, env="VULNERABLE_APP_ENABLED")
     vulnerable_app_proxy_path: str = Field(default="/protected", env="VULNERABLE_APP_PROXY_PATH")
+    upstream_public_mode: str = Field(default="both", env="UPSTREAM_PUBLIC_MODE")
+    upstream_use_demo_target: bool = Field(default=False, env="UPSTREAM_USE_DEMO_TARGET")
+    upstream_demo_target_url: str = Field(default="http://localhost:8080", env="UPSTREAM_DEMO_TARGET_URL")
+    upstream_custom_target_url: str = Field(default="http://localhost:3000", env="UPSTREAM_CUSTOM_TARGET_URL")
     
     @validator("secret_key")
     def validate_secret_key(cls, v):
@@ -113,6 +117,13 @@ class Settings(BaseSettings):
         valid_envs = ["development", "staging", "production"]
         if v not in valid_envs:
             raise ValueError(f"Environment must be one of {valid_envs}")
+        return v
+
+    @validator("upstream_public_mode")
+    def validate_upstream_public_mode(cls, v):
+        valid_modes = ["protected", "root", "both"]
+        if v not in valid_modes:
+            raise ValueError(f"Upstream public mode must be one of {valid_modes}")
         return v
     
     class Config:

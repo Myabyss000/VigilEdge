@@ -10,6 +10,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .auth import check_auth
+from .proxy import proxy_upstream_request
+from vigiledge.utils.upstream_config import get_upstream_proxy_path, should_proxy_root_request, upstream_subpath_enabled
 
 router = APIRouter(tags=["Dashboard"])
 
@@ -26,21 +28,29 @@ def get_waf_engine():
 
 
 @router.get("/", response_class=HTMLResponse)
-async def root():
-    """Redirect directly to admin dashboard."""
+async def root(request: Request):
+    """Serve the upstream home page when root proxying is enabled, otherwise redirect to admin."""
+    if should_proxy_root_request("/", request.app.state.settings):
+        return await proxy_upstream_request(request, path="", public_base_path="")
     return RedirectResponse(url="/admin/dashboard", status_code=302)
 
 
 @router.get("/admin")
-async def redirect_to_protected_admin():
-    """Redirect /admin to the protected vulnerable app admin panel."""
-    return RedirectResponse(url="/protected/admin", status_code=302)
+async def redirect_to_protected_admin(request: Request):
+    """Redirect /admin to the protected upstream admin panel when subpath mode is enabled."""
+    if not upstream_subpath_enabled(request.app.state.settings):
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    proxy_path = get_upstream_proxy_path(request.app.state.settings)
+    return RedirectResponse(url=f"{proxy_path}/admin", status_code=302)
 
 
 @router.get("/admin/logout")
-async def redirect_to_protected_logout():
-    """Redirect logout to the protected vulnerable app logout."""
-    return RedirectResponse(url="/protected/admin/logout", status_code=302)
+async def redirect_to_protected_logout(request: Request):
+    """Redirect logout to the protected upstream logout path when subpath mode is enabled."""
+    if not upstream_subpath_enabled(request.app.state.settings):
+        return RedirectResponse(url="/logout", status_code=302)
+    proxy_path = get_upstream_proxy_path(request.app.state.settings)
+    return RedirectResponse(url=f"{proxy_path}/admin/logout", status_code=302)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -187,7 +197,7 @@ async def security_rules(request: Request):
         <body>
         <h1>Security Rules Page Not Found</h1>
         <p>The security rules template is not available.</p>
-        <a href="/">Go to Dashboard</a>
+        <a href="/admin/dashboard">Go to Dashboard</a>
         </body>
         </html>
         """, status_code=404)
@@ -212,7 +222,7 @@ async def threat_detection(request: Request):
         <body style="background: #0a0e1a; color: white; font-family: Arial; padding: 2rem;">
         <h1 style="color: #00d4ff;">Threat Detection</h1>
         <p>The threat detection page is under maintenance.</p>
-        <a href="/" style="color: #00ffa6;">← Go to Dashboard</a>
+        <a href="/admin/dashboard" style="color: #00ffa6;">← Go to Dashboard</a>
         </body>
         </html>
         """, status_code=200)
@@ -355,7 +365,7 @@ async def settings_page(request: Request):
             <div class="container">
                 <h1>WAF Settings</h1>
                 <p>Settings page is loading...</p>
-                <a href="/" class="back-link">← Back to Dashboard</a>
+                <a href="/admin/dashboard" class="back-link">← Back to Dashboard</a>
             </div>
         </body>
         </html>

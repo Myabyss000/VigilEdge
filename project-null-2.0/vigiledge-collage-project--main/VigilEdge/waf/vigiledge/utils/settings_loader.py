@@ -5,6 +5,7 @@ Overrides default config.py settings with user-configured values
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -89,6 +90,20 @@ class SettingsLoader:
             "auto_backup": backup.get("auto_backup", False),
             "backup_frequency": backup.get("backup_frequency", "daily")
         }
+
+    def get_upstream_settings(self) -> Dict[str, Any]:
+        """Get upstream website routing settings."""
+        if not self.user_settings:
+            return {}
+
+        upstream = self.user_settings.get("upstream", {})
+        return {
+            "use_demo_target": upstream.get("use_demo_target", False),
+            "custom_target_url": upstream.get("custom_target_url", "http://localhost:3000"),
+            "demo_target_url": upstream.get("demo_target_url", "http://localhost:8080"),
+            "public_mode": upstream.get("public_mode", "both"),
+            "public_subpath": upstream.get("public_subpath", "/protected"),
+        }
     
     def get_rules_settings(self) -> Dict[str, Any]:
         """Get security rules settings"""
@@ -140,6 +155,49 @@ class SettingsLoader:
                     app_settings.admin_password = auth.get("admin_password")
                 if auth.get("admin_username"):
                     app_settings.admin_username = auth.get("admin_username")
+
+            upstream = self.get_upstream_settings()
+            if upstream:
+                app_settings.upstream_use_demo_target = upstream.get("use_demo_target", app_settings.upstream_use_demo_target)
+                app_settings.upstream_demo_target_url = upstream.get("demo_target_url", app_settings.upstream_demo_target_url)
+                app_settings.upstream_custom_target_url = upstream.get("custom_target_url", app_settings.upstream_custom_target_url)
+                app_settings.upstream_public_mode = upstream.get("public_mode", app_settings.upstream_public_mode)
+                app_settings.vulnerable_app_proxy_path = upstream.get("public_subpath", app_settings.vulnerable_app_proxy_path)
+                app_settings.vulnerable_app_url = (
+                    app_settings.upstream_demo_target_url
+                    if app_settings.upstream_use_demo_target
+                    else app_settings.upstream_custom_target_url
+                )
+
+            env_demo_mode = os.getenv("UPSTREAM_USE_DEMO_TARGET")
+            if env_demo_mode is not None:
+                app_settings.upstream_use_demo_target = env_demo_mode.lower() in {"1", "true", "yes", "on"}
+
+            env_custom_target = os.getenv("UPSTREAM_CUSTOM_TARGET_URL")
+            if env_custom_target:
+                app_settings.upstream_custom_target_url = env_custom_target
+
+            env_demo_target = os.getenv("UPSTREAM_DEMO_TARGET_URL")
+            if env_demo_target:
+                app_settings.upstream_demo_target_url = env_demo_target
+
+            env_public_mode = os.getenv("UPSTREAM_PUBLIC_MODE")
+            if env_public_mode:
+                app_settings.upstream_public_mode = env_public_mode
+
+            env_proxy_path = os.getenv("VULNERABLE_APP_PROXY_PATH")
+            if env_proxy_path:
+                app_settings.vulnerable_app_proxy_path = env_proxy_path
+
+            env_upstream_url = os.getenv("VULNERABLE_APP_URL")
+            if env_upstream_url:
+                app_settings.vulnerable_app_url = env_upstream_url
+            else:
+                app_settings.vulnerable_app_url = (
+                    app_settings.upstream_demo_target_url
+                    if app_settings.upstream_use_demo_target
+                    else app_settings.upstream_custom_target_url
+                )
             
             logger.info("User settings applied successfully")
             return True

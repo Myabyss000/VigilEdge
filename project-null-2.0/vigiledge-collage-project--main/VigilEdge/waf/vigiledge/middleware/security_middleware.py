@@ -19,6 +19,7 @@ except ImportError:
     JSONResponse = object
 
 from ..core.waf_engine import WAFEngine
+from ..utils.upstream_config import should_proxy_root_request
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
@@ -57,15 +58,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         """Process request through WAF security checks"""
         start_time = time.time()
         
+        root_proxy_path = should_proxy_root_request(request.url.path, getattr(request.app.state, "settings", None))
+
         # Skip WAF checks for certain paths
-        if request.url.path in self.bypass_paths:
+        if request.url.path in self.bypass_paths and not root_proxy_path:
             response = await call_next(request)
             return response
         
         # Skip middleware WAF checks for /protected/ routes since they have their own WAF check
         # This is CRITICAL: the proxy route needs to read the request body, and if middleware
         # reads it first, POST requests will hang because Starlette body can only be read once
-        if request.url.path.startswith("/protected"):
+        if request.url.path.startswith("/protected") or root_proxy_path:
             response = await call_next(request)
             return response
 

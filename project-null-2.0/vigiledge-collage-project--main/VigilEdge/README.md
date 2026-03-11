@@ -16,6 +16,8 @@
 
 ---
 
+> Launcher names changed in the workspace root: use `start_demo.bat` for the original demo flow and `start_custom_website.bat` for a custom site behind the WAF. Mentions of `start_both.bat` below are legacy documentation.
+
 ## 🌟 Overview
 
 VigilEdge WAF is an enterprise-grade web application firewall designed to protect web applications from common security threats including **SQL injection**, **XSS attacks**, **DDoS attempts**, and more. Built with **FastAPI** and **Python 3.13+**, it provides:

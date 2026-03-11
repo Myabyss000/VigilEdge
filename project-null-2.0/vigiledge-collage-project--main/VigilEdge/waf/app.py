@@ -10,7 +10,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -26,6 +26,8 @@ from vigiledge.utils.settings_loader import load_user_settings
 
 from services.websocket_manager import manager
 from services.background_tasks import animated_startup, monitoring_task, auto_backup_task
+from vigiledge.utils.upstream_config import get_upstream_proxy_path, should_proxy_root_request
+from routes.proxy import close_upstream_http_client
 
 
 # Initialize settings and logging
@@ -104,9 +106,10 @@ async def lifespan(app: FastAPI):
     
     # Check vulnerable application status
     if settings.vulnerable_app_enabled:
-        print(f"\n🎯 Protected Application:")
+        print(f"\n🎯 Protected Website:")
         print(f"   🔗 Target: {settings.vulnerable_app_url}")
-        print(f"   🛡️  Proxy: http://{display_host}:{settings.port}{settings.vulnerable_app_proxy_path}")
+        print(f"   🛡️  Proxy Path: http://{display_host}:{settings.port}{get_upstream_proxy_path(settings)}")
+        print(f"   🌍 Public Mode: {settings.upstream_public_mode}")
         
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -150,6 +153,7 @@ async def lifespan(app: FastAPI):
             await backup_task_handle
     except asyncio.CancelledError:
         pass
+    await close_upstream_http_client()
     print("✅ Shutdown complete. Stay secure! 🛡️")
 
 
@@ -208,13 +212,13 @@ def create_app() -> FastAPI:
     app.include_router(network_router)
     app.include_router(ai_router)
     app.include_router(chatbot_router)
-    app.include_router(proxy_router)
     app.include_router(websocket_router)
     app.include_router(auth_router)
+    app.include_router(proxy_router)
     
     # Setup legacy routes (from vigiledge.api.routes)
     setup_routes(app, waf_engine, manager)
-    
+
     # Favicon endpoint
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
@@ -233,6 +237,17 @@ def create_app() -> FastAPI:
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
             ])
             return Response(content=ico_data, media_type="image/x-icon")
+
+    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], include_in_schema=False)
+    async def root_upstream_proxy(request: Request, path: str = ""):
+        """Proxy non-WAF root paths to the configured upstream website."""
+        request_path = f"/{path}" if path else "/"
+        if not should_proxy_root_request(request_path, request.app.state.settings):
+            return Response(status_code=404)
+
+        from routes.proxy import proxy_upstream_request
+
+        return await proxy_upstream_request(request, path=path, public_base_path="")
     
     return app
 
