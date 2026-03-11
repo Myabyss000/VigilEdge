@@ -140,40 +140,140 @@ Useful ThreatLoom routes:
 ### Demo Website
 
 Implemented in code:
+# VigilEdge Security Platform
 
-- Intentionally vulnerable e-commerce-style demo surface
-- Session-backed demo login flow
-- Search and form surfaces that are useful for WAF testing
-- Activity logging back into the WAF for live monitoring views
+VigilEdge Security Platform is a local-first defensive stack for protecting and monitoring web applications without depending on a cloud WAF. This workspace combines a reverse-proxy web application firewall, a lightweight SOC layer, an optional AI analysis path, and a demo target for local security testing.
 
-Treat it as test-only. Do not expose it publicly.
+It is designed around a practical use case: small and medium teams that need inspection, visibility, and explainability on their own infrastructure, while keeping traffic and security data under local control.
 
-### Chatbot Server
+## Overview
 
-Implemented in code:
+This repository contains four main parts:
 
-- Flask API on port 5001
-- Reads WAF event stats from the local SQLite database
-- Sends narrowly scoped prompts to LM Studio at `http://localhost:1234`
-- Refuses general-purpose assistant behavior and limits itself to WAF-related explanations
+| Component | Role | Framework | Default Port |
+|---|---|---|---:|
+| VigilEdge WAF | Reverse-proxy firewall, request inspection, admin dashboard | FastAPI | 5000 |
+| ThreatLoom | SOC-style ingestion, detection, incidents, dashboard | FastAPI | 8443 |
+| Chatbot Server | AI-assisted explanation layer for WAF activity | Flask | 5001 |
+| Demo Website | Intentionally insecure test target for validation | FastAPI | 8080 |
 
-## Quick Start
+The main productized mode is to place your own website behind the WAF. The demo website is optional and should only be used for testing.
+
+## Why This Project Exists
+
+Most smaller teams cannot justify the cost or operational model of enterprise edge products. This project aims to provide:
+
+- local traffic inspection and visibility
+- deployable protection for a custom upstream website
+- explainable AI-assisted threat context without mandatory cloud APIs
+- a bundled SOC component for alerts and incident tracking
+- a demo environment for validation and training
+
+## Core Capabilities
+
+### VigilEdge WAF
+
+- Reverse-proxy protection for a selected upstream website at `/`, `/protected`, or both
+- Detection for SQL injection, XSS, command injection, path traversal, suspicious payloads, and rate abuse
+- Dynamic blocking, request metrics, event logging, and administrative dashboards
+- Authentication for the WAF dashboard with 2FA setup and password reset flows
+- Optional forwarding of WAF events into ThreatLoom
+- Custom upstream routing support for either a real website or the bundled demo target
+
+### ThreatLoom
+
+- Log and event ingestion pipelines
+- Rule-based, behavioral, and correlation-based detection layers
+- Alert and incident management
+- JWT and RBAC-backed APIs
+- Web dashboard plus WebSocket-backed live updates
+
+### AI Features
+
+The AI layer is intentionally local-first and assistive.
+
+- Heuristic AI scoring is available directly inside the WAF request analysis pipeline
+- Optional LM Studio integration adds model-backed scoring and operator-facing explanations
+- The chatbot is restricted to WAF and security-analysis use cases rather than acting as a general assistant
+- AI output is used to enrich context and prioritization; core firewall rules still remain the primary enforcement path
+- If LM Studio is not available, the platform continues operating with heuristic scoring and guidance-only fallback behavior
+
+### Demo Website
+
+- Local e-commerce-style test surface for attack simulation
+- Useful for validating proxying, blocking, dashboards, and AI explanations
+- Intentionally insecure and not suitable for internet exposure
+
+## AI Architecture
+
+The AI implementation in this workspace is split into two practical layers:
+
+| AI Layer | Purpose | Dependency | Behavior |
+|---|---|---|---|
+| Heuristic scorer | Fast inline risk scoring during request analysis | Built into VigilEdge | Always available when AI is enabled |
+| LM Studio integration | Local model-backed explanation and enhanced scoring | LM Studio on port 1234 | Optional |
+| Chatbot interface | WAF-focused operator assistance and threat explanation | Chatbot server + LM Studio | Optional |
+
+Current AI behavior, based on the implemented code:
+
+- heuristic scoring remains the baseline path
+- multi-encoded payloads are normalized before scoring
+- AI-related event fields are written into WAF event details for later analysis
+- model availability is optional and the system degrades gracefully when local model services are offline
+- chatbot responses are scoped to recent WAF data and security-oriented prompts
+
+This means the platform can still inspect and protect traffic without a running LLM, while offering richer explanations when a local model is available.
+
+## Request Flow
+
+1. A browser sends traffic to VigilEdge WAF on port 5000.
+2. The WAF inspects the request before forwarding it to the selected upstream website.
+3. Events are logged locally and can be forwarded to ThreatLoom.
+4. ThreatLoom performs downstream analysis, alerting, and incident handling.
+5. The chatbot can query recent WAF event context and send narrowly scoped prompts to LM Studio.
+
+## Repository Layout
+
+```text
+vigiledge part 3/
+├── README.md
+├── chatbot_server.py
+├── start_demo.bat
+├── start_custom_website.bat
+├── ThreatLoom/
+└── project-null-2.0/
+    └── vigiledge-collage-project--main/
+        └── VigilEdge/
+            ├── vulnerable-app/
+            ├── waf/
+            ├── docs/
+            └── tests/
+```
+
+Key implementation areas:
+
+- WAF application: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/`
+- ThreatLoom service: `ThreatLoom/`
+- Chatbot bridge: `chatbot_server.py`
+- Demo target: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/vulnerable-app/`
+
+## Getting Started
 
 ### Prerequisites
 
 - Windows 10 or 11
 - Python 3.13+
-- Ports 5000, 5001, 8080, and 8443 free
-- LM Studio on port 1234 if you want AI chatbot answers or LM-based WAF scoring
+- Free ports: 5000, 5001, 8080, 8443
+- LM Studio on port 1234 if you want local model-backed AI features
 
-### Recommended Setup For The Batch Launchers
+### Environment Setup
 
-The launcher scripts expect these virtual environments to already exist:
+The launcher scripts expect these virtual environments:
 
 - `project-null-2.0/vigiledge-collage-project--main/VigilEdge/venv`
 - `ThreatLoom/venv`
 
-Create them like this from the workspace root:
+Create them from the workspace root:
 
 ```powershell
 cd "project-null-2.0\vigiledge-collage-project--main\VigilEdge"
@@ -187,35 +287,29 @@ python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-If you want a single shared environment for ad hoc work, the root `requirements.txt` can also be installed separately, but the launchers still expect the two component-local venv paths above.
+### Launch Modes
 
-### Start Everything
-
-Custom website mode:
-
-```powershell
-start_custom_website.bat
-```
-
-Demo website mode:
+For the original demo stack:
 
 ```powershell
 start_demo.bat
 ```
 
-What the launchers do:
+For protecting your own website:
 
-1. `start_demo.bat` is the old all-in-one experience: chatbot, ThreatLoom, demo website, and WAF.
-2. `start_custom_website.bat` asks for your website URL, then starts chatbot, ThreatLoom, and the WAF against that target.
-3. Both launchers now check for port conflicts before startup and stop with a readable message if a required port is already busy.
+```powershell
+start_custom_website.bat
+```
 
-If `start_demo.bat` succeeds, the main demo route is `http://localhost:5000/protected` and the WAF dashboard is `http://localhost:5000/admin/dashboard`.
+Launcher behavior:
 
-Implementation note for Windows batch editing: environment variables that are chained with `&&` must use the quoted form such as `set "UPSTREAM_USE_DEMO_TARGET=true"`. Without quotes, CMD can include a trailing space in the value and the WAF settings parser will reject values like `true ` or `false `.
+1. `start_demo.bat` starts the chatbot, ThreatLoom, demo website, and WAF.
+2. `start_custom_website.bat` asks for your upstream URL, then starts the chatbot, ThreatLoom, and WAF.
+3. Both launchers check for port conflicts before starting services.
 
 ### Manual Start
 
-If you do not want to use the batch launcher:
+If you prefer to launch services yourself:
 
 ```powershell
 # Terminal 1
@@ -235,73 +329,70 @@ cd "."
 project-null-2.0\vigiledge-collage-project--main\VigilEdge\venv\Scripts\python.exe chatbot_server.py
 ```
 
-## Default URLs And Access
+## Default Access
 
 | Service | URL | Notes |
 |---|---|---|
-| WAF login | `http://localhost:5000/login` | Login required before `/admin/dashboard` |
-| WAF admin dashboard | `http://localhost:5000/admin/dashboard` | Uses WAF credentials, not vulnerable app credentials |
-| Website via root path | `http://localhost:5000/` | Main productized entrypoint when root mode is enabled |
-| Website via protected path | `http://localhost:5000/protected` | Compatibility proxy path |
-| Direct demo website | `http://localhost:8080/` | Only used in demo mode |
-| ThreatLoom dashboard | `http://localhost:8443/` | SOC UI |
-| ThreatLoom API docs | `http://localhost:8443/api/docs` | Always enabled in current code |
+| WAF login | `http://localhost:5000/login` | Default credentials currently exist in local config |
+| WAF dashboard | `http://localhost:5000/admin/dashboard` | Main operator UI |
+| Protected website via root | `http://localhost:5000/` | Active when root mode is enabled |
+| Protected website via subpath | `http://localhost:5000/protected` | Compatibility path |
+| ThreatLoom | `http://localhost:8443/` | SOC dashboard |
 | Chatbot health | `http://localhost:5001/health` | Confirms chatbot process is up |
-| WAF health | `http://localhost:5000/api/v1/health` | Current implemented health route |
+| WAF health | `http://localhost:5000/api/v1/health` | Implemented WAF health endpoint |
+
+Current local defaults in the codebase:
+
+- WAF: `admin` / `admin`
+- ThreatLoom: `admin` / `changeme`
+- Demo app admin data is separate from WAF credentials
+
+These defaults are suitable for local evaluation only and should be changed before any serious deployment.
 
 ## Configuration
 
-### WAF
+### WAF Configuration Sources
 
-Sources of configuration:
+- environment variables defined in `waf/vigiledge/config.py`
+- persisted settings in `waf/config/waf_settings.json`
+- launcher-provided environment overrides for upstream target selection
 
-- Environment variables loaded by `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/vigiledge/config.py`
-- Persisted UI settings in `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/config/waf_settings.json`
+Important WAF settings include:
 
-Key settings include:
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `RATE_LIMIT_ENABLED`
+- `RATE_LIMIT_REQUESTS`
+- `SQL_INJECTION_PROTECTION`
+- `XSS_PROTECTION`
+- `DDOS_PROTECTION`
+- `THREATLOOM_ENABLED`
+- `THREATLOOM_API_URL`
+- `UPSTREAM_PUBLIC_MODE`
+- `UPSTREAM_USE_DEMO_TARGET`
+- `UPSTREAM_CUSTOM_TARGET_URL`
+- `UPSTREAM_DEMO_TARGET_URL`
 
-- `ADMIN_USERNAME`, `ADMIN_PASSWORD`
-- `RATE_LIMIT_REQUESTS`, `RATE_LIMIT_ENABLED`
-- `SQL_INJECTION_PROTECTION`, `XSS_PROTECTION`, `DDOS_PROTECTION`
-- `THREATLOOM_ENABLED`, `THREATLOOM_API_URL`
-- `VULNERABLE_APP_URL`, `VULNERABLE_APP_PROXY_PATH`
-- `UPSTREAM_PUBLIC_MODE`, `UPSTREAM_USE_DEMO_TARGET`, `UPSTREAM_CUSTOM_TARGET_URL`, `UPSTREAM_DEMO_TARGET_URL`
-- `DEBUG` for enabling `/docs`
+### AI Configuration
 
-The settings page now also lets you configure:
+Optional AI integrations depend on LM Studio:
 
-- custom website URL
-- demo website URL
-- whether the active target is custom or demo
-- whether the upstream is exposed at `/`, `/protected`, or both
+- chatbot requests use `http://localhost:1234/v1/chat/completions`
+- model availability checks use `http://localhost:1234/v1/models`
 
-### ThreatLoom
+Without LM Studio:
 
-ThreatLoom reads `.env` from the `ThreatLoom/` directory. Important settings include:
+- WAF heuristic scoring still works
+- the platform still logs and inspects requests
+- chatbot flows return guidance instead of model-backed answers
 
-- `APP_PORT=8443`
-- `DATABASE_URL=sqlite+aiosqlite:///./threatloom.db`
-- `DEFAULT_ADMIN_USER=admin`
-- `DEFAULT_ADMIN_PASS=changeme`
-- `FIREWALL_HEALTH_URL=http://localhost:5000`
-- `FIREWALL_WEBHOOK_ENABLED=false` by default
+## Testing
 
-### LM Studio
+Relevant test locations:
 
-Optional but used by AI features:
-
-- Chatbot server expects LM Studio at `http://localhost:1234/v1/chat/completions`
-- The WAF AI scorer checks LM Studio model availability at `http://localhost:1234/v1/models`
-
-Without LM Studio, the chatbot returns connection guidance and the WAF falls back to heuristic scoring.
-
-## Testing And Validation
-
-Code-backed test surfaces in the repository:
-
-- ThreatLoom pytest suite: `ThreatLoom/tests/`
-- VigilEdge test and demo scripts: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/`
-- Additional WAF tests: `project-null-2.0/vigiledge-collage-project--main/VigilEdge/tests/`
+- `ThreatLoom/tests/`
+- `project-null-2.0/vigiledge-collage-project--main/VigilEdge/tests/`
+- root-level VigilEdge validation scripts under `project-null-2.0/vigiledge-collage-project--main/VigilEdge/`
 
 Examples:
 
@@ -311,34 +402,31 @@ python project-null-2.0\vigiledge-collage-project--main\VigilEdge\test_attack_de
 python project-null-2.0\vigiledge-collage-project--main\VigilEdge\test_ai_queries.py
 ```
 
-For manual validation:
+## Current Project Status
 
-1. Open `http://localhost:5000/` for root-mode access or `http://localhost:5000/protected` for compatibility-mode access.
-2. Sign into the WAF at `http://localhost:5000/login` using `admin` / `admin`.
-3. Open ThreatLoom at `http://localhost:8443/` using `admin` / `changeme`.
-4. Trigger test traffic through the WAF and confirm it appears in the WAF views and later in ThreatLoom alerts/incidents.
+This repository is a strong local prototype and demo platform, but it should not yet be described as production-ready.
 
-## Known Gaps And Documentation Corrections
+What is already real:
 
-This README reflects the current codebase and corrects several stale assumptions found elsewhere in the workspace:
+- local reverse-proxy WAF behavior
+- working operator dashboard
+- local event capture and forwarding
+- SOC-style analysis component
+- optional AI assistance without mandatory cloud dependency
 
-- ThreatLoom runs on port 8443, not 8000.
-- The WAF dashboard entry is `/admin/dashboard`, not `/dashboard`.
-- WAF default credentials are `admin` / `admin`; the vulnerable app's demo admin password is `admin123`.
-- The WAF is launched with `uvicorn app:app`, not `python main.py`.
-- The implemented WAF health route is `/api/v1/health`.
-- WAF docs are conditional on `DEBUG=True`.
-- `file_upload_scanning` exists as a config flag, but a complete end-to-end upload scanning workflow is not evident from the current code.
-- `/admin` remains reserved by the WAF, so upstream admin pages should use `/protected/admin` when there is a path collision.
-- Windows Defender integration exists in the WAF service layer, but this workspace should treat it as integration/logging support rather than a separately documented enforcement plane.
+What still needs hardening for production use:
+
+- stronger authentication and session handling
+- secret management and first-run setup
+- authenticated control-plane APIs and ingestion paths
+- TLS and deployment defaults
+- production-grade persistence and operational monitoring
 
 ## Troubleshooting
 
-### Port Conflicts
+### Port Binding Errors
 
-`0.0.0.0` is not itself an error. It means the server is trying to listen on all local network interfaces.
-
-If you see an error such as `[Errno 10048] error while attempting to bind on address ('0.0.0.0', 5000)`, the real problem is that port `5000` is already in use by another process.
+If you see an error like `[Errno 10048] error while attempting to bind on address ('0.0.0.0', 5000)`, the problem is that the port is already in use, not that `0.0.0.0` is invalid.
 
 Quick checks:
 
@@ -356,57 +444,42 @@ Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 5000,5001,8
 Select-Object LocalAddress,LocalPort,OwningProcess
 ```
 
-If a port is already occupied, close the existing service window or stop the process before starting the stack again.
+### AI Responses Fail
 
-To stop a specific process by PID:
+Make sure LM Studio is running locally on port 1234 with a loaded model. If LM Studio is offline, the system will fall back to non-LLM behavior where supported.
 
-```powershell
-Stop-Process -Id <PID> -Force
-```
+### Launcher Stops Immediately
 
-### WAF Starts But Docs Are Missing
+Check that:
 
-That is expected unless `DEBUG=True` is set for the WAF.
+- both expected virtual environments exist
+- the required ports are free
+- your custom upstream website is already running if you use custom mode
 
-### ThreatLoom Looks Up But Health Checks Fail
+### WAF Docs Are Missing
 
-ThreatLoom does not currently publish a generic `/health` route. Use the root dashboard or `/api/docs` to confirm the service is up.
+That is expected unless `DEBUG=True` is enabled.
 
-### Chatbot Answers Fail
+## Security Notice
 
-Make sure LM Studio is running locally on port 1234 with a loaded model.
+The bundled demo website is intentionally vulnerable and exists only for local testing. Do not expose it to the public internet.
 
-### Batch Launcher Fails Immediately
+Before any serious deployment:
 
-Check that both expected virtual environments exist:
-
-- `project-null-2.0/vigiledge-collage-project--main/VigilEdge/venv`
-- `ThreatLoom/venv`
-
-If you are using custom-website mode, also make sure your website is already running at the URL you entered in the launcher.
-
-If the launcher reports that a required port is already in use, close the older instance of that service first and then rerun the launcher.
+- change all default credentials
+- replace default secrets
+- disable or isolate the demo application
+- review WAF and ThreatLoom configuration
+- deploy behind proper TLS and operational monitoring
 
 ## Additional Documentation
 
 - `ThreatLoom/docs/ARCHITECTURE.md`
 - `project-null-2.0/vigiledge-collage-project--main/VigilEdge/docs/TESTING_README.md`
 - `project-null-2.0/vigiledge-collage-project--main/VigilEdge/docs/WAF_TESTING_GUIDE.md`
-- `project-null-2.0/vigiledge-collage-project--main/VigilEdge/README.md`
-- `ThreatLoom/README.md`
-
-## Security Notice
-
-The vulnerable app is intentionally insecure and exists for local testing only. Do not deploy it to the public internet or bundle it into any production environment.
-
-Before any serious deployment work:
-
-- change all default passwords
-- replace all default secret keys
-- disable or isolate the vulnerable app
-- review WAF and ThreatLoom environment settings
-- add proper TLS, monitoring, and backups
+- `project-null-2.0/vigiledge-collage-project--main/VigilEdge/AI_FEATURES_DEMO.md`
+- `project-null-2.0/vigiledge-collage-project--main/VigilEdge/CHATBOT_SETUP.md`
 
 ## License
 
-This workspace includes MIT-licensed components. See the root `LICENSE` and the nested project licenses for details.
+This workspace includes MIT-licensed components. See the root `LICENSE` file and the nested project licenses for details.
