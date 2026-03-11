@@ -490,6 +490,7 @@ async def reset_password_action(
             request.app.state.settings.admin_password = new_password
             
         redirect_response = RedirectResponse(url="/login?msg=password_reset", status_code=303)
+        redirect_response.delete_cookie(COOKIE_NAME, path="/")
         redirect_response.delete_cookie(CSRF_COOKIE_NAME, path="/")
         return redirect_response
         
