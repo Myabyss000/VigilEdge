@@ -945,7 +945,8 @@ Located in `project-null-2.0/vigiledge-collage-project--main/VigilEdge/docs/`:
 - [ ] Change all default passwords
 - [ ] Generate new session secret keys
 - [ ] Review and customize WAF rules
-- [ ] Enable HTTPS/TLS
+- [ ] Deploy behind a TLS terminator or reverse proxy such as Caddy, Nginx, or Traefik
+- [ ] Set `TRUSTED_REVERSE_PROXIES` to only the proxy IPs or private CIDR ranges you control
 - [ ] Configure proper logging
 - [ ] Set up monitoring and alerting
 - [ ] Implement backup strategies

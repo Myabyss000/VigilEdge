@@ -73,10 +73,10 @@ VigilEdge WAF is an enterprise-grade web application firewall designed to protec
 cd "vigiledge part 3"
 
 # Double-click or run:
-start_both.bat
+start_demo.bat
 ```
 
-**That's it!** Both the WAF and vulnerable test app will start automatically.
+**That's it!** The demo launcher starts the WAF, ThreatLoom, chatbot bridge, and vulnerable test app automatically.
 
 ### 🔧 Manual Installation
 
@@ -98,11 +98,10 @@ pip install -r waf/requirements.txt
 ```bash
 # Windows - From project root
 cd ..
-start_both.bat
+start_demo.bat
 
-# Or from VigilEdge/scripts folder
-cd scripts
-start_both.bat
+# Or use the custom upstream launcher from the workspace root
+start_custom_website.bat
 ```
 
 **Option B: Manual Start**
@@ -120,24 +119,27 @@ python main.py
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **WAF Dashboard** | http://localhost:5000/dashboard | Main monitoring interface |
+| **WAF Login** | http://localhost:5000/login | Operator login or first-run bootstrap |
+| **WAF Dashboard** | http://localhost:5000/admin/dashboard | Main monitoring interface |
 | **Protected App** | http://localhost:5000/protected/ | Proxied vulnerable app |
 | **Admin Panel** | http://localhost:5000/protected/admin | Admin interface (password: `admin123`) |
-| **API Docs** | http://localhost:5000/docs | Interactive API documentation |
+| **API Docs** | http://localhost:5000/docs | Interactive API documentation when debug is enabled |
 | **Direct App** | http://localhost:8080/ | Unprotected app (bypasses WAF) |
 
 > **💡 Tip**: The browser will automatically open to `http://localhost:5000/protected` after startup!
 
 ## 📊 Dashboard Access
 
-- **WAF Dashboard**: http://localhost:5000/dashboard (No authentication required)
+- **WAF Login**: http://localhost:5000/login
+- **WAF Dashboard**: http://localhost:5000/admin/dashboard (authentication required)
 - **Vulnerable App (Protected)**: http://localhost:5000/protected/
 - **Vulnerable App Admin**: http://localhost:5000/protected/admin
 - **Direct Vulnerable App**: http://localhost:8080/ (Bypasses WAF)
-- **API Documentation**: http://localhost:5000/docs
+- **API Documentation**: http://localhost:5000/docs when debug is enabled
 
 ### Authentication
-- **WAF Dashboard**: Open access for monitoring
+- **WAF Dashboard**: Signed session-based admin authentication with first-run bootstrap
+- **WAF 2FA**: Google Authenticator compatible TOTP enrollment and password recovery
 - **Vulnerable App Admin Panel**: Session-based authentication
   - Password: `admin123`
   - Session cookies prevent URL-based bypass attacks
@@ -168,9 +170,10 @@ rate_limiting:
 ```
 
 ### Session Configuration
-- Session secret: Auto-generated 32-byte token
-- Session cookies: HTTP-only, secure
-- Admin password: `admin123` (configurable in vulnerable_app.py)
+- WAF admin session: signed JWT-backed cookie
+- Session cookies: HTTP-only with environment-aware secure flag
+- Session invalidation: existing WAF sessions are invalidated on admin password change
+- Vulnerable app admin password: `admin123` inside the demo app only
 
 ### Environment Variables
 Create a `.env` file in the `waf/` directory:
@@ -183,11 +186,15 @@ DEBUG=False
 ENVIRONMENT=production
 
 # Security Settings
+SECRET_KEY=replace-with-a-random-secret
+CONTROL_PLANE_API_TOKENS=replace-with-service-token
+BOOTSTRAP_ADMIN_TOKEN=replace-with-bootstrap-token
 SQL_INJECTION_PROTECTION=True
 XSS_PROTECTION=True
 DDOS_PROTECTION=True
 RATE_LIMIT_ENABLED=True
 RATE_LIMIT_REQUESTS=100
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1
 
 # Logging
 LOG_LEVEL=INFO
@@ -197,6 +204,77 @@ LOG_FILE=./logs/vigiledge.log
 VULNERABLE_APP_URL=http://localhost:8080
 VULNERABLE_APP_ENABLED=True
 ```
+
+## HTTPS and Reverse Proxy Deployment
+
+For real deployments, do not expose the WAF directly on plain HTTP. The intended deployment pattern is:
+
+1. Run VigilEdge WAF on `127.0.0.1:5000` or another private interface.
+2. Put a TLS terminator or reverse proxy in front of it.
+3. Set `TRUSTED_REVERSE_PROXIES` so forwarded client IP headers are only trusted from that proxy.
+
+### Recommended Default: Caddy
+
+For non-expert users, Caddy is the easiest option because it can handle certificates automatically.
+
+```caddy
+example.com {
+  reverse_proxy 127.0.0.1:5000
+}
+```
+
+WAF `.env`:
+
+```env
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1
+```
+
+### Nginx Example
+
+```nginx
+server {
+  listen 80;
+  server_name example.com;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  server_name example.com;
+
+  ssl_certificate /path/to/fullchain.pem;
+  ssl_certificate_key /path/to/privkey.pem;
+
+  location / {
+    proxy_pass http://127.0.0.1:5000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+### Traefik or Another Local TLS Terminator
+
+The same model applies:
+
+- terminate HTTPS in the proxy
+- forward to the WAF over localhost or a private subnet
+- set `TRUSTED_REVERSE_PROXIES` to the proxy host IP or Docker/network CIDR
+
+Example:
+
+```env
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1,172.18.0.0/16
+```
+
+### Important Notes
+
+- Leave `TRUSTED_REVERSE_PROXIES` empty if the WAF is not behind a proxy.
+- Do not trust broad ranges like `0.0.0.0/0`.
+- If this setting is too broad, attackers can spoof `X-Forwarded-For`.
+- If this setting is missing behind a proxy, logs and rate limits will show the proxy IP instead of the real client IP.
 
 ## ⚡ Performance & Specifications
 

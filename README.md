@@ -239,6 +239,111 @@ cd "."
 project-null-2.0\vigiledge-collage-project--main\VigilEdge\venv\Scripts\python.exe chatbot_server.py
 ```
 
+## HTTPS and Reverse Proxy Guide
+
+For real deployments, do not expose the WAF directly on plain HTTP to the public internet. The simplest safe model is:
+
+1. Run VigilEdge WAF on a local interface or private network port.
+2. Put a TLS terminator or reverse proxy in front of it.
+3. Configure `TRUSTED_REVERSE_PROXIES` so the WAF only honors forwarded client IP headers from that proxy.
+
+Recommended one-path deployment for most users:
+
+- public entry: Caddy, Nginx, or Traefik on ports `80` and `443`
+- internal app: VigilEdge WAF on `127.0.0.1:5000`
+- optional internal SOC: ThreatLoom on `127.0.0.1:8443`
+
+### Recommended Default: Caddy in Front of VigilEdge
+
+This is the easiest path for non-expert users because Caddy can obtain and renew TLS certificates automatically.
+
+Example Caddyfile:
+
+```caddy
+example.com {
+    reverse_proxy 127.0.0.1:5000
+}
+```
+
+Then set the WAF environment so the proxy is trusted:
+
+```env
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1
+```
+
+Recommended operating model:
+
+- bind Caddy publicly on `:80` and `:443`
+- bind the WAF only on localhost or a private interface
+- access the WAF through `https://example.com`
+- keep ThreatLoom private unless you intentionally publish it behind its own proxy
+
+### Nginx Example
+
+If you already use Nginx, a minimal reverse-proxy block looks like this:
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate /path/to/fullchain.pem;
+    ssl_certificate_key /path/to/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+With Nginx on the same host, set:
+
+```env
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1
+```
+
+### Traefik Example
+
+If you already run Traefik, point a router at the WAF and trust the proxy network in the WAF config.
+
+Conceptually:
+
+- Traefik handles certificates and public `https`
+- Traefik forwards to `http://127.0.0.1:5000`
+- the WAF trusts only the Traefik host IP or Docker network CIDR via `TRUSTED_REVERSE_PROXIES`
+
+Example setting when Traefik runs on a Docker bridge network:
+
+```env
+TRUSTED_REVERSE_PROXIES=127.0.0.1,::1,172.18.0.0/16
+```
+
+### Local TLS Terminator Option
+
+If you already have another local TLS terminator, the same rule applies:
+
+- terminate HTTPS there
+- forward to the WAF over localhost or a private subnet
+- add only that proxy IP or subnet to `TRUSTED_REVERSE_PROXIES`
+
+### Important Reverse Proxy Notes
+
+- Leave `TRUSTED_REVERSE_PROXIES` empty if the WAF is not behind a proxy.
+- Do not trust `0.0.0.0/0` or broad internet ranges.
+- Only trust the exact proxy IPs or local CIDRs you control.
+- If this setting is wrong, rate limiting, blocking, and logs may show the proxy IP instead of the real client IP.
+- If this setting is too broad, clients may spoof `X-Forwarded-For` and bypass IP-based controls.
+
 ## Access and Authentication
 
 | Service | URL | Notes |
