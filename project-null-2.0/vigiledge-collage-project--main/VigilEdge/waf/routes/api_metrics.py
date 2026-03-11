@@ -5,9 +5,11 @@ Handles WAF performance metrics and threat statistics.
 
 import logging
 from collections import Counter
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/api/v1", tags=["Metrics"])
+from .auth import require_control_plane_access
+
+router = APIRouter(prefix="/api/v1", tags=["Metrics"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_waf_engine():

@@ -7,13 +7,13 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Response, Request
+from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from fastapi.responses import JSONResponse
 
-from .auth import check_auth
+from .auth import check_auth, require_control_plane_access
 from vigiledge.utils.upstream_config import normalize_proxy_path
 
-router = APIRouter(prefix="/api/v1", tags=["Settings"])
+router = APIRouter(prefix="/api/v1", tags=["Settings"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_waf_engine(request: Request = None):

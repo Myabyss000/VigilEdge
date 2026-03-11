@@ -15,7 +15,7 @@ from threatloom.schemas.logs import (
     LogResponse, SystemMetricsSnapshot,
 )
 from threatloom.ingestion.engine import IngestionEngine
-from threatloom.auth.rbac import require_analyst, require_viewer
+from threatloom.auth.rbac import require_analyst, require_viewer, require_ingest_client
 from threatloom.models.users import User
 from threatloom.websocket.manager import manager
 
@@ -27,6 +27,7 @@ ingestion = IngestionEngine()
 async def ingest_json(
     payload: LogIngestJSON,
     db: AsyncSession = Depends(get_db),
+    auth_context = Depends(require_ingest_client),
 ):
     """Ingest a single JSON-formatted firewall log."""
     log = await ingestion.ingest_json(payload.model_dump(), db)
@@ -50,6 +51,7 @@ async def ingest_json(
 async def ingest_batch(
     payload: LogIngestBatch,
     db: AsyncSession = Depends(get_db),
+    auth_context = Depends(require_ingest_client),
 ):
     """Ingest a batch of JSON-formatted logs."""
     logs = await ingestion.ingest_json_batch(
@@ -63,6 +65,7 @@ async def ingest_batch(
 async def ingest_syslog(
     payload: LogIngestSyslog,
     db: AsyncSession = Depends(get_db),
+    auth_context = Depends(require_ingest_client),
 ):
     """Ingest a syslog-formatted log entry."""
     log = await ingestion.ingest_syslog(payload.raw, db)
@@ -74,6 +77,7 @@ async def ingest_syslog(
 async def ingest_raw(
     payload: LogIngestRaw,
     db: AsyncSession = Depends(get_db),
+    auth_context = Depends(require_ingest_client),
 ):
     """Ingest a raw text log entry."""
     log = await ingestion.ingest_raw(payload.raw, db)

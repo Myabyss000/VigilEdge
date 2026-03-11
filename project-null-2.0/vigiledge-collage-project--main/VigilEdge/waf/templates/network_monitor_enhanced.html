@@ -616,7 +616,8 @@
 
         // WebSocket connection for real-time updates
         function connectWebSocket() {
-            ws = new WebSocket('ws://127.0.0.1:5000/ws');
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
             
             ws.onopen = () => {
                 document.getElementById('ws-status').className = 'websocket-status connected';

@@ -5,9 +5,11 @@ Handles IP blocking/unblocking operations.
 
 import logging
 import ipaddress
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 
-router = APIRouter(prefix="/api/v1", tags=["Blocked IPs"])
+from .auth import require_control_plane_access
+
+router = APIRouter(prefix="/api/v1", tags=["Blocked IPs"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_waf_engine():

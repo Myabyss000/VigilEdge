@@ -4,9 +4,11 @@ Handles security event log retrieval.
 """
 
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/api/v1", tags=["Event Logs"])
+from .auth import require_control_plane_access
+
+router = APIRouter(prefix="/api/v1", tags=["Event Logs"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_waf_engine():

@@ -8,7 +8,7 @@ import json
 import logging
 import asyncio
 from datetime import datetime, timezone
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 import httpx
 
@@ -18,6 +18,7 @@ from vigiledge.utils.upstream_config import (
     should_proxy_root_request,
     upstream_subpath_enabled,
 )
+from .auth import require_control_plane_access
 
 router = APIRouter(tags=["Proxy"])
 
@@ -374,7 +375,7 @@ async def test_proxy_post(path: str, request: Request):
 
 
 @router.get("/test-target")
-async def test_target_status():
+async def test_target_status(control_plane=Depends(require_control_plane_access)):
     """Check if the currently selected upstream target is running."""
     settings = get_settings()
     target_url = get_selected_upstream_url(settings)

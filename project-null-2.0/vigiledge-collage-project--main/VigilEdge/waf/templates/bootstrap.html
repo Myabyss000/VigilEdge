@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VigilEdge WAF - First Run Bootstrap</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0f0f23;
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+            --text-primary: #ffffff;
+            --text-secondary: #d8e3f0;
+            --glass-bg: rgba(30, 30, 50, 0.78);
+            --glass-border: rgba(100, 200, 255, 0.28);
+            --radius-md: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(0, 212, 255, 0.16), transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(0, 255, 166, 0.10), transparent 35%),
+                #0f0f23;
+            color: var(--text-primary);
+            padding: 1.5rem;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 520px;
+            padding: 2.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.6rem;
+            margin-bottom: 0.75rem;
+            color: var(--cyber-blue);
+        }
+
+        .intro {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .notice,
+        .error {
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .notice {
+            background: rgba(255, 179, 71, 0.10);
+            border: 1px solid rgba(255, 179, 71, 0.35);
+            color: #ffd59a;
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.10);
+            border: 1px solid rgba(255, 107, 107, 0.35);
+            color: #ffc0c0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.45rem;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.22);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--cyber-blue);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+        }
+
+        .help {
+            margin-top: -0.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        button {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            padding: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            color: #06131a;
+            background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
+        }
+
+        .footnote {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="panel">
+        <h1>First-Run Admin Bootstrap</h1>
+        <p class="intro">
+            VigilEdge is still using its uninitialized admin state. Set a real operator ID and a strong access key before the dashboard is exposed.
+        </p>
+
+        <div class="notice">
+            This step permanently replaces the default bootstrap credentials. Use a password manager and choose a password with at least 12 characters.
+        </div>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form action="/bootstrap" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="form-group">
+                <label for="admin_username">Operator ID</label>
+                <input id="admin_username" name="admin_username" type="text" minlength="3" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="admin_password">Access Key</label>
+                <input id="admin_password" name="admin_password" type="password" minlength="12" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Access Key</label>
+                <input id="confirm_password" name="confirm_password" type="password" minlength="12" required>
+            </div>
+
+            {% if bootstrap_token_required %}
+            <div class="form-group">
+                <label for="bootstrap_token">Bootstrap Token</label>
+                <input id="bootstrap_token" name="bootstrap_token" type="password" required>
+            </div>
+            <p class="help">
+                This token is read from the local WAF environment configuration and prevents unauthorized first-run takeover.
+            </p>
+            {% endif %}
+
+            <button type="submit">Initialize Admin</button>
+        </form>
+
+        <p class="footnote">
+            After bootstrap completes, you will be signed in automatically and can continue with 2FA enrollment and the rest of the security setup.
+        </p>
+    </div>
+</body>
+
+</html>

@@ -12,9 +12,10 @@ import threading
 import socket
 from datetime import datetime
 from typing import Dict, Optional, List
-from fastapi import APIRouter, Request, BackgroundTasks
+from fastapi import APIRouter, Request, BackgroundTasks, Depends
 import httpx
 from vigiledge.config import get_settings
+from .auth import require_control_plane_access
 
 # Import psutil for real network monitoring
 try:
@@ -51,7 +52,7 @@ SPEED_TRACKER: Dict = {
     "last_update": time.time()
 }
 
-router = APIRouter(prefix="/api/v1", tags=["Network Monitoring"])
+router = APIRouter(prefix="/api/v1", tags=["Network Monitoring"], dependencies=[Depends(require_control_plane_access)])
 
 # ============= SERVER-SIDE GEOLOCATION CACHE =============
 # Efficient IP geolocation with caching to avoid rate limits

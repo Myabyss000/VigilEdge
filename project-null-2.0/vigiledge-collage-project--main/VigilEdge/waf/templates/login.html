@@ -272,6 +272,7 @@
         {% endif %}
 
         <form action="/login" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="username">OPERATOR_ID</label>
                 <input type="text" id="username" name="username" class="form-control" autocomplete="off" required>

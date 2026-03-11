@@ -319,7 +319,7 @@ POST http://localhost:5000/protected/admin/login
 3. **Expected**: Request blocked by WAF with threat details
 
 ### URL Bypass Test (Authentication)
-1. Login at: http://localhost:5000/protected/admin (password: admin123)
+1. Login at: http://localhost:5000/login with your WAF admin account
 2. Copy URL to new browser/incognito window
 3. **Expected**: Redirects to login (session-based auth prevents bypass)
 

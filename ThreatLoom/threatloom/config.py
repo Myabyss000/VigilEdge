@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-this-jwt-secret-min-32-chars"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_MINUTES: int = 480
+    INGEST_SERVICE_TOKENS: str = ""
+    BOOTSTRAP_ADMIN_TOKEN: str = ""
 
     # GeoIP
     GEOIP_DB_PATH: str = "./data/GeoLite2-City.mmdb"
@@ -77,10 +79,6 @@ class Settings(BaseSettings):
 
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "100/minute"
-
-    # Default admin
-    DEFAULT_ADMIN_USER: str = "admin"
-    DEFAULT_ADMIN_PASS: str = "changeme"
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

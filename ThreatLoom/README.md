@@ -30,10 +30,18 @@ pip install -r requirements.txt
 copy .env.example .env
 
 # Launch
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8443 --reload
 ```
 
-Open http://localhost:8000 — login with `admin` / `changeme`.
+Open http://localhost:8443.
+
+Authentication flow:
+
+- If no admin exists yet, the login page shows a first-run bootstrap form.
+- Create the first admin account there, then sign in with that account.
+- If `BOOTSTRAP_ADMIN_TOKEN` is configured in `.env`, the bootstrap form also requires that token.
+
+Machine-to-machine ingest is no longer anonymous. Send logs with a bearer token configured through `INGEST_SERVICE_TOKENS`, or use an authorized JWT user.
 
 ## Project Structure
 
@@ -84,7 +92,7 @@ import httpx
 async def send_log(log: dict, token: str):
     async with httpx.AsyncClient() as c:
         await c.post(
-            "http://localhost:8000/api/v1/logs/ingest/json",
+            "http://localhost:8443/api/v1/logs/ingest/json",
             json=log,
             headers={"Authorization": f"Bearer {token}"}
         )

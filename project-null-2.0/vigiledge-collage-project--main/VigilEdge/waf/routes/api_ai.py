@@ -8,9 +8,11 @@ import json
 import sqlite3
 import logging
 import traceback
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/api/v1", tags=["AI Analysis"])
+from .auth import require_control_plane_access
+
+router = APIRouter(prefix="/api/v1", tags=["AI Analysis"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_db_path():

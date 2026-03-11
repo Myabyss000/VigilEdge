@@ -5,8 +5,10 @@ import logging
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 
+from threatloom.auth.rbac import require_viewer
+from threatloom.models.users import User
 from threatloom.config import settings
 
 router = APIRouter()
@@ -14,7 +16,7 @@ logger = logging.getLogger("threatloom.api.firewall")
 
 
 @router.get("/status")
-async def firewall_status(request: Request):
+async def firewall_status(request: Request, viewer: User = Depends(require_viewer)):
     """
     Check the current connectivity status with the external firewall.
     Returns health info and webhook config status.

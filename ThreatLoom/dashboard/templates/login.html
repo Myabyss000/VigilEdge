@@ -21,7 +21,58 @@
         <div class="bg-gray-900 border border-gray-800 rounded-lg p-8">
             <h2 class="text-lg font-semibold text-white mb-6">Sign In</h2>
 
+            {% if bootstrap_required %}
+            <div class="bg-amber-950/50 border border-amber-800 text-amber-200 text-sm rounded px-4 py-3 mb-4">
+                ThreatLoom has not been initialized yet. Create the first admin account below before anyone can sign in.
+            </div>
+            {% endif %}
+
             <div id="error-msg" class="hidden bg-red-900/50 border border-red-800 text-red-300 text-sm rounded px-4 py-2 mb-4"></div>
+
+            {% if bootstrap_required %}
+            <form id="bootstrapForm" class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Admin Username</label>
+                    <input type="text" id="bootstrap_username" name="username" required minlength="3"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Admin Password</label>
+                    <input type="password" id="bootstrap_password" name="password" required minlength="12"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Confirm Password</label>
+                    <input type="password" id="bootstrap_confirm_password" name="confirm_password" required minlength="12"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Full Name</label>
+                    <input type="text" id="bootstrap_full_name" name="full_name"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Email</label>
+                    <input type="email" id="bootstrap_email" name="email"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                {% if bootstrap_token_required %}
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Bootstrap Token</label>
+                    <input type="password" id="bootstrap_token" name="bootstrap_token" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                {% endif %}
+                <button type="submit"
+                    class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 rounded transition">
+                    Initialize Admin
+                </button>
+            </form>
+
+            <div class="border-t border-gray-800 pt-6 mt-6">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3">Admin login will be enabled after bootstrap</h3>
+            </div>
+            {% endif %}
 
             <form id="loginForm" class="space-y-4">
                 <div>
@@ -39,18 +90,22 @@
                     Sign In
                 </button>
             </form>
-
-            <p class="text-xs text-gray-600 mt-6 text-center">
-                Default: admin / changeme
-            </p>
         </div>
     </div>
 
     <script>
+        const bootstrapRequired = {{ 'true' if bootstrap_required else 'false' }};
+        const bootstrapForm = document.getElementById('bootstrapForm');
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const errEl = document.getElementById('error-msg');
             errEl.classList.add('hidden');
+
+            if (bootstrapRequired) {
+                errEl.textContent = 'Create the first admin account before signing in.';
+                errEl.classList.remove('hidden');
+                return;
+            }
 
             try {
                 const resp = await fetch('/api/v1/users/login', {
@@ -76,6 +131,42 @@
                 errEl.classList.remove('hidden');
             }
         });
+
+        if (bootstrapForm) {
+            bootstrapForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const errEl = document.getElementById('error-msg');
+                errEl.classList.add('hidden');
+
+                try {
+                    const resp = await fetch('/api/v1/users/bootstrap', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: document.getElementById('bootstrap_username').value,
+                            password: document.getElementById('bootstrap_password').value,
+                            confirm_password: document.getElementById('bootstrap_confirm_password').value,
+                            full_name: document.getElementById('bootstrap_full_name').value || null,
+                            email: document.getElementById('bootstrap_email').value || null,
+                            bootstrap_token: document.getElementById('bootstrap_token')?.value || null,
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        const data = await resp.json();
+                        throw new Error(data.detail || 'Bootstrap failed');
+                    }
+
+                    const data = await resp.json();
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/';
+                } catch (err) {
+                    errEl.textContent = err.message;
+                    errEl.classList.remove('hidden');
+                }
+            });
+        }
     </script>
 </body>
 </html>

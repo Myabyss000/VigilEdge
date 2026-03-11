@@ -6,10 +6,33 @@ Handles real-time WebSocket connections for live dashboard updates.
 import json
 import asyncio
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from websockets.exceptions import ConnectionClosedError
 
+from .auth import COOKIE_NAME, is_control_plane_token_valid, validate_admin_session_token
+
 router = APIRouter(tags=["WebSocket"])
+
+
+def _is_websocket_authorized(websocket: WebSocket) -> bool:
+    """Authorize dashboard WebSocket clients via session cookie or bearer-style service token."""
+    settings_obj = websocket.app.state.settings
+
+    session_token = websocket.cookies.get(COOKIE_NAME)
+    if session_token and validate_admin_session_token(session_token, settings_obj):
+        return True
+
+    auth_header = websocket.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        bearer_token = auth_header.split(" ", 1)[1].strip()
+        if is_control_plane_token_valid(bearer_token, settings_obj):
+            return True
+
+    query_token = websocket.query_params.get("access_token")
+    if query_token and is_control_plane_token_valid(query_token, settings_obj):
+        return True
+
+    return False
 
 
 def get_waf_engine():
@@ -27,6 +50,10 @@ def get_ws_manager():
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time dashboard updates."""
+    if not _is_websocket_authorized(websocket):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     manager = get_ws_manager()
     waf_engine = get_waf_engine()
     

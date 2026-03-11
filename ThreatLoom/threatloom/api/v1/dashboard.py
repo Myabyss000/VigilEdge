@@ -22,6 +22,7 @@ from threatloom.models.logs import FirewallLog, AttackType, LogAction, LogProtoc
 from threatloom.models.alerts import Alert, AlertSeverity, AlertStatus
 from threatloom.models.incidents import Incident, IncidentPriority, IncidentStatus
 from threatloom.models.responses import AutomatedResponse, ResponseStatus
+from threatloom.models.users import User, UserRole
 
 dashboard_router = APIRouter()
 templates = Jinja2Templates(directory="dashboard/templates")
@@ -428,9 +429,17 @@ async def dashboard_home(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @dashboard_router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+async def login_page(request: Request, db: AsyncSession = Depends(get_db)):
     """Login page."""
-    return templates.TemplateResponse("login.html", {"request": request})
+    admin_exists = (await db.execute(select(User.id).where(User.role == UserRole.ADMIN).limit(1))).scalar_one_or_none() is not None
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "bootstrap_required": not admin_exists,
+            "bootstrap_token_required": bool((request.app.state.settings.BOOTSTRAP_ADMIN_TOKEN or "").strip()),
+        },
+    )
 
 
 @dashboard_router.get("/alerts-view", response_class=HTMLResponse)

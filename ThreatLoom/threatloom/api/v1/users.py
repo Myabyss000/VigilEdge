@@ -2,6 +2,7 @@
 User management and authentication API endpoints.
 """
 from datetime import datetime
+import secrets
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +13,7 @@ from threatloom.database import get_db
 from threatloom.models.users import User, UserRole
 from threatloom.schemas.users import (
     UserCreate, UserUpdate, UserResponse, TokenRequest, TokenResponse, PasswordChange,
+    BootstrapStatusResponse, BootstrapAdminRequest,
 )
 from threatloom.auth.jwt import hash_password, verify_password, create_access_token
 from threatloom.auth.rbac import require_admin, get_current_user
@@ -21,9 +23,81 @@ from threatloom.config import settings
 router = APIRouter()
 
 
+async def _admin_exists(db: AsyncSession) -> bool:
+    result = await db.execute(select(User.id).where(User.role == UserRole.ADMIN).limit(1))
+    return result.scalar_one_or_none() is not None
+
+
+def _bootstrap_token_required() -> bool:
+    return bool((settings.BOOTSTRAP_ADMIN_TOKEN or "").strip())
+
+
+def _validate_bootstrap_token(presented_token: str | None) -> bool:
+    configured = (settings.BOOTSTRAP_ADMIN_TOKEN or "").strip()
+    if not configured:
+        return True
+    if not presented_token:
+        return False
+    return secrets.compare_digest(configured, presented_token.strip())
+
+
+@router.get("/bootstrap/status", response_model=BootstrapStatusResponse)
+async def bootstrap_status(db: AsyncSession = Depends(get_db)):
+    """Return whether ThreatLoom still requires first-run admin bootstrap."""
+    admin_exists = await _admin_exists(db)
+    return BootstrapStatusResponse(
+        bootstrap_required=not admin_exists,
+        bootstrap_token_required=_bootstrap_token_required(),
+    )
+
+
+@router.post("/bootstrap", response_model=TokenResponse)
+async def bootstrap_admin(payload: BootstrapAdminRequest, db: AsyncSession = Depends(get_db)):
+    """Create the initial admin user exactly once during first-run setup."""
+    if await _admin_exists(db):
+        raise HTTPException(status_code=409, detail="ThreatLoom admin bootstrap is already complete")
+
+    username = payload.username.strip()
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if len(payload.password) < 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    if _bootstrap_token_required() and not _validate_bootstrap_token(payload.bootstrap_token):
+        raise HTTPException(status_code=403, detail="Invalid bootstrap token")
+
+    existing = await db.execute(select(User).where(User.username == username))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    user = User(
+        username=username,
+        hashed_password=hash_password(payload.password),
+        email=payload.email,
+        full_name=payload.full_name,
+        role=UserRole.ADMIN,
+        is_active=True,
+        last_login=datetime.utcnow(),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    token = create_access_token({"sub": str(user.id), "role": user.role.value})
+    return TokenResponse(
+        access_token=token,
+        expires_in=settings.JWT_EXPIRY_MINUTES * 60,
+        user=UserResponse.model_validate(user),
+    )
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: TokenRequest, db: AsyncSession = Depends(get_db)):
     """Authenticate and receive JWT token."""
+    if not await _admin_exists(db):
+        raise HTTPException(status_code=403, detail="ThreatLoom bootstrap is required before login")
+
     result = await db.execute(select(User).where(User.username == payload.username))
     user = result.scalar_one_or_none()
 

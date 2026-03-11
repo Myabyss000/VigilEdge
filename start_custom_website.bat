@@ -77,7 +77,7 @@ echo.
 echo AI Chatbot:        http://localhost:5001
 echo ThreatLoom SOC:    http://localhost:8443
 echo   ThreatLoom Docs: http://localhost:8443/api/docs
-echo   ThreatLoom Login: admin / changeme
+echo   ThreatLoom Login: use the first-run bootstrap form or your existing admin account
 echo WAF Dashboard:     http://localhost:5000/admin/dashboard
 echo Website via WAF:   http://localhost:5000/
 echo Protected Access:  http://localhost:5000/protected

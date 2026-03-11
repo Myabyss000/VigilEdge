@@ -446,6 +446,7 @@
 
             <form action="/auth/verify-2fa" method="POST">
                 <input type="hidden" name="secret" value="{{ secret }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
                 {% if bootstrap_mode %}
                 <label class="field-label" for="current_password">Current Admin Password</label>

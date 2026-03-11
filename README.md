@@ -13,8 +13,8 @@ The repository is Windows-first. The main launch flow is driven by batch files i
 
 | Component | Framework | Port | Main entrypoint | Primary URL | Default access |
 |---|---|---:|---|---|---|
-| VigilEdge WAF | FastAPI | 5000 | `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/app.py` | `http://localhost:5000/login` | `admin` / `admin` |
-| ThreatLoom SOC | FastAPI | 8443 | `ThreatLoom/main.py` | `http://localhost:8443/` | `admin` / `changeme` |
+| VigilEdge WAF | FastAPI | 5000 | `project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/app.py` | `http://localhost:5000/login` | First-run bootstrap or persisted local admin |
+| ThreatLoom SOC | FastAPI | 8443 | `ThreatLoom/main.py` | `http://localhost:8443/` | First-run bootstrap or existing admin |
 | Vulnerable App | FastAPI | 8080 | `project-null-2.0/vigiledge-collage-project--main/VigilEdge/vulnerable-app/app.py` | `http://localhost:8080/` | Demo user data in app DB |
 | Chatbot Server | Flask | 5001 | `chatbot_server.py` | `http://localhost:5001/health` | No login |
 
@@ -22,6 +22,7 @@ Important credential boundary:
 
 - WAF dashboard login is separate from the vulnerable app's demo admin account.
 - The vulnerable app seeds `admin` / `admin123` inside its own SQLite database.
+- WAF and ThreatLoom no longer rely on documented default admin credentials; both now support first-run bootstrap for the first privileged account.
 - The demo website can still be reached through the WAF at `http://localhost:5000/protected`.
 - The main productized flow is now a custom upstream website protected through the WAF at `http://localhost:5000/`, with `/protected` kept as a compatibility path.
 
@@ -41,7 +42,7 @@ Operational notes from the code:
 - `start_custom_website.bat` launches chatbot, ThreatLoom, and the WAF, then points the WAF at your custom website URL.
 - The WAF startup path clears in-memory state and deletes rows from its `security_events` table for a fresh session.
 - WAF OpenAPI docs are only enabled when `DEBUG=True`.
-- ThreatLoom exposes API docs at `/api/docs`, but it does not currently expose a generic `/health` route.
+- ThreatLoom exposes API docs at `/api/docs` only when debug mode is enabled, and it does not currently expose a generic `/health` route.
 
 ## Repository Layout
 
@@ -103,6 +104,7 @@ Implemented in code:
 - Rate limiting, dynamic IP blocking, request metrics, and event logging
 - Admin dashboard pages for threats, analytics, AI analysis, network monitoring, blocked IPs, event logs, and settings
 - Session-cookie login for the WAF dashboard
+- First-run WAF admin bootstrap with optional bootstrap token
 - 2FA bootstrap and TOTP-backed password reset pages
 - AI threat scoring with heuristic scoring, optional LM Studio scoring, and a hybrid mode
 - ThreatLoom integration hooks for forwarding WAF events to the SOC
@@ -127,14 +129,16 @@ Implemented in code:
 - MITRE ATT&CK mapping for known attack families
 - Alerts, incidents, responses, playbooks, users, and firewall status APIs
 - JWT authentication and RBAC
+- First-run ThreatLoom admin bootstrap and authenticated ingest endpoints
 - Server-rendered dashboard pages plus WebSocket streaming
 - Retention manager and audit-oriented backend structure
 
 Useful ThreatLoom routes:
 
 - Dashboard: `http://localhost:8443/`
-- API docs: `http://localhost:8443/api/docs`
+- API docs when debug is enabled: `http://localhost:8443/api/docs`
 - Login API: `POST http://localhost:8443/api/v1/users/login`
+- Bootstrap status API: `GET http://localhost:8443/api/v1/users/bootstrap/status`
 - Firewall connectivity status: `GET http://localhost:8443/api/v1/firewall/status`
 
 ### Demo Website
@@ -333,21 +337,19 @@ project-null-2.0\vigiledge-collage-project--main\VigilEdge\venv\Scripts\python.e
 
 | Service | URL | Notes |
 |---|---|---|
-| WAF login | `http://localhost:5000/login` | Default credentials currently exist in local config |
+| WAF login | `http://localhost:5000/login` | Uses the persisted local admin account, or redirects to first-run bootstrap if still uninitialized |
 | WAF dashboard | `http://localhost:5000/admin/dashboard` | Main operator UI |
 | Protected website via root | `http://localhost:5000/` | Active when root mode is enabled |
 | Protected website via subpath | `http://localhost:5000/protected` | Compatibility path |
-| ThreatLoom | `http://localhost:8443/` | SOC dashboard |
+| ThreatLoom | `http://localhost:8443/` | SOC dashboard with first-run bootstrap when no admin exists |
 | Chatbot health | `http://localhost:5001/health` | Confirms chatbot process is up |
 | WAF health | `http://localhost:5000/api/v1/health` | Implemented WAF health endpoint |
 
-Current local defaults in the codebase:
+Current authentication model:
 
-- WAF: `admin` / `admin`
-- ThreatLoom: `admin` / `changeme`
-- Demo app admin data is separate from WAF credentials
-
-These defaults are suitable for local evaluation only and should be changed before any serious deployment.
+- WAF: local admin credentials come from persisted WAF settings or first-run bootstrap
+- ThreatLoom: the first privileged account is created through bootstrap, not a public default password
+- Demo app admin data is separate from WAF and ThreatLoom credentials
 
 ## Configuration
 
@@ -361,6 +363,9 @@ Important WAF settings include:
 
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
+- `CONTROL_PLANE_API_TOKENS`
+- `BOOTSTRAP_ADMIN_TOKEN`
+- `CORS_ORIGINS`
 - `RATE_LIMIT_ENABLED`
 - `RATE_LIMIT_REQUESTS`
 - `SQL_INJECTION_PROTECTION`
@@ -372,6 +377,13 @@ Important WAF settings include:
 - `UPSTREAM_USE_DEMO_TARGET`
 - `UPSTREAM_CUSTOM_TARGET_URL`
 - `UPSTREAM_DEMO_TARGET_URL`
+
+Important ThreatLoom settings include:
+
+- `INGEST_SERVICE_TOKENS`
+- `BOOTSTRAP_ADMIN_TOKEN`
+- `JWT_SECRET`
+- `APP_DEBUG`
 
 ### AI Configuration
 

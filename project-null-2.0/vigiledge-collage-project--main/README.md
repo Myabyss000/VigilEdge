@@ -61,10 +61,11 @@ After starting, access these URLs:
 
 | Service | URL | Description | Credentials |
 |---------|-----|-------------|-------------|
-| **WAF Dashboard** | http://localhost:5000/dashboard | Real-time security monitoring | No login required |
+| **WAF Dashboard** | http://localhost:5000/admin/dashboard | Real-time security monitoring | WAF admin login required |
 | **Protected App** | http://localhost:5000/protected/ | E-commerce app via WAF proxy | - |
 | **Admin Panel** | http://localhost:5000/protected/admin | Admin interface | Password: `admin123` |
-| **API Docs** | http://localhost:5000/docs | Interactive API documentation | - |
+| **WAF Login** | http://localhost:5000/login | WAF operator login or first-run bootstrap | Local admin account |
+| **API Docs** | http://localhost:5000/docs | Interactive API documentation when debug is enabled | - |
 | **Direct App** | http://localhost:8080/ | Unprotected app (bypasses WAF) | ⚠️ Testing only |
 
 ### 🎯 First-Time Users
@@ -73,7 +74,7 @@ After starting, access these URLs:
 2. **Wait** for two terminal windows to appear
 3. **Browser opens** automatically to http://localhost:5000/protected
 4. **Test the WAF** by trying SQL injection: `admin' OR '1'='1'--`
-5. **View dashboard** at http://localhost:5000/dashboard to see blocked threats
+5. **View dashboard** at http://localhost:5000/admin/dashboard to see blocked threats
 
 ---
 
@@ -305,7 +306,7 @@ Expected Result: ⛔ Blocked - javascript: protocol detected
 #### Test 1: URL Session Bypass
 ```bash
 Steps:
-1. Login at http://localhost:5000/protected/admin (password: admin123)
+1. Sign in to the WAF at http://localhost:5000/login with your local admin account
 2. Copy the full URL from address bar
 3. Open new incognito/private browser window
 4. Paste the URL

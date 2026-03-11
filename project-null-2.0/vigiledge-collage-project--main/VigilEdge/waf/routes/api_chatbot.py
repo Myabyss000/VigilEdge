@@ -8,11 +8,13 @@ import sqlite3
 import logging
 import traceback
 from typing import List
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import httpx
 
-router = APIRouter(tags=["Chatbot"])
+from .auth import require_control_plane_access
+
+router = APIRouter(tags=["Chatbot"], dependencies=[Depends(require_control_plane_access)])
 
 
 def get_waf_engine():

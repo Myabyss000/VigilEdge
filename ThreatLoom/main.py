@@ -17,7 +17,6 @@ from threatloom.database import engine, Base, async_session
 from threatloom.api.v1.router import api_router
 from threatloom.api.v1.dashboard import dashboard_router
 from threatloom.websocket.manager import ws_router
-from threatloom.auth.rbac import create_default_admin
 from threatloom.detection.engine import DetectionEngine
 from threatloom.storage.retention import RetentionManager
 
@@ -39,9 +38,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables initialized.")
 
-    # Create default admin user
-    async with async_session() as session:
-        await create_default_admin(session)
+    app.state.settings = settings
 
     # ── Firewall connectivity check ─────────────────────────────────────
     if settings.FIREWALL_WEBHOOK_ENABLED and settings.FIREWALL_STARTUP_CHECK:
@@ -115,8 +112,8 @@ app = FastAPI(
     description="Security Operations Center for Custom Firewall / WAF",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url="/api/docs" if settings.APP_DEBUG else None,
+    redoc_url="/api/redoc" if settings.APP_DEBUG else None,
 )
 
 # CORS

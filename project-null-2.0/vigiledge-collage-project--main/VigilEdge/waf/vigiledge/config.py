@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     admin_username: str = Field(default="admin", env="ADMIN_USERNAME")
     admin_password: str = Field(default="admin", env="ADMIN_PASSWORD")
+    control_plane_api_tokens: str = Field(default="", env="CONTROL_PLANE_API_TOKENS")
+    bootstrap_admin_token: str = Field(default="", env="BOOTSTRAP_ADMIN_TOKEN")
+    cors_origins: str = Field(default="http://127.0.0.1:5000,http://localhost:5000", env="CORS_ORIGINS")
     
     # Database Configuration
     database_url: str = Field(default="sqlite:///./vigiledge.db", env="DATABASE_URL")
@@ -169,6 +172,7 @@ def get_security_config() -> dict:
         "rate_limit_enabled": settings.rate_limit_enabled,
         "rate_limit_requests": settings.rate_limit_requests,
         "rate_limit_window": settings.rate_limit_window,
+        "control_plane_api_tokens_configured": bool(settings.control_plane_api_tokens.strip()),
     }
 
 
@@ -180,3 +184,9 @@ def get_logging_config() -> dict:
         "file": settings.log_file,
         "format": settings.log_format,
     }
+
+
+def get_cors_origins() -> list[str]:
+    """Return configured CORS origins for the WAF UI and trusted local tools."""
+    settings = get_settings()
+    return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]

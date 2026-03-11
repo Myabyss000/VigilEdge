@@ -39,6 +39,20 @@ class TokenRequest(BaseModel):
     password: str
 
 
+class BootstrapStatusResponse(BaseModel):
+    bootstrap_required: bool
+    bootstrap_token_required: bool
+
+
+class BootstrapAdminRequest(BaseModel):
+    username: str
+    password: str
+    confirm_password: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    bootstrap_token: Optional[str] = None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

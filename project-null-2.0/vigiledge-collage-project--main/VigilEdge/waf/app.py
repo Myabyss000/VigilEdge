@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse, Response
 import httpx
 
-from vigiledge.config import get_settings
+from vigiledge.config import get_settings, get_cors_origins
 from vigiledge.core.waf_engine import WAFEngine
 from vigiledge.api.routes import setup_routes
 from vigiledge.middleware.security_middleware import SecurityMiddleware
@@ -171,7 +171,7 @@ def create_app() -> FastAPI:
     # Add CORS middleware - Allow all local origins for development
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Allow all origins for local WAF demo
+        allow_origins=get_cors_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -17,13 +17,14 @@ except ImportError:
 
 from ..core.waf_engine import WAFEngine, ThreatLevel, ActionType
 from ..core.security_manager import SecurityRule
+from routes.auth import require_control_plane_access
 
 
 def setup_routes(app, waf_engine: WAFEngine, websocket_manager):
     """Setup all API routes"""
     
     # Create API router
-    api_v1 = APIRouter(prefix="/api/v1", tags=["WAF API"])
+    api_v1 = APIRouter(prefix="/api/v1", tags=["WAF API"], dependencies=[Depends(require_control_plane_access)])
     
     @api_v1.get("/metrics")
     async def get_metrics():

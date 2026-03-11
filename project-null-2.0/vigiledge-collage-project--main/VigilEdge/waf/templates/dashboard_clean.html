@@ -714,7 +714,8 @@
 
         function connectWebSocket() {
             try {
-                wsConnection = new WebSocket('ws://localhost:5000/ws');
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsConnection = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
                 
                 wsConnection.onopen = () => {
                     console.log('🔌 WebSocket connected');
