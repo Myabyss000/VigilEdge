@@ -176,7 +176,10 @@
             });
 
             const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-            const ws = new WebSocket(`${protocol}://${location.host}/ws/notifications`);
+            const notifToken = localStorage.getItem('token') || '';
+            const ws = new WebSocket(
+                `${protocol}://${location.host}/ws/notifications?token=${encodeURIComponent(notifToken)}`
+            );
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);

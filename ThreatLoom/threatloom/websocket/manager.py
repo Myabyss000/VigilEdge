@@ -3,10 +3,16 @@ WebSocket connection manager for real-time event feeds.
 """
 import json
 import logging
-from typing import Dict, Set
+from typing import Dict, Optional, Set
 from datetime import datetime
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from threatloom.database import get_db
+from threatloom.auth.jwt import decode_access_token
+from threatloom.models.users import User
 
 logger = logging.getLogger("threatloom.websocket")
 
@@ -95,8 +101,30 @@ manager = ConnectionManager()
 
 
 @ws_router.websocket("/ws/{channel}")
-async def websocket_endpoint(websocket: WebSocket, channel: str):
-    """WebSocket endpoint for real-time event streaming."""
+async def websocket_endpoint(
+    websocket: WebSocket,
+    channel: str,
+    token: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """WebSocket endpoint for real-time event streaming. Requires a valid JWT via ?token=."""
+    # --- Auth check must happen before websocket.accept() ---
+    if not token:
+        await websocket.close(code=4001, reason="Missing authentication token")
+        return
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise ValueError("Missing sub claim")
+        result = await db.execute(select(User).where(User.id == int(user_id)))
+        user = result.scalar_one_or_none()
+        if user is None or not user.is_active:
+            raise ValueError("User invalid or inactive")
+    except Exception:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
     if channel not in manager.channels:
         await websocket.close(code=4000, reason=f"Unknown channel: {channel}")
         return

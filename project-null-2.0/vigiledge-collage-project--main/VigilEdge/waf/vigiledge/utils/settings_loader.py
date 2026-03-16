@@ -6,11 +6,21 @@ Overrides default config.py settings with user-configured values
 import json
 import logging
 import os
+import base64
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+import bcrypt as _bcrypt
+from cryptography.fernet import Fernet, InvalidToken
+
 
 logger = logging.getLogger(__name__)
+
+
+def _hash_password(plain: str) -> str:
+    """Hash a plaintext password using bcrypt."""
+    return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
 
 
 class SettingsLoader:
@@ -148,13 +158,41 @@ class SettingsLoader:
                 app_settings.auto_ip_blocking = security.get("auto_block_ips", app_settings.auto_ip_blocking)
                 logger.info(f"Security: rate_limit={app_settings.rate_limit_requests}, auto_ip_blocking={app_settings.auto_ip_blocking}")
             
-            # Apply auth settings
+            # Apply auth settings — migrate plaintext passwords to bcrypt on first load
             auth = self.get_auth_settings()
             if auth:
+                raw_pw = auth.get("admin_password")
+                if raw_pw and not raw_pw.startswith("$2") and raw_pw != "admin":
+                    # Real plaintext password detected — hash it and rewrite the config file
+                    hashed = _hash_password(raw_pw)
+                    self.user_settings["authentication"]["admin_password"] = hashed
+                    try:
+                        with open(self.settings_file, "w") as f:
+                            json.dump(self.user_settings, f, indent=2)
+                        logger.info("Migrated plaintext admin password to bcrypt hash.")
+                    except Exception as e:
+                        logger.error(f"Could not persist migrated password hash: {e}")
+                    auth["admin_password"] = hashed
+
                 if auth.get("admin_password"):
                     app_settings.admin_password = auth.get("admin_password")
                 if auth.get("admin_username"):
                     app_settings.admin_username = auth.get("admin_username")
+
+            # Migrate plaintext TOTP secret to Fernet-encrypted form
+            raw_totp = self.user_settings.get("authentication", {}).get("totp_secret")
+            if raw_totp and not raw_totp.startswith("gAAAAA"):
+                try:
+                    key = base64.urlsafe_b64encode(
+                        hashlib.sha256(app_settings.secret_key.encode()).digest()
+                    )
+                    encrypted = Fernet(key).encrypt(raw_totp.encode()).decode()
+                    self.user_settings["authentication"]["totp_secret"] = encrypted
+                    with open(self.settings_file, "w") as f:
+                        json.dump(self.user_settings, f, indent=2)
+                    logger.info("Migrated plaintext TOTP secret to encrypted form.")
+                except Exception as e:
+                    logger.error(f"Could not migrate TOTP secret: {e}")
 
             upstream = self.get_upstream_settings()
             if upstream:

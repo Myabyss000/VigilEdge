@@ -21,8 +21,43 @@ from io import BytesIO
 import qrcode
 from pathlib import Path
 from jose import JWTError, jwt
+import bcrypt as _bcrypt
+from cryptography.fernet import Fernet, InvalidToken
 
 from vigiledge.config import get_settings
+
+router = APIRouter(tags=["Authentication"])
+
+
+def _hash_password(plain: str) -> str:
+    """Hash a plaintext password using bcrypt."""
+    return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    """Verify a plaintext password against a bcrypt hash."""
+    try:
+        return _bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def _get_fernet(app_settings) -> Fernet:
+    """Derive a Fernet symmetric-encryption key from the application secret key."""
+    key = base64.urlsafe_b64encode(
+        hashlib.sha256(app_settings.secret_key.encode()).digest()
+    )
+    return Fernet(key)
+
+
+def encrypt_totp_secret(plaintext: str, app_settings) -> str:
+    """Encrypt a TOTP base32 seed using the app secret key."""
+    return _get_fernet(app_settings).encrypt(plaintext.encode()).decode()
+
+
+def decrypt_totp_secret(token: str, app_settings) -> str:
+    """Decrypt a Fernet-encrypted TOTP seed. Raises InvalidToken if not a valid token."""
+    return _get_fernet(app_settings).decrypt(token.encode()).decode()
 
 router = APIRouter(tags=["Authentication"])
 
@@ -138,13 +173,13 @@ def get_effective_admin_credentials(request: Request) -> tuple[str, str]:
     return get_effective_admin_credentials_from_settings(request.app.state.settings)
 
 
-def build_auth_fingerprint(username: str, password: str, secret_key: str) -> str:
+def build_auth_fingerprint(username: str, password_hash: str, secret_key: str) -> str:
     """Create a deterministic fingerprint that invalidates old tokens on password change."""
-    material = f"{username}:{password}:{secret_key}".encode("utf-8")
+    material = f"{username}:{password_hash}:{secret_key}".encode("utf-8")
     return hashlib.sha256(material).hexdigest()
 
 
-def create_admin_session_token(app_settings, username: str, password: str) -> str:
+def create_admin_session_token(app_settings, username: str) -> str:
     """Issue a signed JWT for the authenticated WAF admin session."""
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=app_settings.access_token_expire_minutes)
@@ -153,7 +188,7 @@ def create_admin_session_token(app_settings, username: str, password: str) -> st
         "token_type": SESSION_TOKEN_TYPE,
         "iat": now,
         "exp": expires_at,
-        "auth_fingerprint": build_auth_fingerprint(username, password, app_settings.secret_key),
+        "auth_fingerprint": build_auth_fingerprint(username, app_settings.admin_password, app_settings.secret_key),
     }
     return jwt.encode(payload, app_settings.secret_key, algorithm=app_settings.algorithm)
 
@@ -246,7 +281,10 @@ async def login(
 
     app_settings = request.app.state.settings
     effective_username, effective_password = get_effective_admin_credentials(request)
-    auth_success = username == effective_username and password == effective_password
+    auth_success = (
+        username == effective_username
+        and _verify_password(password, effective_password)
+    )
 
     if auth_success:
         # Self-repair: keep app state aligned with persisted settings.
@@ -256,7 +294,7 @@ async def login(
     if auth_success:
         # Create response with redirect
         response = RedirectResponse(url="/admin/dashboard", status_code=303)
-        session_token = create_admin_session_token(app_settings, effective_username, effective_password)
+        session_token = create_admin_session_token(app_settings, effective_username)
         
         # Set signed JWT cookie
         response.set_cookie(
@@ -370,16 +408,17 @@ async def bootstrap_admin(
 
     settings_data = load_settings_file()
     auth_config = settings_data.setdefault("authentication", {})
+    hashed_password = _hash_password(admin_password)
     auth_config["admin_username"] = normalized_username
-    auth_config["admin_password"] = admin_password
+    auth_config["admin_password"] = hashed_password
     auth_config["bootstrap_completed"] = True
     save_settings_file(settings_data)
 
     request.app.state.settings.admin_username = normalized_username
-    request.app.state.settings.admin_password = admin_password
+    request.app.state.settings.admin_password = hashed_password
 
     redirect_response = RedirectResponse(url="/admin/dashboard", status_code=303)
-    session_token = create_admin_session_token(request.app.state.settings, normalized_username, admin_password)
+    session_token = create_admin_session_token(request.app.state.settings, normalized_username)
     redirect_response.set_cookie(
         key=COOKIE_NAME,
         value=session_token,
@@ -457,9 +496,9 @@ async def reset_password_action(
         file_settings = load_settings_file()
             
         auth_config = file_settings.get("authentication", {})
-        secret = auth_config.get("totp_secret")
-        
-        if not secret:
+        stored_secret = auth_config.get("totp_secret")
+
+        if not stored_secret:
             return template_response_with_csrf(
                 "reset_password.html",
                 {
@@ -468,7 +507,16 @@ async def reset_password_action(
                     "setup_required": True,
                 }
             )
-            
+
+        # Decrypt the TOTP secret. If decryption fails the secret is still plaintext
+        # (pre-migration run) — use it and save the encrypted version now.
+        try:
+            secret = decrypt_totp_secret(stored_secret, request.app.state.settings)
+        except (InvalidToken, Exception):
+            secret = stored_secret
+            file_settings["authentication"]["totp_secret"] = encrypt_totp_secret(secret, request.app.state.settings)
+            save_settings_file(file_settings)
+
         totp = pyotp.TOTP(secret)
         if not totp.verify(totp_code.replace(" ", "")): # Handle spaces if user types them
             return template_response_with_csrf(
@@ -480,14 +528,15 @@ async def reset_password_action(
         if "authentication" not in file_settings:
             file_settings["authentication"] = {}
 
+        hashed_password = _hash_password(new_password)
         file_settings["authentication"]["admin_username"] = request.app.state.settings.admin_username
-        file_settings["authentication"]["admin_password"] = new_password
-        
+        file_settings["authentication"]["admin_password"] = hashed_password
+
         save_settings_file(file_settings)
-            
+
         # Update memory state if available
         if hasattr(request.app.state, "settings"):
-            request.app.state.settings.admin_password = new_password
+            request.app.state.settings.admin_password = hashed_password
             
         redirect_response = RedirectResponse(url="/login?msg=password_reset", status_code=303)
         redirect_response.delete_cookie(COOKIE_NAME, path="/")
@@ -556,7 +605,7 @@ async def verify_2fa_setup(
 
     if not authenticated:
         _, admin_password = get_effective_admin_credentials(request)
-        if current_password != admin_password:
+        if not _verify_password(current_password, admin_password):
             return template_response_with_csrf(
                 "setup_2fa.html",
                 {
@@ -581,7 +630,7 @@ async def verify_2fa_setup(
                 settings_data["authentication"] = {}
 
             settings_data["authentication"]["admin_username"] = request.app.state.settings.admin_username
-            settings_data["authentication"]["totp_secret"] = secret
+            settings_data["authentication"]["totp_secret"] = encrypt_totp_secret(secret, request.app.state.settings)
             settings_data["authentication"]["2fa_enabled"] = True
             
             save_settings_file(settings_data)

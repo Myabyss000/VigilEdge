@@ -10,7 +10,8 @@ class ThreatLoomWS {
 
     connect(channel, onMessage) {
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const url = `${protocol}//${location.host}/ws/${channel}`;
+        const token = localStorage.getItem('token') || '';
+        const url = `${protocol}//${location.host}/ws/${channel}?token=${encodeURIComponent(token)}`;
 
         const ws = new WebSocket(url);
         this.connections[channel] = ws;

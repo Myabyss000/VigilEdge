@@ -42,9 +42,9 @@
     "auto_dark_mode": false
   },
   "authentication": {
-    "totp_secret": "6A7CAN474H3OEJKOW6BQVKDI3R6L4Z7V",
+    "totp_secret": "gAAAAABpt5HkHEYcsrPJYyQ5bqU_V6XKKqWrsxbnM96a7xZx62HCAq0T2XDvgXVC7T8biYFtlP2Xb4L7XzCbdO7sZHb9DlZr55yaj2L7eSXDHqH-plNBxKQblG5S-bMBeTrx9t9y9EJl",
     "2fa_enabled": true,
-    "admin_password": "123456789",
+    "admin_password": "$2b$12$hyaxcBJdqTtChJPgushvA.Quz/ymSsfa/RsmrjnB0T3a7pu1kXahq",
     "admin_username": "admin"
   }
 }

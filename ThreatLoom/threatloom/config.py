@@ -4,6 +4,7 @@ Application configuration loaded from environment / .env file.
 from pathlib import Path
 from typing import List
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,8 +15,8 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "ThreatLoom"
     APP_ENV: str = "development"
-    APP_DEBUG: bool = True
-    APP_HOST: str = "0.0.0.0"
+    APP_DEBUG: bool = False
+    APP_HOST: str = "127.0.0.1"
     APP_PORT: int = 8443
     SECRET_KEY: str = "change-this-to-a-random-secret-key-min-32-chars"
 
@@ -79,6 +80,20 @@ class Settings(BaseSettings):
 
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "100/minute"
+
+    @model_validator(mode="after")
+    def check_production_secrets(self) -> "Settings":
+        if self.APP_ENV == "production":
+            if self.SECRET_KEY == "change-this-to-a-random-secret-key-min-32-chars" or not self.SECRET_KEY:
+                raise ValueError(
+                    "SECRET_KEY must be set to a secure random value in production. "
+                    "Set it in .env or as an environment variable."
+                )
+            if self.JWT_SECRET == "change-this-jwt-secret-min-32-chars" or not self.JWT_SECRET:
+                raise ValueError(
+                    "JWT_SECRET must be set to a secure random value in production."
+                )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

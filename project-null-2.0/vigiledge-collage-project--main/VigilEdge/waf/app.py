@@ -5,7 +5,6 @@ Creates and configures the FastAPI application with all middleware and routes.
 
 import os
 import asyncio
-import sqlite3
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -67,35 +66,10 @@ async def lifespan(app: FastAPI):
     # Animated startup sequence
     animated_startup()
     
-    # 🔄 Clear WAF in-memory state (fresh session)
-    print(f"\n🔄 Resetting WAF Session State...")
-    waf_engine.blocked_ips.clear()
-    waf_engine.rate_limits.clear()
-    waf_engine.metrics.reset()
-    waf_engine.security_events.clear()
-    waf_engine.connection_table.clear()
-    waf_engine.request_patterns.clear()
-    waf_engine.user_agent_cache.clear()
-    print(f"   ✅ Blocked IPs cleared")
-    print(f"   ✅ Rate limits reset")
-    print(f"   ✅ Metrics reset to zero")
-    print(f"   ✅ In-memory events cleared")
-    print(f"   ✅ DDoS tracking data cleared")
-    
-    # 🗑️ Clear database (fresh start)
-    print(f"\n🗑️  Clearing Database...")
-    try:
-        conn = sqlite3.connect('vulnerable.db')
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM security_events')
-        deleted_count = cursor.rowcount
-        conn.commit()
-        conn.close()
-        print(f"   ✅ Database cleared: {deleted_count} events deleted")
-        print(f"   🆕 Fresh session - starting from zero")
-    except Exception as e:
-        print(f"   ⚠️  Database clear failed: {e}")
-    
+    # WAF engine retains existing blocked IPs and session state across restarts.
+    # Use POST /admin/waf/reset-session for an explicit, admin-triggered reset.
+    logging.getLogger(__name__).info("WAF engine ready. Existing blocked IPs and session state preserved.")
+
     # Show connection info
     display_host = "127.0.0.1" if settings.host == "0.0.0.0" else settings.host
     print(f"\n🌐 Server Information:")

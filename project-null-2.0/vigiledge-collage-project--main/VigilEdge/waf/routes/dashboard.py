@@ -4,9 +4,10 @@ Handles all page routes for the dashboard UI.
 """
 
 import os
+import sqlite3
 import logging
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .auth import check_auth
@@ -98,6 +99,12 @@ async def customer_dashboard(request: Request):
         </body>
         </html>
         """, status_code=404)
+
+
+@router.get("/admin/dashboard/", include_in_schema=False)
+async def dashboard_redirect_trailing_slash():
+    """Redirect trailing slash to canonical path."""
+    return RedirectResponse(url="/admin/dashboard", status_code=301)
 
 
 @router.get("/admin/dashboard", response_class=HTMLResponse)
@@ -370,3 +377,27 @@ async def settings_page(request: Request):
         </body>
         </html>
         """)
+
+
+@router.post("/admin/waf/reset-session")
+async def admin_reset_waf_session(request: Request):
+    """Explicit admin-triggered WAF session reset. Clears all runtime in-memory state."""
+    if not check_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    waf = get_waf_engine()
+    waf.blocked_ips.clear()
+    waf.rate_limits.clear()
+    waf.metrics.reset()
+    waf.security_events.clear()
+    waf.connection_table.clear()
+    waf.request_patterns.clear()
+    waf.user_agent_cache.clear()
+    try:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "vulnerable.db")
+        conn = sqlite3.connect(db_path)
+        conn.execute("DELETE FROM security_events")
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        return JSONResponse({"status": "partial", "db_error": str(exc)}, status_code=500)
+    return JSONResponse({"status": "ok", "message": "WAF session state reset."})
