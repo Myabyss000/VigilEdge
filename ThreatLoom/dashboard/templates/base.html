@@ -52,8 +52,8 @@
                 </button>
             </div>
             <div id="live-indicator" class="flex items-center gap-2">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-xs text-gray-400">LIVE</span>
+                <span id="live-dot" class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                <span id="live-label" class="text-xs text-gray-400">CONNECTING</span>
             </div>
             <span class="text-xs text-gray-500" id="clock"></span>
         </div>
@@ -149,7 +149,24 @@
             const bell = document.getElementById('notification-bell');
             const countBadge = document.getElementById('notification-count');
             const toastHost = document.getElementById('notification-toasts');
+            const liveDot = document.getElementById('live-dot');
+            const liveLabel = document.getElementById('live-label');
             let unreadCount = 0;
+            let reconnectTimer = null;
+            const RECONNECT_DELAY = 5000;
+
+            function setLive(state) {
+                if (state === 'live') {
+                    liveDot.className = 'w-2 h-2 bg-green-500 rounded-full animate-pulse';
+                    liveLabel.textContent = 'LIVE';
+                } else if (state === 'offline') {
+                    liveDot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                    liveLabel.textContent = 'OFFLINE';
+                } else {
+                    liveDot.className = 'w-2 h-2 bg-gray-500 rounded-full';
+                    liveLabel.textContent = 'CONNECTING';
+                }
+            }
 
             function setUnreadCount(value) {
                 unreadCount = Math.max(0, value);
@@ -169,40 +186,80 @@
             bell.addEventListener('click', async () => {
                 setUnreadCount(0);
                 if ('Notification' in window && Notification.permission === 'default') {
-                    try {
-                        await Notification.requestPermission();
-                    } catch {}
+                    try { await Notification.requestPermission(); } catch {}
                 }
             });
 
-            const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-            const notifToken = localStorage.getItem('token') || '';
-            const ws = new WebSocket(
-                `${protocol}://${location.host}/ws/notifications?token=${encodeURIComponent(notifToken)}`
-            );
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type !== 'notification') {
+            function connectNotificationsWS() {
+                const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+                const notifToken = localStorage.getItem('token');
+
+                // No token → don't bother connecting (server will 4001-reject it).
+                // Poll localStorage every 5 s in case the user logs in.
+                if (!notifToken) {
+                    console.warn('[ThreatLoom] No auth token — WS skipped, retrying in 5 s');
+                    setLive('offline');
+                    reconnectTimer = setTimeout(connectNotificationsWS, RECONNECT_DELAY);
+                    return;
+                }
+
+                setLive('connecting');
+                console.log('[ThreatLoom] WS connecting…');
+                const ws = new WebSocket(
+                    `${protocol}://${location.host}/ws/notifications?token=${encodeURIComponent(notifToken)}`
+                );
+
+                let pingInterval = null;
+
+                ws.onopen = () => {
+                    console.log('[ThreatLoom] WS open — LIVE');
+                    setLive('live');
+                    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+                    // Application-level keepalive every 15 s
+                    pingInterval = setInterval(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'ping' }));
+                        }
+                    }, 15000);
+                };
+
+                ws.onerror = (event) => {
+                    console.error('[ThreatLoom] WS error:', event);
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type !== 'notification') return;
+                        const data = msg.data || {};
+                        const title = data.notification_title || (data.kind === 'playbook' ? `Playbook: ${data.playbook || 'Notification'}` : (data.title || 'New Alert'));
+                        const body = data.message || (data.kind === 'playbook'
+                            ? 'Playbook action triggered'
+                            : `${data.severity || 'INFO'} • ${data.src_ip || 'unknown'} • ${data.attack_type || 'activity'}${data.event_count ? ` • ${data.event_count} events` : ''}`);
+                        setUnreadCount(unreadCount + 1);
+                        showToast(title, body, data.severity || 'LOW');
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification(title, { body });
+                        }
+                    } catch {}
+                };
+
+                ws.onclose = (event) => {
+                    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+                    setLive('offline');
+                    console.warn('[ThreatLoom] WS closed, code=' + event.code + ' reason=' + event.reason);
+                    // Code 4001 = auth failure — token missing or expired
+                    if (event.code === 4001) {
+                        showToast('Session Expired', 'Please sign in again to restore live notifications.', 'HIGH');
+                        localStorage.removeItem('token');
+                        setTimeout(() => { window.location.href = '/login'; }, 3000);
                         return;
                     }
-                    const data = msg.data || {};
-                    const title = data.notification_title || (data.kind === 'playbook' ? `Playbook: ${data.playbook || 'Notification'}` : (data.title || 'New Alert'));
-                    const body = data.message || (data.kind === 'playbook'
-                        ? 'Playbook action triggered'
-                        : `${data.severity || 'INFO'} • ${data.src_ip || 'unknown'} • ${data.attack_type || 'activity'}${data.event_count ? ` • ${data.event_count} events` : ''}`);
+                    reconnectTimer = setTimeout(connectNotificationsWS, RECONNECT_DELAY);
+                };
+            }
 
-                    setUnreadCount(unreadCount + 1);
-                    showToast(title, body, data.severity || 'LOW');
-
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification(title, { body });
-                    }
-                } catch {}
-            };
-            ws.onclose = () => {
-                showToast('Notifications Offline', 'Realtime notification channel disconnected.', 'HIGH');
-            };
+            connectNotificationsWS();
         })();
     </script>
     {% block scripts %}{% endblock %}

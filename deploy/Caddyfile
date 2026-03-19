@@ -1,0 +1,55 @@
+# VigilEdge + ThreatLoom — Caddy reverse proxy configuration
+#
+# Replace "your.domain.example" with your actual FQDN.
+# Caddy automatically provisions and renews a Let's Encrypt TLS certificate.
+#
+# Topology:
+#   HTTPS :443  → /soc/*    → ThreatLoom   127.0.0.1:8443
+#   HTTPS :443  → /*        → VigilEdge WAF  127.0.0.1:5000
+#   HTTP  :80   → redirect to :443 (automatic in Caddy)
+
+your.domain.example {
+    # ── ThreatLoom SOC dashboard (/soc prefix) ──────────────────────────────
+    handle /soc/* {
+        uri strip_prefix /soc
+        reverse_proxy 127.0.0.1:8443
+    }
+
+    # ── ThreatLoom ops probes (no auth, served directly) ────────────────────
+    handle /soc/health {
+        reverse_proxy 127.0.0.1:8443 {
+            header_up Host {http.request.host}
+        }
+    }
+
+    handle /soc/readiness {
+        reverse_proxy 127.0.0.1:8443 {
+            header_up Host {http.request.host}
+        }
+    }
+
+    # ── VigilEdge WAF (catches everything else) ──────────────────────────────
+    handle {
+        reverse_proxy 127.0.0.1:5000
+    }
+
+    # ── Security headers ─────────────────────────────────────────────────────
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        # Remove server identity
+        -Server
+    }
+
+    # ── Access log ───────────────────────────────────────────────────────────
+    log {
+        output file /var/log/caddy/vigiledge-access.log {
+            roll_size    50mb
+            roll_keep    30
+            roll_keep_for 720h  # 30 days
+        }
+        format json
+    }
+}

@@ -102,6 +102,7 @@ async def lifespan(app: FastAPI):
     
     # Start background monitoring
     monitoring_task_handle = asyncio.create_task(monitoring_task(waf_engine, manager))
+    app.state.monitoring_task = monitoring_task_handle
     
     # Start auto-backup scheduler if enabled
     backup_task_handle = None
@@ -211,6 +212,58 @@ def create_app() -> FastAPI:
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
             ])
             return Response(content=ico_data, media_type="image/x-icon")
+
+    # ── Ops probes (unauthenticated, must be registered before the catch-all) ──
+
+    @app.get("/health", include_in_schema=False)
+    async def health_probe():
+        """Liveness probe — returns 200 as long as the process is up."""
+        from datetime import datetime, timezone
+        return {
+            "status": "ok",
+            "service": "vigiledge-waf",
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.get("/readiness", include_in_schema=False)
+    async def readiness_probe(request: Request):
+        """
+        Readiness probe — 200 when WAF engine and monitoring task are ready,
+        503 otherwise.
+        """
+        from datetime import datetime, timezone
+        from fastapi.responses import JSONResponse as _JSONResponse
+
+        checks: dict = {}
+        overall_ok = True
+
+        engine_inst = getattr(request.app.state, "waf_engine", None)
+        if engine_inst is not None:
+            checks["waf_engine"] = "ok"
+        else:
+            checks["waf_engine"] = "not_initialized"
+            overall_ok = False
+
+        mon_task = getattr(request.app.state, "monitoring_task", None)
+        if mon_task is not None and not mon_task.done():
+            checks["monitoring_task"] = "running"
+        elif mon_task is not None and mon_task.done():
+            checks["monitoring_task"] = "stopped"
+            overall_ok = False
+        else:
+            checks["monitoring_task"] = "not_started"
+            overall_ok = False
+
+        status_code = 200 if overall_ok else 503
+        return _JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "ready" if overall_ok else "not_ready",
+                "service": "vigiledge-waf",
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "checks": checks,
+            },
+        )
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], include_in_schema=False)
     async def root_upstream_proxy(request: Request, path: str = ""):

@@ -14,12 +14,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from threatloom.config import settings
 from threatloom.database import engine, Base, async_session
+from threatloom.logger import setup_logging
 from threatloom.api.v1.router import api_router
 from threatloom.api.v1.dashboard import dashboard_router
+from threatloom.api.v1.health import router as health_router
 from threatloom.websocket.manager import ws_router
 from threatloom.detection.engine import DetectionEngine
 from threatloom.storage.retention import RetentionManager
 
+# Initialise structured / rotating logging before the first log call
+setup_logging()
 logger = logging.getLogger("threatloom")
 
 
@@ -27,16 +31,18 @@ logger = logging.getLogger("threatloom")
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown."""
     # --- Startup ---
-    logging.basicConfig(
-        level=getattr(logging, settings.LOG_LEVEL),
-        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
-    )
     logger.info("ThreatLoom SOC Platform starting...")
 
     # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables initialized.")
+    # In development, create_all() keeps the SQLite file in sync automatically.
+    # In production (APP_ENV=production) schema changes are handled exclusively
+    # by Alembic — run `alembic upgrade head` before starting the service.
+    if settings.APP_ENV != "production":
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables initialised (development auto-create).")
+    else:
+        logger.info("Production mode — skipping create_all. Schema managed by Alembic.")
 
     app.state.settings = settings
 
@@ -128,6 +134,9 @@ app.add_middleware(
 # Static files & templates
 app.mount("/static", StaticFiles(directory="dashboard/static"), name="static")
 
+# Health / readiness probes — no auth, no prefix, available at /health and /readiness
+app.include_router(health_router)
+
 # API routes
 app.include_router(api_router, prefix="/api/v1")
 
@@ -147,4 +156,6 @@ if __name__ == "__main__":
         port=settings.APP_PORT,
         reload=settings.APP_DEBUG,
         log_level=settings.LOG_LEVEL.lower(),
+        ws_ping_interval=None,
+        ws_ping_timeout=None,
     )

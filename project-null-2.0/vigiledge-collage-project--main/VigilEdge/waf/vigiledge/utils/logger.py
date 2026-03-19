@@ -6,6 +6,7 @@ Configures structured logging for security events and monitoring
 import os
 import sys
 import logging
+import logging.handlers
 from datetime import datetime
 from pathlib import Path
 
@@ -64,16 +65,23 @@ def setup_structlog(settings):
     
     # Add file handler if log file is specified
     if settings.log_file:
-        file_handler = logging.FileHandler(settings.log_file)
+        file_handler = logging.handlers.TimedRotatingFileHandler(
+            settings.log_file,
+            when="midnight",
+            interval=1,
+            backupCount=30,
+            encoding="utf-8",
+            utc=True,
+        )
         file_handler.setLevel(getattr(logging, settings.log_level.upper()))
-        
+
         if settings.log_format == "json":
             formatter = logging.Formatter('%(message)s')
         else:
             formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
-        
+
         file_handler.setFormatter(formatter)
         logging.getLogger().addHandler(file_handler)
 
@@ -119,7 +127,14 @@ def setup_standard_logging(settings):
     
     # Add file handler if log file is specified
     if settings.log_file:
-        file_handler = logging.FileHandler(settings.log_file)
+        file_handler = logging.handlers.TimedRotatingFileHandler(
+            settings.log_file,
+            when="midnight",
+            interval=1,
+            backupCount=30,
+            encoding="utf-8",
+            utc=True,
+        )
         file_handler.setLevel(log_level)
         file_handler.setFormatter(formatter)
         logging.getLogger().addHandler(file_handler)

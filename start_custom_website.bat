@@ -19,6 +19,23 @@ if '%errorlevel%' NEQ '0' (
     pushd "%CD%"
     CD /D "%~dp0"
 
+set START_DIR=%~dp0
+set VIGILEDGE_DIR=%START_DIR%project-null-2.0\vigiledge-collage-project--main\VigilEdge
+set THREATLOOM_DIR=%START_DIR%ThreatLoom
+set PYTHON=%VIGILEDGE_DIR%\venv\Scripts\python.exe
+set PIP=%VIGILEDGE_DIR%\venv\Scripts\pip.exe
+
+REM ── Validate shared venv exists ──────────────────────────────────────────────
+if not exist "%PYTHON%" (
+    color 0C
+    echo [ERROR] Shared venv not found at:
+    echo         %VIGILEDGE_DIR%\venv\Scripts\python.exe
+    echo         Run the VigilEdge setup first, then re-run this script.
+    pause
+    exit /B 1
+)
+
+REM ── Port checks ───────────────────────────────────────────────────────────────
 call :check_port 5001 "Chatbot Server"
 if errorlevel 1 goto portConflict
 call :check_port 8443 "ThreatLoom SOC"
@@ -26,8 +43,54 @@ if errorlevel 1 goto portConflict
 call :check_port 5000 "VigilEdge WAF"
 if errorlevel 1 goto portConflict
 
+REM ── Auto-setup: logs directories ─────────────────────────────────────────────
+if not exist "%THREATLOOM_DIR%\logs"        mkdir "%THREATLOOM_DIR%\logs"
+if not exist "%VIGILEDGE_DIR%\waf\logs"     mkdir "%VIGILEDGE_DIR%\waf\logs"
+
+REM ── Auto-setup: ThreatLoom .env ───────────────────────────────────────────────
+if not exist "%THREATLOOM_DIR%\.env" (
+    echo [SETUP] Creating ThreatLoom .env from .env.example ...
+    copy "%THREATLOOM_DIR%\.env.example" "%THREATLOOM_DIR%\.env" >nul
+    echo [SETUP] .env created. Edit %THREATLOOM_DIR%\.env before production use.
+)
+
+REM ── Auto-setup: install ThreatLoom deps into shared venv ─────────────────────
+echo [SETUP] Syncing ThreatLoom dependencies into shared venv...
+"%PIP%" install -r "%THREATLOOM_DIR%\requirements.txt" --quiet --disable-pip-version-check
+if errorlevel 1 (
+    color 0C
+    echo [ERROR] Failed to install ThreatLoom dependencies.
+    pause
+    exit /B 1
+)
+
+REM ── Run Alembic if APP_ENV=production is set in ThreatLoom .env ───────────────
+findstr /I "APP_ENV=production" "%THREATLOOM_DIR%\.env" >nul 2>&1
+if not errorlevel 1 (
+    echo [DB] APP_ENV=production detected — running Alembic migrations...
+    cd /d "%THREATLOOM_DIR%"
+    "%PYTHON%" -m alembic upgrade head
+    if errorlevel 1 (
+        color 0C
+        echo.
+        echo [ERROR] Alembic migration failed.
+        echo         Check DATABASE_URL in %THREATLOOM_DIR%\.env
+        echo         Make sure PostgreSQL is running and the database exists.
+        echo.
+        pause
+        exit /B 1
+    )
+    echo [DB] Migrations applied successfully.
+    cd /d "%START_DIR%"
+    set THREATLOOM_RELOAD=
+) else (
+    REM development mode — keep --reload for hot reloading
+    set THREATLOOM_RELOAD=--reload
+)
+
+REM ── Prompt for custom target URL ──────────────────────────────────────────────
 set "DEFAULT_CUSTOM_URL=http://localhost:3000"
-set /p CUSTOM_TARGET_URL=Enter your custom website URL [%DEFAULT_CUSTOM_URL%]: 
+set /p CUSTOM_TARGET_URL=Enter your custom website URL [%DEFAULT_CUSTOM_URL%]:
 if "%CUSTOM_TARGET_URL%"=="" set "CUSTOM_TARGET_URL=%DEFAULT_CUSTOM_URL%"
 
 echo.
@@ -53,20 +116,16 @@ echo [*] %CUSTOM_TARGET_URL%
 echo.
 echo ========================================
 
-set START_DIR=%~dp0
-set VIGILEDGE_DIR=%START_DIR%project-null-2.0\vigiledge-collage-project--main\VigilEdge
-set THREATLOOM_DIR=%START_DIR%ThreatLoom
-
 echo [1/3] Starting AI Chatbot Server...
-start "VigilEdge AI Chatbot" cmd /k "cd /d "%START_DIR%" && "%VIGILEDGE_DIR%\venv\Scripts\python.exe" chatbot_server.py"
+start "VigilEdge AI Chatbot" cmd /k "cd /d "%START_DIR%" && "%PYTHON%" chatbot_server.py"
 timeout /t 3 /nobreak >nul
 
 echo [2/3] Starting ThreatLoom SOC Platform...
-start "ThreatLoom SOC" cmd /k "cd /d "%THREATLOOM_DIR%" && "%THREATLOOM_DIR%\venv\Scripts\python.exe" -m uvicorn main:app --host 0.0.0.0 --port 8443 --reload"
+start "ThreatLoom SOC" cmd /k "cd /d "%THREATLOOM_DIR%" && "%PYTHON%" -m uvicorn main:app --host 0.0.0.0 --port 8443 %THREATLOOM_RELOAD%"
 timeout /t 5 /nobreak >nul
 
 echo [3/3] Starting WAF Dashboard...
-start "VigilEdge WAF" cmd /k "cd /d "%VIGILEDGE_DIR%\waf" && set "UPSTREAM_USE_DEMO_TARGET=false" && set "UPSTREAM_CUSTOM_TARGET_URL=%CUSTOM_TARGET_URL%" && "%VIGILEDGE_DIR%\venv\Scripts\python.exe" -m uvicorn app:app --host 0.0.0.0 --port 5000 --reload"
+start "VigilEdge WAF" cmd /k "cd /d "%VIGILEDGE_DIR%\waf" && set "UPSTREAM_USE_DEMO_TARGET=false" && set "UPSTREAM_CUSTOM_TARGET_URL=%CUSTOM_TARGET_URL%" && "%PYTHON%" -m uvicorn app:app --host 0.0.0.0 --port 5000 --reload"
 timeout /t 5 /nobreak >nul
 
 echo.

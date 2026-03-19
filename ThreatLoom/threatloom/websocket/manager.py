@@ -6,11 +6,10 @@ import logging
 from typing import Dict, Optional, Set
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from threatloom.database import get_db
+from threatloom.database import async_session
 from threatloom.auth.jwt import decode_access_token
 from threatloom.models.users import User
 
@@ -105,10 +104,16 @@ async def websocket_endpoint(
     websocket: WebSocket,
     channel: str,
     token: Optional[str] = Query(default=None),
-    db: AsyncSession = Depends(get_db),
 ):
     """WebSocket endpoint for real-time event streaming. Requires a valid JWT via ?token=."""
-    # --- Auth check must happen before websocket.accept() ---
+    # Accept first so that the close frame (with our custom code) is properly
+    # transmitted to the browser.  Without accept(), the browser sees 1006
+    # (abnormal closure) and cannot distinguish auth failures from network drops.
+    await websocket.accept()
+
+    # --- Auth check (uses its own short-lived session — never holds a DB
+    #     connection open for the entire WS lifetime, which would conflict
+    #     with SQLite's single-writer model) ---
     if not token:
         await websocket.close(code=4001, reason="Missing authentication token")
         return
@@ -117,8 +122,9 @@ async def websocket_endpoint(
         user_id = payload.get("sub")
         if not user_id:
             raise ValueError("Missing sub claim")
-        result = await db.execute(select(User).where(User.id == int(user_id)))
-        user = result.scalar_one_or_none()
+        async with async_session() as session:
+            result = await session.execute(select(User).where(User.id == int(user_id)))
+            user = result.scalar_one_or_none()
         if user is None or not user.is_active:
             raise ValueError("User invalid or inactive")
     except Exception:
@@ -129,12 +135,11 @@ async def websocket_endpoint(
         await websocket.close(code=4000, reason=f"Unknown channel: {channel}")
         return
 
-    await manager.connect(websocket, channel)
+    manager.channels[channel].add(websocket)
+    logger.info(f"WebSocket connected: channel={channel}")
     try:
         while True:
-            # Keep connection alive; handle incoming messages
             data = await websocket.receive_text()
-            # Client can send ping/pong or subscribe commands
             try:
                 msg = json.loads(data)
                 if msg.get("type") == "ping":
@@ -142,4 +147,7 @@ async def websocket_endpoint(
             except json.JSONDecodeError:
                 pass
     except WebSocketDisconnect:
+        manager.disconnect(websocket, channel)
+    except Exception as exc:
+        logger.warning(f"WebSocket error: channel={channel} {type(exc).__name__}: {exc}")
         manager.disconnect(websocket, channel)

@@ -1,0 +1,43 @@
+[Unit]
+Description=VigilEdge WAF
+Documentation=file:///opt/vigiledge/DEPLOYMENT.md
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=vigiledge
+Group=vigiledge
+WorkingDirectory=/opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf
+
+# Load .env so settings are available without shell expansion
+EnvironmentFile=-/opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/.env
+
+ExecStart=/opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/.venv/bin/uvicorn \
+    app:app \
+    --host 127.0.0.1 \
+    --port 5000 \
+    --no-access-log \
+    --log-level warning
+
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Resource limits
+LimitNOFILE=65536
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/logs
+ReadWritePaths=/opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/config
+
+# Health / readiness probe (checked every 30 s; 3 consecutive failures → restart)
+# Requires systemd 254+ — comment out on older distributions
+# ExecStartPost=/bin/sh -c 'until curl -sf http://127.0.0.1:5000/health; do sleep 1; done'
+
+[Install]
+WantedBy=multi-user.target

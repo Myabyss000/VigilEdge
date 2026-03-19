@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-this-to-a-random-secret-key-min-32-chars"
 
     # Database
+    # Development default: SQLite.  Production: set to a postgresql+asyncpg:// URL.
+    # Example: postgresql+asyncpg://threatloom:password@localhost:5432/threatloom
     DATABASE_URL: str = "sqlite+aiosqlite:///./threatloom.db"
 
     # Redis
@@ -92,6 +94,11 @@ class Settings(BaseSettings):
             if self.JWT_SECRET == "change-this-jwt-secret-min-32-chars" or not self.JWT_SECRET:
                 raise ValueError(
                     "JWT_SECRET must be set to a secure random value in production."
+                )
+            if self.DATABASE_URL.startswith("sqlite"):
+                raise ValueError(
+                    "SQLite is not supported in production. "
+                    "Set DATABASE_URL to a postgresql+asyncpg:// connection string."
                 )
         return self
 

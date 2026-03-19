@@ -9,7 +9,9 @@ pydantic-settings==2.7.1
 # Database
 sqlalchemy==2.0.36
 alembic==1.14.1
-aiosqlite==0.20.0
+aiosqlite==0.20.0        # development / SQLite
+asyncpg==0.30.0          # production / PostgreSQL (async driver)
+psycopg2-binary==2.9.10  # used by Alembic offline migrations (sync)
 
 # Auth
 python-jose[cryptography]==3.3.0

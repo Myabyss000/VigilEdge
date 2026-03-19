@@ -1,0 +1,43 @@
+[Unit]
+Description=ThreatLoom SOC Platform
+Documentation=file:///opt/vigiledge/DEPLOYMENT.md
+After=network.target postgresql.service
+Wants=network.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=threatloom
+Group=threatloom
+WorkingDirectory=/opt/vigiledge/ThreatLoom
+
+# Load .env so settings are available without shell expansion
+EnvironmentFile=-/opt/vigiledge/ThreatLoom/.env
+
+ExecStart=/opt/vigiledge/ThreatLoom/.venv/bin/uvicorn \
+    main:app \
+    --host 127.0.0.1 \
+    --port 8443 \
+    --no-access-log \
+    --log-level warning
+
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Resource limits
+LimitNOFILE=65536
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/vigiledge/ThreatLoom/logs
+
+# Health / readiness probe
+# Requires systemd 254+ — comment out on older distributions
+# ExecStartPost=/bin/sh -c 'until curl -sf http://127.0.0.1:8443/health; do sleep 1; done'
+
+[Install]
+WantedBy=multi-user.target

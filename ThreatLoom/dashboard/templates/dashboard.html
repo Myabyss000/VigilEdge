@@ -327,7 +327,8 @@
     });
 
     // WebSocket live feed
-    const ws = new WebSocket(`ws://${location.host}/ws/alerts`);
+    const alertToken = localStorage.getItem('token') || '';
+    const ws = new WebSocket(`ws://${location.host}/ws/alerts?token=${encodeURIComponent(alertToken)}`);
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         if (msg.type === 'new_alert') {
@@ -354,9 +355,6 @@
             feed.insertBefore(row, feed.firstChild);
             setTimeout(() => row.classList.remove('animate-pulse'), 2000);
         }
-    };
-    ws.onclose = () => {
-        document.getElementById('live-indicator').innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span><span class="text-xs text-red-400">OFFLINE</span>';
     };
 </script>
 {% endblock %}
