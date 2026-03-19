@@ -442,6 +442,15 @@ async def login_page(request: Request, db: AsyncSession = Depends(get_db)):
     )
 
 
+@dashboard_router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request):
+    """Password reset page."""
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {"request": request}
+    )
+
+
 @dashboard_router.get("/alerts-view", response_class=HTMLResponse)
 async def alerts_page(request: Request, db: AsyncSession = Depends(get_db)):
     """Alerts management page."""

@@ -63,3 +63,9 @@ class TokenResponse(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+class PasswordResetRequest(BaseModel):
+    username: str
+    recovery_key: str
+    new_password: str
+    confirm_password: str
