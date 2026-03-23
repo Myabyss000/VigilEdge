@@ -1,0 +1,1086 @@
+<h1
+id="vigiledge-threatloom-a-local-hybrid-waf-soc-architecture-for-real-time-web-threat-detection-and-automated-response">VigilEdge-ThreatLoom:
+A Local Hybrid WAF-SOC Architecture for Real-Time Web Threat Detection
+and Automated Response</h1>
+<h2 id="ieee-author-block-double-blind-submission">IEEE Author Block
+(Double-Blind Submission)</h2>
+<p>Author details are intentionally omitted for double-blind review.</p>
+<h2 id="abstract">Abstract</h2>
+<p>This paper presents VigilEdge-ThreatLoom, a hybrid WAF-SOC
+architecture for local web defense where managed cloud-edge controls may
+be impractical because of cost, policy, or connectivity constraints. The
+implemented system links inline Web Application Firewall (WAF)
+enforcement with downstream Security Operations Center (SOC) analytics
+and playbook-driven response, with accessibility as a core goal for
+single-service local deployments. We evaluate three primary profiles:
+signature-only WAF (A), WAF plus SOC rule analytics (B), and full hybrid
+WAF-SOC architecture with response orchestration (C), with an additional
+exploratory B-tuned rerun. Reported metrics include precision, recall,
+F1-score, false positive rate (FPR), p50/p95 latency, and throughput.
+Mitigation delay is not reported in this run because end-to-end response
+timestamp capture for B and C is incomplete. Results show identical
+recall across profiles (1.0000) but high false-positive instability (FPR
+means approximately 0.66 with wide CI95), indicating calibration risk.
+Profiles A and C provide the best quality balance in this workload, with
+C adding operational visibility and response lifecycle capability. The
+contribution is an evidence-bounded local architecture and reproducible
+evaluation workflow.</p>
+<h2 id="index-terms">Index Terms</h2>
+<p>Web application firewall, SOC automation, hybrid detection, incident
+response, local cybersecurity.</p>
+<h2 id="i.-introduction">I. INTRODUCTION</h2>
+<p>Web applications continue to represent a dominant external attack
+surface. Common adversarial traffic includes SQL injection, cross-site
+scripting, path traversal, command injection, and request-flood abuse.
+While cloud edge platforms provide robust protective controls, many
+organizations still require local deployment due to data governance
+boundaries, air-gapped operation, budget constraints, or educational-lab
+conditions.</p>
+<p>In local deployments, rule-based WAF filtering is widely used but
+frequently isolated from downstream operational context. As a result,
+campaign-level behavior and cross-event progression may remain
+underdetected, and mitigation decisions may remain manual or delayed.
+This paper evaluates whether a hybrid WAF-SOC architecture can improve
+practical local defense outcomes while maintaining acceptable runtime
+overhead.</p>
+<h3 id="a.-problem-statement">A. Problem Statement</h3>
+<p>Signature-only local WAF deployments exhibit three practical
+limitations: 1. Per-request analysis with limited temporal context. 2.
+Weak visibility of distributed and low-and-slow attack behavior. 3.
+Fragmented detection-to-response execution paths.</p>
+<h3 id="b.-research-question">B. Research Question</h3>
+<p>Can a local hybrid WAF-SOC architecture improve detection and
+response effectiveness compared to signature-only local filtering, while
+preserving acceptable latency and throughput under local test
+conditions?</p>
+<h3 id="c.-contributions">C. Contributions</h3>
+<p>This paper makes six contributions: 1. A local, modular architecture
+coupling inline WAF enforcement with SOC analytics and automated
+response. 2. A staged hybrid detection model integrating signature,
+threshold, behavioral, and time-window correlation logic. 3. A
+reproducible experimental protocol for quality and performance
+benchmarking. 4. An implemented one-command local deployment workflow
+(with offline fallback) to improve operational accessibility and
+reproducibility. 5. A deployment-evidence subsection that quantifies
+operational completion outcomes for the evaluated run session. 6. An
+explicit evidence-boundary analysis that documents validity risks,
+operational limitations, and safe-claim boundaries.</p>
+<h3 id="d.-innovation-statement">D. Innovation Statement</h3>
+<p>The core innovation is not a new single detector, but an
+accessibility-first and deployment-first security architecture that
+unifies prevention and operations in a local environment. Specifically,
+the system combines low-cost deployment, offline-capable execution,
+reproducible evaluation artifacts, and analyst-governed automation in
+one integrated stack. This positions the work as a practical bridge
+between basic local firewalls and high-cost cloud-managed security
+ecosystems.</p>
+<p>Standout contribution summary: this work combines inline enforcement,
+SOC correlation, and auditable response in one reproducible local stack,
+which is uncommon in low-cost single-service deployments.</p>
+<p>Example use case: a small business owner running one public-facing
+web service on a low-cost VPS can deploy this architecture locally to
+gain both request-time filtering and SOC-style incident visibility
+without subscribing to enterprise cloud-edge tooling.</p>
+<h2 id="ii.-related-work">II. RELATED WORK</h2>
+<p>Conventional WAF literature focuses on rule-based payload inspection
+and low-latency mediation, exemplified by early system overviews and
+attack-focused detection work <span class="citation"
+data-cites="modsecurity_overview sqli_detection xss_detection">[1], [2],
+[3]</span>. SOC/SIEM practice emphasizes event centralization,
+correlation, and incident handling workflows <span class="citation"
+data-cites="nist80061">[4]</span>. Threat-class taxonomies and defensive
+verification guidance are covered by OWASP and MITRE <span
+class="citation"
+data-cites="owasp_top10_2021 mitre_attack owasp_asvs">[5], [6],
+[7]</span>.</p>
+<p>In practice, tools such as ModSecurity represent mature rule-centric
+WAF deployment models, while cloud WAF platforms emphasize managed
+policy updates, global telemetry, and multi-region edge enforcement
+<span class="citation"
+data-cites="modsecurity_project cloudflare_waf aws_waf">[8], [9],
+[10]</span>.</p>
+<p>Most prior references treat these concerns in separate layers. This
+work positions itself against that separation: the contribution is a
+deployable hybrid WAF-SOC architecture that integrates inline filtering,
+structured event transport, correlation, and bounded response into one
+local reproducible stack. The target is not cloud-scale parity; the
+target is accessible security operations depth for constrained
+deployments.</p>
+<p>Compared to standalone WAF-only tools, this design adds SOC-side
+temporal/correlation reasoning and response governance. Compared to
+SOC-only log analysis systems, this design adds inline enforcement
+context at event origin time. Compared to managed cloud WAFs, it trades
+global intelligence scale for local deployability, control, and
+reproducibility.</p>
+<h2 id="iii.-architecture-overview">III. ARCHITECTURE OVERVIEW</h2>
+<p>The system is organized into four layers.</p>
+<h3 id="a.-inline-enforcement-layer-vigiledge">A. Inline Enforcement
+Layer (VigilEdge)</h3>
+<p>The WAF inspects HTTP traffic and applies attack-class checks
+including SQLi, XSS, traversal, and command-injection style payloads. It
+enforces allow, block, or rate-limit actions and emits structured event
+records.</p>
+<h3 id="b.-ingestion-and-normalization-layer-threatloom">B. Ingestion
+and Normalization Layer (ThreatLoom)</h3>
+<p>ThreatLoom ingests event streams through API endpoints and normalizes
+key fields, including source IP, path, action, attack type, severity,
+and timestamps.</p>
+<h3 id="c.-detection-and-correlation-layer">C. Detection and Correlation
+Layer</h3>
+<p>The SOC engine executes signature and threshold rules, runs
+behavioral analyzers, and performs IP/session/time-window correlation to
+identify repeated and escalating activity.</p>
+<h3 id="d.-response-orchestration-layer">D. Response Orchestration
+Layer</h3>
+<p>Playbook triggers map alert conditions to actions such as block,
+temporary ban, and adaptive rate limit. Action state is tracked,
+auditable, and revocable.</p>
+<p>In implementation terms, a playbook is a rule-to-action mapping: if
+trigger condition(s) match (for example threshold + anomaly), execute
+predefined action script(s) with cooldown and revocation
+constraints.</p>
+<h3 id="e.-accessibility-and-deployment-by-design">E. Accessibility and
+Deployment-by-Design</h3>
+<p>The architecture is intentionally designed for environments where
+cloud-edge security is unavailable or operationally unsuitable. This
+includes academic labs, resource-constrained teams, private intranet
+services, and policy-restricted deployments. The system is designed for
+security-aware operators to run on commodity hardware with transparent
+controls and reproducible script-driven experiments.</p>
+<p>The current implementation includes an autonomous one-command
+launcher (<code>deploy_oneclick.ps1</code>) with a double-click wrapper
+(<code>run_oneclick.bat</code>) for Windows-first local deployment. The
+launcher automates environment preparation and service orchestration,
+including privilege elevation and offline-capable dependency setup. This
+operational layer is treated as an accessibility and reproducibility
+contribution rather than as a detection-performance claim.</p>
+<p>Accessibility in this paper means operational accessibility (cost,
+ownership, and deployability under local constraints), not
+zero-configuration usability for non-technical users.</p>
+<h3 id="f.-architecture-diagram">F. Architecture Diagram</h3>
+<p>Fig. 1. Hybrid WAF-SOC architecture and module-level flow. <img
+src="figures/fig1_architecture.png"
+alt="Fig. 1. Hybrid WAF-SOC architecture and module-level flow" /></p>
+<h2 id="iv.-detection-and-response-pipeline">IV. DETECTION AND RESPONSE
+PIPELINE</h2>
+<p>The pipeline proceeds in stages: - Inline signature and policy
+enforcement. - Event enrichment and normalized persistence. - Rule and
+threshold analytics in SOC processing cycles. - Behavioral and temporal
+correlation. - Playbook-based mitigation with override support.</p>
+<p>This staged strategy aims to preserve low-latency inline filtering
+while increasing post-ingestion context depth for higher-confidence
+operations decisions.</p>
+<h3 id="pipeline-diagram">Pipeline Diagram</h3>
+<p>Fig. 2. Request-to-mitigation pipeline of the hybrid WAF-SOC
+architecture. <img src="figures/fig2_pipeline.png"
+alt="Fig. 2. Request-to-mitigation pipeline of the hybrid WAF-SOC architecture" /></p>
+<h3 id="a.-detailed-system-flow-request-to-mitigation">A. Detailed
+System Flow (Request to Mitigation)</h3>
+<ul>
+<li>A request enters the WAF and is normalized (path, query, headers,
+payload fingerprints).</li>
+<li>Signature and policy checks produce an immediate decision: allow,
+block, or rate-limit.</li>
+<li>A structured event is emitted with source, action, severity, threat
+class, and timestamp.</li>
+<li>ThreatLoom ingests and normalizes the event into SOC-ready
+fields.</li>
+<li>Rule engines evaluate threshold conditions across time windows.</li>
+<li>Behavioral correlators evaluate repeated probing, burst anomalies,
+and escalation patterns.</li>
+<li>If trigger conditions are met, a playbook action is selected and
+executed.</li>
+<li>Response outcomes are recorded with audit metadata and optional
+revocation support.</li>
+</ul>
+<h3 id="b.-module-data-flow-and-event-structure">B. Module Data Flow and
+Event Structure</h3>
+<p>Events are transferred from WAF to SOC as JSON records over REST
+endpoints. A minimal event schema includes: <code>event_id</code>,
+<code>timestamp</code>, <code>source_ip</code>,
+<code>request_path</code>, <code>http_method</code>, <code>action</code>
+(allow/block/rate_limit), <code>threat_type</code>,
+<code>severity</code>, <code>rule_id</code>, and
+<code>context_tags</code>.</p>
+<p>This explicit event contract enables downstream correlation and
+response without re-parsing raw HTTP traffic in the SOC layer.</p>
+<h3 id="c.-internal-working-logic">C. Internal Working Logic</h3>
+<p>The internal operation uses two linked decision loops: - Inline
+decision loop (fast path): input is request features and signature
+matches; output is immediate enforcement action with minimal latency
+impact. - SOC decision loop (context path): input is the event stream
+over temporal windows; output is contextual alerting and bounded
+response actions.</p>
+<p>A simplified scoring model is: <span
+class="math display"><em>R</em><sub><em>t</em></sub> = <em>w</em><sub><em>S</em></sub><em>S</em><sub><em>t</em></sub> + <em>w</em><sub><em>T</em></sub><em>T</em><sub><em>t</em></sub> + <em>w</em><sub><em>B</em></sub><em>B</em><sub><em>t</em></sub> + <em>w</em><sub><em>C</em></sub><em>C</em><sub><em>t</em></sub></span></p>
+<p>subject to <span
+class="math display"><em>w</em><sub><em>S</em></sub> + <em>w</em><sub><em>T</em></sub> + <em>w</em><sub><em>B</em></sub> + <em>w</em><sub><em>C</em></sub> = 1,  <em>w</em><sub><em>S</em></sub>, <em>w</em><sub><em>T</em></sub>, <em>w</em><sub><em>B</em></sub>, <em>w</em><sub><em>C</em></sub> ≥ 0</span></p>
+<p>where:</p>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Meaning in this study</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span
+class="math inline"><em>R</em><sub><em>t</em></sub></span></td>
+<td>Combined risk score at time window <span
+class="math inline"><em>t</em></span></td>
+</tr>
+<tr>
+<td><span
+class="math inline"><em>S</em><sub><em>t</em></sub></span></td>
+<td>Signature confidence term at time window <span
+class="math inline"><em>t</em></span></td>
+</tr>
+<tr>
+<td><span
+class="math inline"><em>T</em><sub><em>t</em></sub></span></td>
+<td>Threshold/rate-pressure term at time window <span
+class="math inline"><em>t</em></span></td>
+</tr>
+<tr>
+<td><span
+class="math inline"><em>B</em><sub><em>t</em></sub></span></td>
+<td>Behavioral-anomaly term at time window <span
+class="math inline"><em>t</em></span></td>
+</tr>
+<tr>
+<td><span
+class="math inline"><em>C</em><sub><em>t</em></sub></span></td>
+<td>Multi-event correlation term at time window <span
+class="math inline"><em>t</em></span></td>
+</tr>
+<tr>
+<td><span
+class="math inline"><em>w</em><sub><em>S</em></sub>, <em>w</em><sub><em>T</em></sub>, <em>w</em><sub><em>B</em></sub>, <em>w</em><sub><em>C</em></sub></span></td>
+<td>Non-negative weights for <span
+class="math inline"><em>S</em><sub><em>t</em></sub>, <em>T</em><sub><em>t</em></sub>, <em>B</em><sub><em>t</em></sub>, <em>C</em><sub><em>t</em></sub></span></td>
+</tr>
+<tr>
+<td><span class="math inline"><em>τ</em></span></td>
+<td>Risk threshold that triggers playbook evaluation</td>
+</tr>
+</tbody>
+</table>
+<p>In simplified operation, each component is normalized to <span
+class="math inline">[0, 1]</span> and combined by weighted summation. If
+<span
+class="math inline"><em>R</em><sub><em>t</em></sub> ≥ <em>τ</em></span>,
+the system evaluates response policy constraints and executes the
+selected action.</p>
+<p>Numerical example (illustrative): let <span
+class="math inline"><em>S</em><sub><em>t</em></sub> = 0.80</span>, <span
+class="math inline"><em>T</em><sub><em>t</em></sub> = 0.60</span>, <span
+class="math inline"><em>B</em><sub><em>t</em></sub> = 0.40</span>, <span
+class="math inline"><em>C</em><sub><em>t</em></sub> = 0.70</span>, and
+weights <span
+class="math inline">(<em>w</em><sub><em>S</em></sub>, <em>w</em><sub><em>T</em></sub>, <em>w</em><sub><em>B</em></sub>, <em>w</em><sub><em>C</em></sub>) = (0.35, 0.25, 0.20, 0.20)</span>.
+Then: <span
+class="math display"><em>R</em><sub><em>t</em></sub> = 0.35 ⋅ 0.80 + 0.25 ⋅ 0.60 + 0.20 ⋅ 0.40 + 0.20 ⋅ 0.70 = 0.65</span>
+If <span class="math inline"><em>τ</em> = 0.60</span>, response playbook
+evaluation is triggered.</p>
+<p>Practical mapping note: in this implementation, <span
+class="math inline"><em>S</em><sub><em>t</em></sub></span> is derived
+from matched signature severity, <span
+class="math inline"><em>T</em><sub><em>t</em></sub></span> from
+threshold counters within configured windows, <span
+class="math inline"><em>B</em><sub><em>t</em></sub></span> from temporal
+behavior shifts, and <span
+class="math inline"><em>C</em><sub><em>t</em></sub></span> from
+multi-event consistency across source/time context.</p>
+<p>This two-loop design is the practical mechanism by which the system
+avoids relying only on per-request signatures while still preserving
+fast inline protection.</p>
+<h2 id="v.-implementation-details">V. IMPLEMENTATION DETAILS</h2>
+<p>The implementation is Python-based and service-oriented. The WAF and
+SOC services expose HTTP/REST interfaces and exchange structured JSON
+events. The stack uses FastAPI/Uvicorn services, background async tasks,
+YAML/JSON configuration files for rules/playbooks, and relational
+persistence for SOC entities.</p>
+<h3 id="a.-execution-model">A. Execution Model</h3>
+<p>The implementation follows a split execution model: 1. Synchronous
+path for inline request mediation (WAF). 2. Asynchronous path for SOC
+analytics and response orchestration.</p>
+<p>This split limits user-visible latency while enabling richer
+post-ingestion reasoning. It is also a key engineering tradeoff in local
+deployments where compute resources are finite.</p>
+<p>Concurrency/load handling: - Async request handling is used in both
+services. - ThreatLoom runs periodic background detection cycles
+(configurable scan interval and lookback window). - Database backends
+support SQLite for development and PostgreSQL-compatible async drivers
+for production-style deployments.</p>
+<h3 id="b.-operational-safety-controls">B. Operational Safety
+Controls</h3>
+<ul>
+<li>Role-based access for sensitive APIs.</li>
+<li>Response cooldown and revocation pathways.</li>
+<li>Alert deduplication windows to reduce analyst fatigue.</li>
+<li>Structured logs and event metadata for traceability.</li>
+</ul>
+<p>Security summary: SOC APIs use authenticated access with role-based
+restrictions for privileged actions, and ingestion endpoints support
+service-to-service credentials.</p>
+<h3 id="c.-enforcement-logic-rate-limiting-and-blocking">C. Enforcement
+Logic (Rate Limiting and Blocking)</h3>
+<p>Rate limiting and blocking are driven by per-source counters and
+threshold windows. At a simplified level, repeated suspicious requests
+within a configured window increment risk and can escalate actions from
+allow to rate-limit to block.</p>
+<p>Blocking state is maintained with timestamped entries so temporary
+actions can expire or be revoked. This avoids permanent lockout by
+default and supports analyst override.</p>
+<p>Practical policy example used in this codebase context: default API
+rate limits are minute-window based, and profile-level thresholds tune
+when repeated events transition into stronger enforcement.</p>
+<p>Concrete thresholds are configuration-dependent and profile-specific;
+this paper evaluates their aggregate behavior through profile-level
+outcomes rather than prescribing universal numeric defaults.</p>
+<p>Tuning strategy: start with conservative thresholds, measure FPR
+impact on benign traffic, then adjust per attack family while preserving
+recall.</p>
+<p>Current thresholds were selected from rule-of-thumb security
+baselines and iterative local validation runs, not from formal
+statistical optimization.</p>
+<h3 id="d.-behavioral-analysis-example">D. Behavioral Analysis
+Example</h3>
+<p>Example: if a source submits benign-seeming requests at low volume
+and then rapidly shifts to repeated traversal patterns within a short
+interval, the behavioral module raises anomaly pressure even when each
+individual request alone appears borderline. This enables earlier
+detection of campaign-style progression.</p>
+<p>Additional scenarios: - Progressive authentication abuse: repeated
+login failures below hard threshold become high-confidence when combined
+with endpoint concentration and burst timing. - Multi-vector probing:
+mixed XSS and traversal attempts from one source in a short window
+increase correlation pressure even when individual signatures are
+moderate.</p>
+<h3 id="e.-logging-and-storage">E. Logging and Storage</h3>
+<p>The architecture uses structured security events (JSON payloads) for
+inter-module communication and persists SOC-side entities (alerts,
+incidents, response actions) in backend storage. Logs include timestamp,
+source, action, and threat metadata to support audit and replay.</p>
+<p>Storage and retrieval implementation details are intentionally
+summarized here; full API and configuration specifics are retained in
+project documentation rather than repeated in the manuscript body.</p>
+<h3 id="f.-deployment-pathways-and-scope">F. Deployment Pathways and
+Scope</h3>
+<p>Current scope supports single-application deployment on a single
+node.</p>
+<p>Two setup pathways are implemented:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Pathway</th>
+<th>Operator actions</th>
+<th>Automation level</th>
+<th>Research relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legacy manual path</td>
+<td>Execute setup and launch commands in sequence</td>
+<td>Low</td>
+<td>Baseline reproducibility pathway</td>
+</tr>
+<tr>
+<td>One-command launcher path (Windows-first)</td>
+<td>Run <code>deploy_oneclick.ps1</code> (or
+<code>run_oneclick.bat</code>) and select mode when prompted</td>
+<td>High</td>
+<td>Accessibility and repeatability contribution</td>
+</tr>
+</tbody>
+</table>
+<p>Operational scope note: this deployment pathway improves onboarding
+and reproducibility under local constraints. It is not a direct
+detector-quality improvement mechanism.</p>
+<h2 id="vi.-experimental-methodology">VI. EXPERIMENTAL METHODOLOGY</h2>
+<p>This section specifies the protocol used to generate and rerun the
+reported measurements.</p>
+<h3 id="a.-compared-profiles">A. Compared Profiles</h3>
+<ol type="1">
+<li>Profile A: signature-only local WAF.</li>
+<li>Profile B: WAF plus SOC rules/thresholds.</li>
+<li>Profile C: full hybrid WAF-SOC with response playbooks.</li>
+</ol>
+<h3 id="b.-traffic-workloads">B. Traffic Workloads</h3>
+<ul>
+<li>Benign control traffic.</li>
+<li>SQLi variants (plain, obfuscated, encoded).</li>
+<li>XSS variants (tag, attribute, encoded).</li>
+<li>Traversal and file-inclusion attempts.</li>
+<li>Command-injection style attempts.</li>
+<li>Brute-force and burst/flood phases.</li>
+</ul>
+<h3 id="c.-evaluation-metrics">C. Evaluation Metrics</h3>
+<ul>
+<li>Reported in this manuscript: precision, recall, F1-score, false
+positive rate (FPR), p50 latency, p95 latency, and throughput (requests
+per second).</li>
+<li>Planned but not reliably captured in this session: detection delay
+and mitigation delay.</li>
+</ul>
+<h3 id="d.-reproducibility-conditions">D. Reproducibility
+Conditions</h3>
+<ul>
+<li>Pinned environment and dependency versions.</li>
+<li>Frozen configuration snapshots per profile.</li>
+<li>Multi-run statistics (mean and standard deviation).</li>
+<li>Raw artifact retention for audit and rerun.</li>
+<li>Scripted startup path recorded (manual and one-command launcher
+variants).</li>
+</ul>
+<h3 id="e.-protocol-revision-note-356-vs-126-requests">E. Protocol
+Revision Note (356 vs 126 Requests)</h3>
+<p>Two benchmark protocols exist in the artifact history. Earlier
+exploratory runs used 356 requests per profile (single-pass style). The
+final reproducible session used in this manuscript
+(<code>run_20260322_020932</code>) uses 126 requests per trial with 3
+repeated trials per profile. This revision was adopted to improve run
+stability, avoid process-overlap contamination, and support
+repeated-trial statistics. All final tables in this manuscript are
+derived only from the 126-request repeated-trial session.</p>
+<h3 id="f.-evaluation-scope-and-unmeasured-dimensions">F. Evaluation
+Scope and Unmeasured Dimensions</h3>
+<p>The current paper reports repeated synthetic benchmark runs (3 trials
+per profile) with aggregated mean, standard deviation, and CI95
+half-width for core quality/runtime metrics. A supplemental quick
+operational probe was also executed for partial resource/query evidence.
+The following remain out of full evidence scope in this session: direct
+mitigation-delay timing, populated server-side timing headers,
+adversarial evasion/bypass resilience, and controlled scale/stress
+resource-query benchmarking.</p>
+<h3 id="g.-evidence-boundary-checklist-reviewer-facing">G.
+Evidence-Boundary Checklist (Reviewer-Facing)</h3>
+<p>To prevent over-claiming, the evaluation status of key dimensions is
+declared explicitly:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Status in this manuscript</th>
+<th>Implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sample size/statistical power</td>
+<td>Limited (n=3 trials per profile)</td>
+<td>CI95 is reported, but statistical confidence remains weak</td>
+</tr>
+<tr>
+<td>Mitigation delay</td>
+<td>Not measured</td>
+<td>Response evaluation is incomplete</td>
+</tr>
+<tr>
+<td>Data realism</td>
+<td>Synthetic-only workload</td>
+<td>External validity to production traffic is limited</td>
+</tr>
+<tr>
+<td>Real-world traffic replay</td>
+<td>Not performed</td>
+<td>No operational traffic validation claim</td>
+</tr>
+<tr>
+<td>Adversarial bypass/evasion testing</td>
+<td>Not performed</td>
+<td>Robustness against adaptive attackers is unverified</td>
+</tr>
+<tr>
+<td>CPU/RAM profiling</td>
+<td>Preliminary (host-level short-window probe)</td>
+<td>Service-level efficiency and long-window behavior remain
+unverified</td>
+</tr>
+<tr>
+<td>Stress/scalability benchmarking</td>
+<td>Not measured</td>
+<td>No saturation or capacity claim</td>
+</tr>
+<tr>
+<td>Formal threshold optimization</td>
+<td>Not performed</td>
+<td>Current tuning is heuristic/exploratory</td>
+</tr>
+<tr>
+<td>Behavioral module ablation</td>
+<td>Not performed</td>
+<td>Independent effect size is not quantified</td>
+</tr>
+<tr>
+<td>Log/query performance benchmarking</td>
+<td>Preliminary (SQLite micro-benchmark only)</td>
+<td>API-level and scale/stress retrieval performance remain
+unverified</td>
+</tr>
+<tr>
+<td>Latency-detection quantitative model</td>
+<td>Not fitted</td>
+<td>No Pareto or response-surface claim</td>
+</tr>
+<tr>
+<td>False-negative challenge validation</td>
+<td>Not performed</td>
+<td>Zero FN in synthetic labels is not generalized</td>
+</tr>
+</tbody>
+</table>
+<h2 id="vii.-results">VII. RESULTS</h2>
+<h3 id="a.-detection-quality-mean---std">A. Detection Quality (Mean +/-
+Std)</h3>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th>Profile</th>
+<th style="text-align: right;">Precision</th>
+<th style="text-align: right;">Recall</th>
+<th style="text-align: right;">F1-score</th>
+<th style="text-align: right;">False Positive Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">0.6998 +/- 0.2600</td>
+<td style="text-align: right;">1.0000 +/- 0.0000</td>
+<td style="text-align: right;">0.8062 +/- 0.1678</td>
+<td style="text-align: right;">0.6556 +/- 0.5680</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">0.6998 +/- 0.2600</td>
+<td style="text-align: right;">1.0000 +/- 0.0000</td>
+<td style="text-align: right;">0.8062 +/- 0.1678</td>
+<td style="text-align: right;">0.6556 +/- 0.5680</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">0.6970 +/- 0.2624</td>
+<td style="text-align: right;">1.0000 +/- 0.0000</td>
+<td style="text-align: right;">0.8039 +/- 0.1698</td>
+<td style="text-align: right;">0.6667 +/- 0.5774</td>
+</tr>
+<tr>
+<td>B-tuned</td>
+<td style="text-align: right;">0.6998 +/- 0.2600</td>
+<td style="text-align: right;">1.0000 +/- 0.0000</td>
+<td style="text-align: right;">0.8062 +/- 0.1678</td>
+<td style="text-align: right;">0.6556 +/- 0.5680</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b.-detection-quality-ci95-half-width">B. Detection Quality (CI95
+Half-Width)</h3>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th>Profile</th>
+<th style="text-align: right;">Precision CI95 +/-</th>
+<th style="text-align: right;">Recall CI95 +/-</th>
+<th style="text-align: right;">F1 CI95 +/-</th>
+<th style="text-align: right;">FPR CI95 +/-</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">0.2943</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.1899</td>
+<td style="text-align: right;">0.6427</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">0.2943</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.1899</td>
+<td style="text-align: right;">0.6427</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">0.2969</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.1921</td>
+<td style="text-align: right;">0.6533</td>
+</tr>
+<tr>
+<td>B-tuned</td>
+<td style="text-align: right;">0.2943</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.1899</td>
+<td style="text-align: right;">0.6427</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c.-runtime-performance-mean---std">C. Runtime Performance (Mean
++/- Std)</h3>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th>Profile</th>
+<th style="text-align: right;">p50 Latency (ms)</th>
+<th style="text-align: right;">p95 Latency (ms)</th>
+<th style="text-align: right;">Throughput (req/s)</th>
+<th style="text-align: right;">Mitigation Delay (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">28.72 +/- 6.14</td>
+<td style="text-align: right;">121.56 +/- 150.30</td>
+<td style="text-align: right;">17.91 +/- 8.22</td>
+<td style="text-align: right;">Not measured</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">32.23 +/- 6.52</td>
+<td style="text-align: right;">125.35 +/- 117.17</td>
+<td style="text-align: right;">16.01 +/- 6.52</td>
+<td style="text-align: right;">Not measured</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">28.85 +/- 4.56</td>
+<td style="text-align: right;">117.19 +/- 135.47</td>
+<td style="text-align: right;">17.56 +/- 7.67</td>
+<td style="text-align: right;">Not measured</td>
+</tr>
+<tr>
+<td>B-tuned</td>
+<td style="text-align: right;">28.15 +/- 4.45</td>
+<td style="text-align: right;">146.06 +/- 177.36</td>
+<td style="text-align: right;">16.74 +/- 8.02</td>
+<td style="text-align: right;">Not measured</td>
+</tr>
+</tbody>
+</table>
+<h3 id="d.-runtime-performance-ci95-half-width">D. Runtime Performance
+(CI95 Half-Width)</h3>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th style="text-align: right;">p50 CI95 +/-</th>
+<th style="text-align: right;">p95 CI95 +/-</th>
+<th style="text-align: right;">Throughput CI95 +/-</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">6.9461</td>
+<td style="text-align: right;">170.0859</td>
+<td style="text-align: right;">9.2989</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">7.3823</td>
+<td style="text-align: right;">132.5908</td>
+<td style="text-align: right;">7.3817</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">5.1598</td>
+<td style="text-align: right;">153.2956</td>
+<td style="text-align: right;">8.6766</td>
+</tr>
+<tr>
+<td>B-tuned</td>
+<td style="text-align: right;">5.0336</td>
+<td style="text-align: right;">200.7011</td>
+<td style="text-align: right;">9.0748</td>
+</tr>
+</tbody>
+</table>
+<p>Mitigation delay note: mitigation delay is not reported for B and C
+because this benchmark run did not capture synchronized alert-to-action
+completion timestamps.</p>
+<p>Repeated-run note: values above are means across 3 trials per profile
+(session <code>run_20260322_020932</code>). Full variance and CI95 are
+available in per-profile <code>aggregate_stats.json</code>
+artifacts.</p>
+<h3 id="e.-figure-assets-generated">E. Figure Assets (Generated)</h3>
+<p>Fig. 3. Detection quality comparison by profile. Fig. 4. Latency and
+throughput tradeoff. Fig. 5. Confusion components by profile.</p>
+<p><img src="figures/fig3_detection_quality.png"
+alt="Fig. 3. Detection quality comparison" /> <img
+src="figures/fig4_runtime_tradeoff.png"
+alt="Fig. 4. Runtime tradeoff" /> <img
+src="figures/fig5_confusion_components.png"
+alt="Fig. 5. Confusion components" /></p>
+<p>Figure interpretation notes: - Fig. 3 highlights quality divergence,
+especially profile B false-positive behavior. - Fig. 4 shows runtime
+tradeoff between tail latency, throughput, and quality. - Fig. 5 makes
+class-wise confusion behavior explicit (including false negatives).</p>
+<p>Measured benchmark note: - Profiles A, B, C, and B-tuned were each
+computed from live local benchmark runs with 126 requests per trial and
+3 trials per profile. - Raw request-level artifacts and summaries are
+stored under <code>research_package/results/run_20260322_020932/</code>.
+- Consolidated paper-ready table is provided in
+<code>research_package/results/run_20260322_020932/RESULTS_TABLE_FOR_PAPER.md</code>.
+- False-positive behavior remains unstable across trials (high FPR
+variance and wide CI95), requiring calibration before production
+claims.</p>
+<h3 id="f.-additional-conductable-tests-quick-operational-probe">F.
+Additional Conductable Tests (Quick Operational Probe)</h3>
+<p>To address reviewer concerns about “conductable now” gaps, an
+additional compact operational probe session
+(<code>run_20260322_quick_ops</code>) was executed with short-run
+traffic and database-level measurements.</p>
+<p>Quick hybrid probe (single trial, 64 requests): - Precision: 1.0000 -
+Recall: 1.0000 - FPR: 0.0000 - p50 latency: 39.26 ms - p95 latency:
+282.64 ms - Throughput: 6.30 req/s - Alerts created in run window: 5 -
+Alert pipeline delay proxy (log receipt to alert creation): mean 5220.02
+ms, p95 7778.23 ms</p>
+<p>Host resource probe during benchmark execution (9 samples): - CPU
+utilization: mean 18.70%, p95 28.72% - Memory utilization: mean 85.08%,
+p95 85.34%</p>
+<p>SQLite log/query micro-benchmark (50 runs/query): - Recent 200 logs
+query: mean 17.235 ms, p95 22.186 ms - SQLi high-severity recent query:
+mean 5.603 ms, p95 7.965 ms - Source-IP time-window count query: mean
+14.158 ms, p95 20.033 ms - Attack-type aggregation query: mean 0.252 ms,
+p95 0.281 ms</p>
+<p>Response orchestration proxy from historical alert-incident links: -
+Non-negative alert-to-incident creation lag pairs: n=33, mean 3659.40
+ms, p95 5354.34 ms - Historical negative lag pairs were also observed
+(n=223), indicating legacy linkage/timestamp inconsistency that requires
+cleanup before claiming strict end-to-end mitigation delay.</p>
+<p>Operational note: these additions are supplemental and do not replace
+the main repeated-trial A/B/C/B-tuned comparison. They reduce evidence
+gaps for resource and query behavior, while direct mitigation completion
+timing remains unresolved.</p>
+<h3 id="g.-discussion-of-measured-outcomes">G. Discussion of Measured
+Outcomes</h3>
+<p>Three observations are most relevant for publication claims. First,
+recall was 1.0000 across all profiles in this synthetic workload,
+indicating consistent interception of attack-labeled requests. Second,
+median runtime remained low (tens of milliseconds) across profiles, but
+p95 variance was large across trials. Third, false-positive behavior
+remained highly unstable (FPR means around 0.65-0.67 with large CI95),
+indicating a calibration problem rather than a clear architectural
+ranking signal in this session.</p>
+<p>The runtime data should be interpreted with the same caution.
+Although Profile B reported higher throughput and lower p95 latency,
+those gains are coupled to indiscriminate blocking and therefore are not
+operationally acceptable. Consequently, the primary contribution is not
+that every layered configuration improves outcomes, but that measurable
+cross-layer observability exposes when policy settings become unsafe and
+enables systematic correction.</p>
+<p>Profile quality instability is attributable to threshold and rule
+calibration under this synthetic workload and should be treated as a
+system-tuning lesson rather than evidence against the hybrid WAF-SOC
+architecture.</p>
+<p>Profile C is preferable to Profile A despite similar aggregate
+metrics because C provides richer operational visibility (correlated
+alerts/incidents), explicit response lifecycle records, and governed
+automation pathways that A does not provide.</p>
+<p>There is an explicit trade-off between latency and detection depth:
+adding SOC-side context analysis can increase processing complexity, but
+it can also improve operational decision quality and reduce hidden
+campaign progression risk when calibrated properly.</p>
+<p>This trade-off remains unresolved in the current session: although
+latency medians are acceptable, confidence-bounded differentiation
+between profiles is weak because FPR variance dominates comparative
+quality interpretation. No formal latency-detection response-surface or
+Pareto curve is claimed in this version.</p>
+<p>Behavioral analysis was integrated into scoring logic but not
+independently benchmarked with isolated module-level metrics (for
+example separate ablation precision/recall contribution), so its
+standalone contribution magnitude is not claimed.</p>
+<p>False positives directly affect usability by interrupting legitimate
+user traffic and increasing analyst burden. Therefore, controlling FPR
+is critical for real-world deployment viability, not merely a reporting
+metric.</p>
+<p>False negatives in this run are reported as zero across profiles
+based on the labeled synthetic workload; this does not guarantee zero
+false negatives in real traffic.</p>
+<p>Potential false-negative scenarios include heavily obfuscated
+payloads, low-and-slow multi-session campaigns, and attacks that remain
+below active threshold windows while avoiding high-confidence
+signatures.</p>
+<h3 id="h.-deployment-workflow-evaluation-pilot">H. Deployment Workflow
+Evaluation (Pilot)</h3>
+<p>Deployment was evaluated as an operational property of the study
+workflow rather than as a detection metric. The one-command launcher was
+used as the primary startup pathway for repeated benchmark execution in
+this version.</p>
+<p>Observed deployment evidence in session
+<code>run_20260322_020932</code> is summarized below.</p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 40%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr>
+<th>Deployment indicator</th>
+<th style="text-align: right;">Observed value</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Planned profile-trial runs completed</td>
+<td style="text-align: right;">12/12 (100%)</td>
+<td>End-to-end execution completed for all scheduled profile-trial
+jobs</td>
+</tr>
+<tr>
+<td>Launcher-induced aborts after environment preparation</td>
+<td style="text-align: right;">0</td>
+<td>No observed orchestration failure in this run session</td>
+</tr>
+<tr>
+<td>Operator command count for startup path</td>
+<td style="text-align: right;">1 (one-command path) vs multi-step manual
+path</td>
+<td>Reduced operator interaction complexity</td>
+</tr>
+</tbody>
+</table>
+<p>Startup time, first-attempt success rate across fresh machines, and
+setup-error rates were not instrumented formally in this version.
+Therefore, deployment usability is partially quantified (completion
+outcomes) but not yet evaluated with full human-factor metrics.</p>
+<h3 id="i.-utility-and-differentiation">I. Utility and
+Differentiation</h3>
+<p>Practical utility is established along three axes. First, security
+utility: the system sustains perfect recall in this workload while
+exposing false-positive behavior explicitly. Second, operational
+utility: the architecture links detection to auditable and revocable
+response actions, reducing manual SOC burden. Third, deployment utility:
+the stack can be executed locally with transparent controls, which is
+critical for institutions that cannot depend on managed cloud-edge
+services.</p>
+<p>Differentiation is also explicit. Compared to a signature-only local
+WAF, this design adds temporal and behavioral reasoning plus response
+orchestration. Compared to cloud-edge platforms, this design prioritizes
+accessibility, local control, and reproducibility over global telemetry
+scale. The contribution is therefore best understood as a deployable,
+evidence-bounded middle layer between basic local filtering and
+enterprise cloud-edge ecosystems.</p>
+<h3 id="j.-completed-work-in-this-study">J. Completed Work in This
+Study</h3>
+<p>The final research package is implementation-backed and
+measurement-backed. Completed work includes: - Architecture design and
+integration of a local WAF-SOC stack. - Reproducible benchmark script
+development. - Execution of profile-based evaluations (A/B/C and B-tuned
+exploratory rerun). - Artifact generation in CSV/JSON formats. -
+Automated figure generation from measured outputs. - Implementation and
+study use of the one-command local deployment pathway (Windows-first)
+with offline package fallback. - Manuscript and reproducibility-document
+synchronization across submission artifacts.</p>
+<p>The benchmark outcomes establish an evidence-bounded narrative under
+local synthetic conditions: runtime overhead is manageable, attack
+recall is saturated, and calibration stability (especially false
+positives) is the dominant unresolved deployment risk.</p>
+<h2 id="viii.-threats-to-validity">VIII. THREATS TO VALIDITY</h2>
+<ol type="1">
+<li>Internal validity: residual configuration drift between runs and
+limited trial count (n=3 per profile) reduce statistical power.</li>
+<li>External validity: synthetic workload bias versus production traffic
+and no real-world traffic replay validation.</li>
+<li>Construct validity: label quality for borderline payloads and no
+dedicated false-negative stress campaign.</li>
+<li>Systems validity: machine-level performance variation; preliminary
+host-level CPU/memory probe was executed, but no controlled
+service-level or long-window resource benchmark was completed.</li>
+<li>Method validity: no formal threshold optimization sweep and no
+quantitative latency-detection trade-off model.</li>
+</ol>
+<h2 id="ix.-limitations">IX. LIMITATIONS</h2>
+<ul>
+<li>Evaluation data remains small and synthetic (126 requests per trial,
+3 trials per profile), so statistical and external validity are
+limited.</li>
+<li>One-command deployment is currently Windows-first; this constrains
+portability and limits generalization of deployment-usability claims
+beyond the tested operating context.</li>
+<li>Cross-platform one-command validation (Linux/macOS) has not yet been
+completed.</li>
+<li>Rule quality and maintenance cadence remain critical.</li>
+<li>Local threat intelligence breadth is inherently limited versus
+global edge systems.</li>
+<li>Aggressive automation can increase false-positive impact.</li>
+<li>Single-node deployments may constrain high-load behavior.</li>
+<li>Current implementation supports single-application deployment in
+one-node mode.</li>
+<li>Distributed scaling and multi-node coordination are not yet
+implemented.</li>
+<li>Machine-learning-based adaptive detection is not included in the
+current version.</li>
+<li>Repeated-trial variance and CI95 are reported, but sample size (n=3
+per profile) remains statistically limited.</li>
+<li>Resource profiling is preliminary (host-level short-window probe
+only); controlled per-service CPU/memory profiling and horizontal
+scaling analysis are not yet included.</li>
+<li>Security hardening of the defensive stack itself (for example
+service isolation and anti-bypass resilience testing) is incomplete and
+should be expanded before production use.</li>
+<li>No adversarial bypass/evasion test campaign is reported in this
+version.</li>
+<li>A B-tuned exploratory rerun is reported, but no formal threshold
+optimization sweep is yet implemented.</li>
+<li>False-negative behavior is only observed on synthetic labels and is
+not externally validated.</li>
+<li>Logging/query behavior has preliminary SQLite micro-benchmark data,
+but API-level and scale/stress query benchmarking remain
+incomplete.</li>
+<li>Behavioral analysis is integrated but not independently evaluated
+with module-specific metrics.</li>
+<li>No quantitative latency-versus-detection model is fitted in this
+version.</li>
+</ul>
+<h2 id="x.-ethical-and-responsible-use-considerations">X. ETHICAL AND
+RESPONSIBLE USE CONSIDERATIONS</h2>
+<p>All testing and evaluation must be executed on authorized assets and
+controlled targets. The system and methodology are intended for
+defensive cybersecurity research and operations only.</p>
+<h2 id="xi.-conclusion">XI. CONCLUSION</h2>
+<p>This study demonstrates that a local hybrid WAF-SOC stack is
+implementation-feasible, reproducibly runnable, and operationally
+inspectable under repeated synthetic trials. The architecture
+consistently achieved complete attack-label recall in the tested
+workload while maintaining low median runtime overhead, establishing
+clear baseline viability for constrained local deployments. The critical
+unresolved risk is calibration stability: false positives remain highly
+variable across profiles and trials, including exploratory tuned
+settings.</p>
+<p>Core claim: the strongest validated contribution is an
+implementation-backed local WAF-SOC architecture and repeatable
+benchmarking workflow that converts calibration risk from an implicit
+operational hazard into an explicit, measurable, and auditable
+engineering target.</p>
+<p>Boundary claim: this manuscript does not claim production-grade
+response completeness, adversarial robustness, or scalability
+sufficiency until mitigation-delay instrumentation, real-traffic
+validation, stress/resource benchmarking, and formal optimization
+studies are completed.</p>
+<h2 id="xii.-practical-applications">XII. PRACTICAL APPLICATIONS</h2>
+<p>Immediate uses are academic submission, preprint sharing of
+architecture and methodology, and baseline documentation for calibrated
+reruns.</p>
+<h2 id="xiii.-future-work">XIII. FUTURE WORK</h2>
+<ul>
+<li>Cross-platform extension and quantitative usability evaluation of
+the implemented one-command deployment workflow (startup time,
+first-attempt success rate, and operator effort).</li>
+<li>Distributed multi-node deployment and centralized coordination.</li>
+<li>End-to-end mitigation delay instrumentation and reporting.</li>
+<li>Optional adaptive scoring augmentation with machine learning.</li>
+</ul>
+<h2 id="acknowledgment">ACKNOWLEDGMENT</h2>
+<p>The author declares that this work was conducted independently
+without external supervision or institutional research support. All
+design, implementation, and evaluation were carried out by the
+author.</p>
+<h2 id="references">REFERENCES</h2>
+<p>References are managed in
+<code>research_package/references.bib</code> and should be rendered in
+IEEE numeric style in final exports.</p>
+<div id="refs" class="references csl-bib-body" data-entry-spacing="0"
+role="list">
+<div id="ref-modsecurity_overview" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[1] </div><div class="csl-right-inline">S.
+Kals, E. Kirda, C. Kruegel, and N. Jovanovic, <span>“An overview of web
+application firewall technologies,”</span> <em>International Journal of
+Information Security</em>, vol. 5, no. 4, pp. 247–261, 2006.</div>
+</div>
+<div id="ref-sqli_detection" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[2] </div><div class="csl-right-inline">W.
+G. J. Halfond, J. Viegas, and A. Orso, <span>“SQL injection attack
+detection and prevention: A survey,”</span> in <em>Proceedings of the
+IEEE international symposium on secure software engineering</em>,
+2006.</div>
+</div>
+<div id="ref-xss_detection" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[3] </div><div class="csl-right-inline">T.
+Pietraszek and C. V. Berghe, <span>“Cross-site scripting prevention with
+dynamic data tainting and static analysis,”</span> in <em>Proceedings of
+the NDSS</em>, 2005.</div>
+</div>
+<div id="ref-nist80061" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[4] </div><div class="csl-right-inline">P.
+Cichonski, T. Millar, T. Grance, and K. Scarfone, <span>“NIST SP 800-61
+rev. 2: Computer security incident handling guide.”</span> NIST Special
+Publication, 2012.</div>
+</div>
+<div id="ref-owasp_top10_2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[5] </div><div
+class="csl-right-inline">OWASP Foundation, <span>“OWASP top 10: The ten
+most critical web application security risks.”</span> 2021. Available:
+<a
+href="https://owasp.org/www-project-top-ten/">https://owasp.org/www-project-top-ten/</a></div>
+</div>
+<div id="ref-mitre_attack" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[6] </div><div
+class="csl-right-inline">MITRE Corporation, <span>“MITRE ATT&amp;CK
+framework for enterprise.”</span> 2024. Available: <a
+href="https://attack.mitre.org/">https://attack.mitre.org/</a></div>
+</div>
+<div id="ref-owasp_asvs" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[7] </div><div
+class="csl-right-inline">OWASP Foundation, <span>“OWASP application
+security verification standard (ASVS).”</span> 2023. Available: <a
+href="https://owasp.org/www-project-application-security-verification-standard/">https://owasp.org/www-project-application-security-verification-standard/</a></div>
+</div>
+<div id="ref-modsecurity_project" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[8] </div><div
+class="csl-right-inline">OWASP ModSecurity Core Team, <span>“ModSecurity
+web application firewall.”</span> 2024. Available: <a
+href="https://github.com/owasp-modsecurity/ModSecurity">https://github.com/owasp-modsecurity/ModSecurity</a></div>
+</div>
+<div id="ref-cloudflare_waf" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[9] </div><div
+class="csl-right-inline">Cloudflare, <span>“Cloudflare web application
+firewall documentation.”</span> 2024. Available: <a
+href="https://developers.cloudflare.com/waf/">https://developers.cloudflare.com/waf/</a></div>
+</div>
+<div id="ref-aws_waf" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[10] </div><div
+class="csl-right-inline">Amazon Web Services, <span>“AWS WAF developer
+guide.”</span> 2024. Available: <a
+href="https://docs.aws.amazon.com/waf/">https://docs.aws.amazon.com/waf/</a></div>
+</div>
+</div>

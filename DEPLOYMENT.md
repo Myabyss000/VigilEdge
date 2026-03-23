@@ -1,94 +1,167 @@
-# VigilEdge + ThreatLoom — Production Deployment Guide
+# VigilEdge + ThreatLoom Deployment Guide
 
-This guide walks you through a complete, tested installation on a fresh
-**Ubuntu 22.04 LTS** virtual machine using the canonical topology:
+This document covers deployment in two tracks:
 
+- Local autonomous deployment on Windows (recommended for non-technical users)
+- Production deployment on Ubuntu with systemd + Caddy
+
+## Track A: Local Autonomous Deployment (Windows)
+
+### Goal
+
+Provide a one-step, zero-configuration local deployment that installs and runs the platform automatically.
+
+### Entrypoints
+
+- PowerShell: `deploy_oneclick.ps1`
+- Double-click wrapper: `run_oneclick.bat`
+
+### Default behavior
+
+When run without arguments, deployment starts in full-demo mode:
+
+- WAF (`5000`)
+- ThreatLoom SOC (`8443`)
+- Demo app (`8080`)
+- Chatbot (`5001`, optional and enabled by default)
+
+### What the script automates
+
+1. self-elevates to Administrator
+2. validates required paths and Python availability
+3. checks for port conflicts
+4. creates Windows firewall rules for ports `5000`, `5001`, `8080`, `8443`
+     - inbound TCP
+     - `Private` profile only
+5. creates missing virtual environments:
+     - `project-null-2.0/vigiledge-collage-project--main/VigilEdge/venv`
+     - `ThreatLoom/venv`
+6. installs dependencies
+7. falls back to offline package install if online pip fails
+8. creates missing `.env` files from `.env.example`
+9. generates secure random values for placeholder secrets when needed
+10. runs ThreatLoom Alembic migration if `APP_ENV=production`
+11. starts services in separate PowerShell windows
+12. verifies listening ports and prints final URLs
+
+### Quick run
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1
 ```
+
+or double-click:
+
+```bat
+run_oneclick.bat
+```
+
+### Custom upstream mode
+
+Interactive URL prompt:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -Mode custom
+```
+
+Argument-driven URL:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -Mode custom -UpstreamUrl "http://localhost:3000"
+```
+
+### Optional flags
+
+- skip chatbot:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -SkipChatbot
+```
+
+- force local offline package directory:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -LocalPackageDir .\offline_packages
+```
+
+Auto-detected offline directories (if present):
+
+- `offline_packages`
+- `offline-packages`
+- `packages`
+- `wheels`
+
+### Local deployment output URLs
+
+- WAF: `http://localhost:5000`
+- SOC: `http://localhost:8443`
+- Demo: `http://localhost:8080` (full mode)
+- Chatbot: `http://localhost:5001` (unless skipped)
+
+## Track B: Production Deployment (Ubuntu + Caddy)
+
+Reference topology:
+
+```text
 Internet
-   │
-   ▼
-Caddy  :80 / :443   (TLS termination, reverse proxy)
-   ├── / → VigilEdge WAF   127.0.0.1:5000
-   └── /soc/* → ThreatLoom   127.0.0.1:8443
+    -> Caddy (:80/:443, TLS)
+            -> VigilEdge WAF (127.0.0.1:5000)
+            -> ThreatLoom SOC (127.0.0.1:8443)
 ```
 
----
-
-## 1. System prerequisites
+### 1) Install prerequisites
 
 ```bash
-# As root or via sudo
 apt-get update && apt-get upgrade -y
-
-# Runtime dependencies
 apt-get install -y \
     python3.11 python3.11-venv python3.11-dev \
     build-essential libpq-dev \
-    postgresql postgresql-client \
-    git curl
+    postgresql postgresql-client git curl
+```
 
-# Caddy (official package)
+Install Caddy from the official repository:
+
+```bash
 apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
     | tee /etc/apt/sources.list.d/caddy-stable.list
 apt-get update && apt-get install -y caddy
 ```
 
----
-
-## 2. Service accounts
+### 2) Clone repository
 
 ```bash
-useradd --system --no-create-home --shell /usr/sbin/nologin vigiledge
-useradd --system --no-create-home --shell /usr/sbin/nologin threatloom
-```
-
----
-
-## 3. Deploy application code
-
-```bash
-# Choose an install root; /opt is conventional for managed services
 APP_ROOT=/opt/vigiledge
 git clone <your-repo-url> "$APP_ROOT"
-chown -R root:root "$APP_ROOT"
 ```
 
-### 3a. WAF virtual environment
+### 3) Create virtual environments
+
+WAF side:
 
 ```bash
-WAF_DIR="$APP_ROOT/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf"
+VE_DIR="$APP_ROOT/project-null-2.0/vigiledge-collage-project--main/VigilEdge"
+WAF_DIR="$VE_DIR/waf"
 
-python3.11 -m venv "$WAF_DIR/.venv"
-"$WAF_DIR/.venv/bin/pip" install --upgrade pip
-"$WAF_DIR/.venv/bin/pip" install -r "$WAF_DIR/requirements.txt"
-
-# Runtime directories
-mkdir -p "$WAF_DIR/logs" "$WAF_DIR/config"
-chown -R vigiledge:vigiledge "$WAF_DIR/logs"
+python3.11 -m venv "$VE_DIR/venv"
+"$VE_DIR/venv/bin/pip" install --upgrade pip
+"$VE_DIR/venv/bin/pip" install -r "$WAF_DIR/requirements.txt"
 ```
 
-### 3b. ThreatLoom virtual environment
+ThreatLoom side:
 
 ```bash
 TL_DIR="$APP_ROOT/ThreatLoom"
-
-python3.11 -m venv "$TL_DIR/.venv"
-"$TL_DIR/.venv/bin/pip" install --upgrade pip
-"$TL_DIR/.venv/bin/pip" install -r "$TL_DIR/requirements.txt"
-
-mkdir -p "$TL_DIR/logs"
-chown -R threatloom:threatloom "$TL_DIR/logs"
+python3.11 -m venv "$TL_DIR/venv"
+"$TL_DIR/venv/bin/pip" install --upgrade pip
+"$TL_DIR/venv/bin/pip" install -r "$TL_DIR/requirements.txt"
 ```
 
----
-
-## 4. PostgreSQL database
+### 4) Configure PostgreSQL for ThreatLoom
 
 ```bash
-# Switch to the postgres system user
 sudo -u postgres psql <<'SQL'
 CREATE USER threatloom WITH PASSWORD 'CHANGE_ME_STRONG_PASSWORD';
 CREATE DATABASE threatloom OWNER threatloom;
@@ -96,264 +169,106 @@ GRANT ALL PRIVILEGES ON DATABASE threatloom TO threatloom;
 SQL
 ```
 
-Verify connectivity:
+### 5) Configure environment files
 
-```bash
-psql -U threatloom -h 127.0.0.1 -d threatloom -c '\l'
-```
+Create production `.env` files for both services. Minimum required values:
 
-### 4a. Alembic schema migration
+- strong `SECRET_KEY`
+- strong `JWT_SECRET` (ThreatLoom)
+- production `DATABASE_URL` for ThreatLoom (`postgresql+asyncpg`)
+- debug disabled in production
+
+### 6) Run DB migrations
 
 ```bash
 cd "$TL_DIR"
-
-APP_ENV=production \
-DATABASE_URL="postgresql+asyncpg://threatloom:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/threatloom" \
-  .venv/bin/alembic upgrade head
+APP_ENV=production DATABASE_URL="postgresql+asyncpg://threatloom:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/threatloom" \
+    "$TL_DIR/venv/bin/alembic" upgrade head
 ```
 
-Expected output:
-
-```
-INFO  [alembic.runtime.migration] Running upgrade  -> 001, initial schema
-```
-
-> **Important:** re-run `alembic upgrade head` after every future migration
-> before restarting the ThreatLoom service.  The service will refuse to run
-> with `APP_ENV=production` if `create_all` would otherwise mutate the schema.
-
----
-
-## 5. Environment files
-
-### WAF — `$WAF_DIR/.env`
-
-```ini
-SECRET_KEY=<openssl rand -hex 32>
-DEBUG=false
-ENVIRONMENT=production
-HOST=127.0.0.1
-PORT=5000
-```
-
-Permissions:
-
-```bash
-chmod 640 "$WAF_DIR/.env"
-chown root:vigiledge "$WAF_DIR/.env"
-```
-
-### ThreatLoom — `$TL_DIR/.env`
-
-```ini
-APP_ENV=production
-APP_HOST=127.0.0.1
-APP_PORT=8443
-APP_DEBUG=false
-
-SECRET_KEY=<openssl rand -hex 32>
-JWT_SECRET=<openssl rand -hex 32>
-
-DATABASE_URL=postgresql+asyncpg://threatloom:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/threatloom
-
-LOG_LEVEL=INFO
-LOG_FILE=./logs/threatloom.log
-
-# FIREWALL_WEBHOOK_ENABLED=true
-# FIREWALL_WEBHOOK_URL=http://127.0.0.1:5000/api/v1/webhook/threatloom
-# FIREWALL_WEBHOOK_SECRET=<shared webhook secret>
-```
-
-Permissions:
-
-```bash
-chmod 640 "$TL_DIR/.env"
-chown root:threatloom "$TL_DIR/.env"
-```
-
----
-
-## 6. Systemd service units
-
-Copy the unit files from `deploy/`:
+### 7) Install and start systemd services
 
 ```bash
 cp "$APP_ROOT/deploy/vigiledge-waf.service" /etc/systemd/system/
-cp "$APP_ROOT/deploy/threatloom.service"     /etc/systemd/system/
-
+cp "$APP_ROOT/deploy/threatloom.service" /etc/systemd/system/
 systemctl daemon-reload
-
 systemctl enable --now vigiledge-waf
 systemctl enable --now threatloom
 ```
 
-Check status:
+### 8) Configure Caddy
+
+```bash
+cp "$APP_ROOT/deploy/Caddyfile" /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
+```
+
+## Verification Checklist
+
+Local checks:
 
 ```bash
 systemctl status vigiledge-waf
 systemctl status threatloom
-
-# Tail live logs
 journalctl -fu vigiledge-waf
 journalctl -fu threatloom
 ```
 
----
-
-## 7. Caddy reverse proxy
-
-Copy `deploy/Caddyfile` to `/etc/caddy/Caddyfile` and reload:
+HTTP checks:
 
 ```bash
-cp "$APP_ROOT/deploy/Caddyfile" /etc/caddy/Caddyfile
-caddy validate --config /etc/caddy/Caddyfile   # dry-run check
-systemctl reload caddy
+curl http://127.0.0.1:5000/
+curl http://127.0.0.1:8443/
 ```
 
-Caddy obtains a Let's Encrypt TLS certificate automatically on first
-request once DNS for your domain points to the server.
-
----
-
-## 8. Verify the deployment
+Public TLS checks (if exposed):
 
 ```bash
-# Liveness
-curl http://127.0.0.1:5000/health
-curl http://127.0.0.1:8443/health
-
-# Readiness
-curl http://127.0.0.1:5000/readiness
-curl http://127.0.0.1:8443/readiness
-
-# Via Caddy (public HTTPS)
-curl https://your.domain.example/health
-curl https://your.domain.example/soc/health
+curl https://your.domain.example/
 ```
 
-Both readiness endpoints return `{"status":"ready",...}` when all checks
-pass and HTTP 503 with `"status":"not_ready"` if any check fails.
+## Backup and Restore
 
----
+Recommended backups:
 
-## 9. Backup and restore
+- PostgreSQL ThreatLoom database (`pg_dump`)
+- WAF runtime config (`waf/config/waf_settings.json`)
+- `.env` files (encrypted at rest)
 
-### 9a. PostgreSQL backup
+Restore sequence:
 
-Daily automated backup (add to root crontab with `crontab -e`):
+1. stop services
+2. restore PostgreSQL dump
+3. run Alembic migrations
+4. restore WAF config and env files
+5. restart services
 
-```bash
-# /etc/cron.daily/threatloom-backup
-#!/usr/bin/env bash
-set -euo pipefail
-BACKUP_DIR=/var/backups/threatloom
-mkdir -p "$BACKUP_DIR"
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-pg_dump -U threatloom -h 127.0.0.1 --format=custom threatloom \
-    | gzip > "$BACKUP_DIR/threatloom-${STAMP}.pgdump.gz"
-# Retain last 30 days
-find "$BACKUP_DIR" -name "*.pgdump.gz" -mtime +30 -delete
-```
-
-Make it executable:
-
-```bash
-chmod +x /etc/cron.daily/threatloom-backup
-```
-
-Test it:
-
-```bash
-/etc/cron.daily/threatloom-backup
-ls -lh /var/backups/threatloom/
-```
-
-### 9b. Restore from backup
-
-```bash
-# Stop the service first
-systemctl stop threatloom
-
-# Drop and recreate the DB (destructive!)
-sudo -u postgres psql -c "DROP DATABASE IF EXISTS threatloom;"
-sudo -u postgres psql -c "CREATE DATABASE threatloom OWNER threatloom;"
-
-# Restore
-gunzip -c /var/backups/threatloom/threatloom-<STAMP>.pgdump.gz \
-    | pg_restore -U threatloom -h 127.0.0.1 -d threatloom
-
-# Re-run migrations to ensure schema matches current code
-cd /opt/vigiledge/ThreatLoom
-APP_ENV=production .venv/bin/alembic upgrade head
-
-systemctl start threatloom
-```
-
-### 9c. WAF config backup
-
-The WAF stores its runtime config in `waf/config/waf_settings.json`.
-Include this file in your server snapshot or a simple cron cp:
-
-```bash
-cp /opt/vigiledge/project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/config/waf_settings.json \
-   /var/backups/waf_settings_$(date +%Y%m%d).json
-```
-
----
-
-## 10. Log rotation
-
-Both services use `TimedRotatingFileHandler` (midnight UTC, 30-day
-retention).  Log files are written to:
-
-| Service | File |
-|---------|------|
-| WAF | `waf/logs/vigiledge.log` |
-| ThreatLoom | `ThreatLoom/logs/threatloom.log` |
-
-Archived files get a `.YYYY-MM-DD` suffix automatically.  No additional
-`logrotate` configuration is required, but you may add one for compression:
-
-```
-# /etc/logrotate.d/vigiledge
-/opt/vigiledge/*/logs/*.log {
-    daily
-    rotate 30
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-}
-```
-
----
-
-## 11. Upgrading
+## Upgrade Procedure
 
 ```bash
 cd /opt/vigiledge
 git pull
 
-# ThreatLoom — apply any new migrations
-cd ThreatLoom
-APP_ENV=production \
-DATABASE_URL="postgresql+asyncpg://threatloom:CHANGE_ME@127.0.0.1:5432/threatloom" \
-  .venv/bin/alembic upgrade head
+cd /opt/vigiledge/ThreatLoom
+APP_ENV=production DATABASE_URL="postgresql+asyncpg://threatloom:CHANGE_ME@127.0.0.1:5432/threatloom" \
+    venv/bin/alembic upgrade head
 
-# Restart services
 systemctl restart vigiledge-waf
 systemctl restart threatloom
 ```
 
----
+## Troubleshooting
 
-## 12. Troubleshooting
+Common checks:
 
-| Symptom | Check |
-|---------|-------|
-| `systemctl status` shows `failed` | `journalctl -xe -u <service>` |
-| `GET /readiness` returns 503 | Check the `checks` object in the JSON response |
-| ThreatLoom won't start in production | Ensure `DATABASE_URL` points to PostgreSQL (SQLite is rejected in production mode) |
-| Alembic `alembic upgrade head` fails | Verify PostgreSQL credentials and that the DB exists |
-| Caddy TLS cert not issued | Ensure port 80 is publicly reachable and DNS points to the server |
+- service failures: `journalctl -xe -u <service>`
+- migration errors: verify DB credentials and schema state
+- Caddy cert issues: verify DNS + public port `80` reachability
+- local startup failures: verify free ports `5000`, `5001`, `8080`, `8443`
+
+Windows local port check:
+
+```powershell
+Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 5000,5001,8080,8443 }
+```

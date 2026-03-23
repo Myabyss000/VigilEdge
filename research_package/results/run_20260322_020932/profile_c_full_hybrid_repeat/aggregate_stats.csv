@@ -1,0 +1,14 @@
+metric,mean,std,ci95_half_width
+precision,0.697,0.2624,0.2969
+recall,1.0,0.0,0.0
+f1,0.8039,0.1698,0.1921
+false_positive_rate,0.6667,0.5774,0.6533
+p50_ms,28.8467,4.5597,5.1598
+p95_ms,117.1867,135.4672,153.2956
+throughput_req_per_sec,17.5633,7.6675,8.6766
+avg_alert_pipeline_delay_ms,,,
+p95_alert_pipeline_delay_ms,,,
+avg_sys_cpu,,,
+p95_sys_cpu,,,
+avg_sys_memory,,,
+p95_sys_memory,,,

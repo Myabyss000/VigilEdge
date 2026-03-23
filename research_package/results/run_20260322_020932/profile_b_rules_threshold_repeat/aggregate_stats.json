@@ -1,0 +1,173 @@
+{
+  "trials": [
+    {
+      "trial": 1,
+      "profile": "profile_b_rules_threshold_repeat",
+      "total_requests": 126,
+      "blocked_403": 65,
+      "p50_ms": 35.37,
+      "p95_ms": 260.34,
+      "throughput_req_per_sec": 8.84,
+      "tp": 36,
+      "fp": 0,
+      "fn": 0,
+      "tn": 30,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "status_0_count": 0,
+      "status_0_ratio": 0.0,
+      "latency_basis": "client_end_to_end_ms",
+      "server_timing_sample_count": 0,
+      "server_p50_ms": null,
+      "server_p95_ms": null,
+      "alerts_created": 0,
+      "avg_alert_pipeline_delay_ms": null,
+      "p95_alert_pipeline_delay_ms": null,
+      "avg_sys_cpu": null,
+      "p95_sys_cpu": null,
+      "avg_sys_memory": null,
+      "p95_sys_memory": null,
+      "detection_source_counts": {},
+      "t0": "2026-03-21T20:40:51.657913+00:00",
+      "t1": "2026-03-21T20:41:19.131927+00:00"
+    },
+    {
+      "trial": 2,
+      "profile": "profile_b_rules_threshold_repeat",
+      "total_requests": 126,
+      "blocked_403": 126,
+      "p50_ms": 24.73,
+      "p95_ms": 65.74,
+      "throughput_req_per_sec": 21.59,
+      "tp": 36,
+      "fp": 30,
+      "fn": 0,
+      "tn": 0,
+      "precision": 0.5455,
+      "recall": 1.0,
+      "f1": 0.7059,
+      "false_positive_rate": 1.0,
+      "status_0_count": 0,
+      "status_0_ratio": 0.0,
+      "latency_basis": "client_end_to_end_ms",
+      "server_timing_sample_count": 0,
+      "server_p50_ms": null,
+      "server_p95_ms": null,
+      "alerts_created": 0,
+      "avg_alert_pipeline_delay_ms": null,
+      "p95_alert_pipeline_delay_ms": null,
+      "avg_sys_cpu": null,
+      "p95_sys_cpu": null,
+      "avg_sys_memory": null,
+      "p95_sys_memory": null,
+      "detection_source_counts": {},
+      "t0": "2026-03-21T20:41:19.149945+00:00",
+      "t1": "2026-03-21T20:41:38.081378+00:00"
+    },
+    {
+      "trial": 3,
+      "profile": "profile_b_rules_threshold_repeat",
+      "total_requests": 126,
+      "blocked_403": 125,
+      "p50_ms": 36.59,
+      "p95_ms": 49.97,
+      "throughput_req_per_sec": 17.61,
+      "tp": 36,
+      "fp": 29,
+      "fn": 0,
+      "tn": 1,
+      "precision": 0.5538,
+      "recall": 1.0,
+      "f1": 0.7128,
+      "false_positive_rate": 0.9667,
+      "status_0_count": 0,
+      "status_0_ratio": 0.0,
+      "latency_basis": "client_end_to_end_ms",
+      "server_timing_sample_count": 0,
+      "server_p50_ms": null,
+      "server_p95_ms": null,
+      "alerts_created": 0,
+      "avg_alert_pipeline_delay_ms": null,
+      "p95_alert_pipeline_delay_ms": null,
+      "avg_sys_cpu": null,
+      "p95_sys_cpu": null,
+      "avg_sys_memory": null,
+      "p95_sys_memory": null,
+      "detection_source_counts": {},
+      "t0": "2026-03-21T20:41:38.115280+00:00",
+      "t1": "2026-03-21T20:41:58.370081+00:00"
+    }
+  ],
+  "aggregate": {
+    "precision": {
+      "mean": 0.6998,
+      "std": 0.26,
+      "ci95_half_width": 0.2943
+    },
+    "recall": {
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95_half_width": 0.0
+    },
+    "f1": {
+      "mean": 0.8062,
+      "std": 0.1678,
+      "ci95_half_width": 0.1899
+    },
+    "false_positive_rate": {
+      "mean": 0.6556,
+      "std": 0.568,
+      "ci95_half_width": 0.6427
+    },
+    "p50_ms": {
+      "mean": 32.23,
+      "std": 6.5238,
+      "ci95_half_width": 7.3823
+    },
+    "p95_ms": {
+      "mean": 125.35,
+      "std": 117.1704,
+      "ci95_half_width": 132.5908
+    },
+    "throughput_req_per_sec": {
+      "mean": 16.0133,
+      "std": 6.5232,
+      "ci95_half_width": 7.3817
+    },
+    "avg_alert_pipeline_delay_ms": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "p95_alert_pipeline_delay_ms": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "avg_sys_cpu": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "p95_sys_cpu": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "avg_sys_memory": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "p95_sys_memory": {
+      "mean": null,
+      "std": null,
+      "ci95_half_width": null
+    },
+    "profile": "profile_b_rules_threshold_repeat",
+    "trials": 3,
+    "run_session": "run_20260322_020932"
+  }
+}

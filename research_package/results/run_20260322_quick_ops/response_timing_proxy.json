@@ -1,0 +1,17 @@
+{
+  "metric_name": "alert_to_incident_creation_delay_ms",
+  "all_pairs": {
+    "count": 256,
+    "mean_ms": -1239933.84,
+    "p95_ms": 4655.59,
+    "max_ms": 6117.28
+  },
+  "non_negative_pairs": {
+    "count": 33,
+    "mean_ms": 3659.4,
+    "p95_ms": 5354.34,
+    "max_ms": 6117.28
+  },
+  "negative_pair_count": 223,
+  "note": "Proxy for SOC orchestration lag; not direct mitigation action completion time. Negative values indicate inconsistent historical linkage/timestamp ordering."
+}

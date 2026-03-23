@@ -96,31 +96,33 @@ class DetectionEngine:
             for th in thr_hits:
                 await self._create_alert_from_behavioral(db, th, source="threshold")
 
-            # --- Behavioral analysis ---
-            rate_alerts = await self.rate_analyzer.analyze(logs, db)
-            for ra in rate_alerts:
-                await self._create_alert_from_behavioral(db, ra, source="behavioral.rate")
+            # --- Behavioral analysis (profile-gated) ---
+            if settings.DETECTION_BEHAVIORAL_ENABLED:
+                rate_alerts = await self.rate_analyzer.analyze(logs, db)
+                for ra in rate_alerts:
+                    await self._create_alert_from_behavioral(db, ra, source="behavioral.rate")
 
-            geo_alerts = self.geo_analyzer.analyze(logs)
-            for ga in geo_alerts:
-                await self._create_alert_from_behavioral(db, ga, source="behavioral.geo")
+                geo_alerts = self.geo_analyzer.analyze(logs)
+                for ga in geo_alerts:
+                    await self._create_alert_from_behavioral(db, ga, source="behavioral.geo")
 
-            pattern_alerts = self.pattern_analyzer.analyze(logs)
-            for pa in pattern_alerts:
-                await self._create_alert_from_behavioral(db, pa, source="behavioral.pattern")
+                pattern_alerts = self.pattern_analyzer.analyze(logs)
+                for pa in pattern_alerts:
+                    await self._create_alert_from_behavioral(db, pa, source="behavioral.pattern")
 
-            # --- Correlation ---
-            ip_corr = self.ip_correlator.correlate(logs)
-            for ic in ip_corr:
-                await self._create_alert_from_correlation(db, ic, source="correlation.ip")
+            # --- Correlation (profile-gated) ---
+            if settings.DETECTION_CORRELATION_ENABLED:
+                ip_corr = self.ip_correlator.correlate(logs)
+                for ic in ip_corr:
+                    await self._create_alert_from_correlation(db, ic, source="correlation.ip")
 
-            session_corr = self.session_correlator.correlate(logs)
-            for sc in session_corr:
-                await self._create_alert_from_correlation(db, sc, source="correlation.session")
+                session_corr = self.session_correlator.correlate(logs)
+                for sc in session_corr:
+                    await self._create_alert_from_correlation(db, sc, source="correlation.session")
 
-            time_corr = self.time_window.correlate(logs)
-            for tc in time_corr:
-                await self._create_alert_from_correlation(db, tc, source="correlation.time")
+                time_corr = self.time_window.correlate(logs)
+                for tc in time_corr:
+                    await self._create_alert_from_correlation(db, tc, source="correlation.time")
 
             await db.commit()
             self._last_scan = datetime.utcnow()

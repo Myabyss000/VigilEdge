@@ -1,0 +1,107 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{url}
+\usepackage{hyperref}
+
+\title{VigilEdge-ThreatLoom: A Local Hybrid WAF-SOC Architecture for Real-Time Web Threat Detection and Automated Response}
+
+\author{Anonymous Authors}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Local-first web defense remains necessary in environments constrained by privacy policy, cost, connectivity, or deployment policy. This paper presents VigilEdge-ThreatLoom, a self-hosted architecture that integrates inline Web Application Firewall (WAF) enforcement with Security Operations Center (SOC) analytics and playbook-driven mitigation. The implementation now includes an autonomous one-command local deployment workflow (with offline fallback) to improve accessibility and reproducibility. We evaluate three profiles: signature-only WAF (A), WAF plus SOC rules (B), and full hybrid WAF-SOC orchestration (C). Measured local results show identical recall across profiles ($1.0000$), while precision and false positive behavior differ substantially. Profiles A and C match on precision ($0.7619$), F1-score ($0.8649$), and false positive rate (FPR, $0.3750$), while Profile B overblocks benign traffic (FPR $=1.0000$). Runtime measurements report p50/p95 latency and throughput for each profile. The contribution is an implementation-oriented local security blueprint and an evidence-bounded experimental methodology for hybrid defense evaluation.
+\end{abstract}
+
+\begin{IEEEkeywords}
+web application firewall, SOC automation, hybrid detection, incident response, local cybersecurity
+\end{IEEEkeywords}
+
+\section{Introduction}
+Web applications remain a dominant external attack surface, with common traffic patterns including SQL injection, cross-site scripting, path traversal, command injection, and burst abuse. Cloud edge platforms provide strong controls, but local deployment remains essential for privacy-sensitive, budget-constrained, and education-lab environments.
+
+Signature-only local WAF deployments commonly suffer from per-request context limits and weak campaign-level visibility. This paper studies whether coupling local WAF telemetry with SOC analytics and bounded response playbooks improves practical outcomes while maintaining acceptable runtime overhead under local test conditions.
+
+\section{Architecture Overview}
+The system contains four layers: (1) inline enforcement in VigilEdge, (2) ingestion and normalization in ThreatLoom, (3) SOC detection and correlation, and (4) response orchestration via playbooks.
+
+\subsection{Inline Enforcement Layer}
+The WAF applies attack-class checks (SQLi, XSS, traversal, command injection), then enforces allow, block, or rate-limit actions while emitting structured events.
+
+\subsection{SOC Analytics Layer}
+ThreatLoom ingests normalized event telemetry and applies threshold and behavioral analysis over time windows to detect repeated and escalating activity.
+
+\subsection{Response Layer}
+Playbook triggers map alert conditions to bounded actions (block, temporary ban, adaptive rate limit) with revocation and audit support.
+
+\section{Methodology}
+\subsection{Compared Profiles}
+\begin{itemize}
+\item Profile A: signature-only local WAF.
+\item Profile B: WAF plus SOC rules and thresholds.
+\item Profile C: full hybrid WAF-SOC with response playbooks.
+\end{itemize}
+
+\subsection{Workload and Metrics}
+Each profile is evaluated with 356 requests spanning benign control traffic and attack-like traffic classes. Metrics include precision, recall, F1-score, false positive rate (FPR), p50/p95 latency, throughput, and mitigation delay.
+
+\section{Results}
+\subsection{Detection Quality}
+\begin{table}[htbp]
+\caption{Detection quality across profiles}
+\label{tab:detection}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Profile & Precision & Recall & F1-score & FPR \\
+\midrule
+A & 0.7619 & 1.0000 & 0.8649 & 0.3750 \\
+B & 0.5455 & 1.0000 & 0.7059 & 1.0000 \\
+C & 0.7619 & 1.0000 & 0.8649 & 0.3750 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Runtime Performance}
+\begin{table}[htbp]
+\caption{Runtime performance across profiles}
+\label{tab:runtime}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Profile & p50 (ms) & p95 (ms) & Throughput (req/s) & Mitigation (ms) \\
+\midrule
+A & 42.89 & 263.51 & 12.84 & N/A \\
+B & 45.76 & 96.96 & 17.19 & Not measured \\
+C & 42.57 & 259.39 & 13.36 & Not measured \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Interpretation}
+Three findings are central. First, recall is perfect in this workload for all profiles. Second, Profiles A and C share the strongest quality balance in this run. Third, Profile B demonstrates a policy calibration failure mode: it improves p95 and throughput while overblocking benign traffic (FPR $=1.0000$), which is operationally unacceptable.
+
+\section{Threats to Validity}
+Internal threats include configuration drift across runs. External threats include synthetic traffic bias relative to production workloads. Construct threats include label ambiguity for borderline payloads. System threats include host-level performance variation.
+
+\section{Limitations and Responsible Use}
+Local threat intelligence remains narrower than internet-scale telemetry. Automation quality depends on threshold and playbook tuning. All testing must be conducted on authorized assets and defensive targets.
+
+\section{Conclusion}
+VigilEdge-ThreatLoom provides a practical local-first path to integrate request-time filtering with SOC-time correlation and bounded mitigation. Current measurements support feasibility claims under local test conditions and motivate tuned reruns with repeated-trial statistics before camera-ready submission.
+
+\section*{Artifact and Data Availability}
+Measured artifacts are included in the research package, including profile-level summaries and request-level CSV outputs.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

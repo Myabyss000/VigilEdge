@@ -1,0 +1,26 @@
+{
+  "recent_200_logs": {
+    "runs": 50,
+    "mean_ms": 17.235,
+    "p95_ms": 22.186,
+    "max_ms": 29.597
+  },
+  "sqli_high_recent_500": {
+    "runs": 50,
+    "mean_ms": 5.603,
+    "p95_ms": 7.965,
+    "max_ms": 9.82
+  },
+  "src_ip_time_window": {
+    "runs": 50,
+    "mean_ms": 14.158,
+    "p95_ms": 20.033,
+    "max_ms": 28.087
+  },
+  "agg_by_attack_type": {
+    "runs": 50,
+    "mean_ms": 0.252,
+    "p95_ms": 0.281,
+    "max_ms": 0.665
+  }
+}

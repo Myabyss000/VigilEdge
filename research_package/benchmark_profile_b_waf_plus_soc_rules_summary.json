@@ -1,0 +1,16 @@
+﻿{
+    "profile":  "profile_b_waf_plus_soc_rules",
+    "total_requests":  356,
+    "blocked_403":  356,
+    "p50_ms":  45.76,
+    "p95_ms":  96.96,
+    "throughput_req_per_sec":  17.19,
+    "tp":  96,
+    "fp":  80,
+    "fn":  0,
+    "tn":  0,
+    "precision":  0.5455,
+    "recall":  1,
+    "f1":  0.7059,
+    "false_positive_rate":  1
+}

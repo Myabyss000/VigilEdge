@@ -1,0 +1,16 @@
+﻿{
+    "profile":  "profile_c_live",
+    "total_requests":  356,
+    "blocked_403":  306,
+    "p50_ms":  42.57,
+    "p95_ms":  259.39,
+    "throughput_req_per_sec":  13.36,
+    "tp":  96,
+    "fp":  30,
+    "fn":  0,
+    "tn":  50,
+    "precision":  0.7619,
+    "recall":  1,
+    "f1":  0.8649,
+    "false_positive_rate":  0.375
+}

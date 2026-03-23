@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     JWT_EXPIRY_MINUTES: int = 480
     INGEST_SERVICE_TOKENS: str = ""
     BOOTSTRAP_ADMIN_TOKEN: str = ""
-    PASSWORD_RECOVERY_KEY: str = "default-insecure-recovery-key-change-me"
 
     # GeoIP
     GEOIP_DB_PATH: str = "./data/GeoLite2-City.mmdb"
@@ -74,6 +73,8 @@ class Settings(BaseSettings):
     # Detection engine
     DETECTION_SCAN_INTERVAL_SECONDS: int = 3
     DETECTION_LOOKBACK_SECONDS: int = 15
+    DETECTION_BEHAVIORAL_ENABLED: bool = True
+    DETECTION_CORRELATION_ENABLED: bool = True
 
     # Firewall health check
     FIREWALL_HEALTH_URL: str = "http://localhost:5000"
