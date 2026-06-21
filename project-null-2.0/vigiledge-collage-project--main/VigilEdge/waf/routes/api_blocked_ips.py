@@ -8,6 +8,7 @@ import ipaddress
 from fastapi import APIRouter, Request, Depends
 
 from .auth import require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, WRITE, READ
 
 router = APIRouter(prefix="/api/v1", tags=["Blocked IPs"], dependencies=[Depends(require_control_plane_access)])
 
@@ -19,7 +20,8 @@ def get_waf_engine():
 
 
 @router.get("/blocked-ips")
-async def api_get_blocked_ips():
+@limiter.limit(READ)
+async def api_get_blocked_ips(request: Request):
     """API endpoint to get all blocked IPs with full details."""
     try:
         waf_engine = get_waf_engine()
@@ -44,6 +46,7 @@ async def api_get_blocked_ips():
 
 
 @router.post("/blocked-ips")
+@limiter.limit(WRITE)
 async def api_block_ip(request: Request):
     """API endpoint to manually block an IP address."""
     try:
@@ -83,7 +86,8 @@ async def api_block_ip(request: Request):
 
 
 @router.delete("/blocked-ips/{ip_address}")
-async def api_unblock_ip(ip_address: str):
+@limiter.limit(WRITE)
+async def api_unblock_ip(ip_address: str, request: Request):
     """API endpoint to unblock an IP address."""
     try:
         waf_engine = get_waf_engine()
@@ -104,7 +108,8 @@ async def api_unblock_ip(ip_address: str):
 
 
 @router.post("/blocked-ips/clear")
-async def api_clear_blocked_ips():
+@limiter.limit(WRITE)
+async def api_clear_blocked_ips(request: Request):
     """API endpoint to clear all blocked IPs."""
     try:
         waf_engine = get_waf_engine()

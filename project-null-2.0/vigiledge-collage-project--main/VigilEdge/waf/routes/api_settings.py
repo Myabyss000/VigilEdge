@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from fastapi.responses import JSONResponse
 
 from .auth import check_auth, require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, STRICT, WRITE, READ
 from vigiledge.utils.upstream_config import normalize_proxy_path
 
 router = APIRouter(prefix="/api/v1", tags=["Settings"], dependencies=[Depends(require_control_plane_access)])
@@ -26,6 +27,7 @@ def get_waf_engine(request: Request = None):
 
 
 @router.post("/auth/change-password")
+@limiter.limit(STRICT)
 async def change_password(request: Request):
     """Change admin password."""
     if not check_auth(request):
@@ -155,6 +157,7 @@ def merge_settings_with_defaults(settings: dict, defaults: dict) -> dict:
 
 
 @router.get("/settings")
+@limiter.limit(READ)
 async def get_settings(request: Request):
     """Get all WAF settings from configuration file."""
     if not check_auth(request):
@@ -178,6 +181,7 @@ async def get_settings(request: Request):
 
 
 @router.post("/settings")
+@limiter.limit(WRITE)
 async def save_settings(request: Request):
     """Save WAF settings to configuration file."""
     if not check_auth(request):
@@ -290,6 +294,7 @@ async def save_settings(request: Request):
 
 
 @router.post("/settings/reset")
+@limiter.limit(STRICT)
 async def reset_settings(request: Request):
     """Reset settings to factory defaults by deleting the config file."""
     if not check_auth(request):
@@ -326,6 +331,7 @@ async def reset_settings(request: Request):
 # Backup Management Routes
 
 @router.get("/backups")
+@limiter.limit(READ)
 async def list_backups(request: Request):
     """List all available backup files."""
     if not check_auth(request):
@@ -354,6 +360,7 @@ async def list_backups(request: Request):
 
 
 @router.post("/backups/create")
+@limiter.limit(WRITE)
 async def create_backup(request: Request):
     """Create a new backup of current settings."""
     if not check_auth(request):
@@ -396,6 +403,7 @@ async def create_backup(request: Request):
 
 
 @router.get("/backups/download/{filename}")
+@limiter.limit(READ)
 async def download_backup(filename: str, request: Request):
     """Download a specific backup file."""
     if not check_auth(request):
@@ -428,6 +436,7 @@ async def download_backup(filename: str, request: Request):
 
 
 @router.delete("/backups/delete/{filename}")
+@limiter.limit(WRITE)
 async def delete_backup(filename: str, request: Request):
     """Delete a specific backup file."""
     if not check_auth(request):
@@ -457,6 +466,7 @@ async def delete_backup(filename: str, request: Request):
 
 
 @router.post("/rules/toggle")
+@limiter.limit(WRITE)
 async def toggle_security_rule(request: Request):
     """Toggle a specific security rule on/off."""
     if not check_auth(request):

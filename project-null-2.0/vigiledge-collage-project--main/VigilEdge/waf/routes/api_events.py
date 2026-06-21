@@ -4,9 +4,10 @@ Handles security event log retrieval.
 """
 
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Request, Depends
 
 from .auth import require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, READ
 
 router = APIRouter(prefix="/api/v1", tags=["Event Logs"], dependencies=[Depends(require_control_plane_access)])
 
@@ -18,7 +19,8 @@ def get_waf_engine():
 
 
 @router.get("/event-logs")
-async def api_get_event_logs(limit: int = 50):
+@limiter.limit(READ)
+async def api_get_event_logs(request: Request, limit: int = 50):
     """API endpoint to get recent security event logs."""
     try:
         waf_engine = get_waf_engine()

@@ -183,8 +183,7 @@ For more details, check the VigilEdge WAF Dashboard.
     def _write_event_log(self, message: str, severity: EventSeverity) -> bool:
         """Write event to Windows Event Log using PowerShell"""
         try:
-            # Escape special characters for PowerShell
-            escaped_message = message.replace("'", "''").replace('"', '`"')
+            import os
             
             # Map severity to Windows event type
             event_type_map = {
@@ -194,16 +193,24 @@ For more details, check the VigilEdge WAF Dashboard.
             }
             event_type = event_type_map.get(severity, "Warning")
             
-            # PowerShell command to write event log
+            # Use Environment Variables to safely pass the attacker-controlled message.
+            # This completely prevents command injection (CWE-78) because the data
+            # is never evaluated as part of the PowerShell script string.
             ps_command = f'''
-            Write-EventLog -LogName "{self.EVENT_LOG}" -Source "{self.EVENT_SOURCE}" -EventId 1000 -EntryType {event_type} -Message '{escaped_message}'
+            $msg = $env:VIGILEDGE_EVENT_MSG
+            Write-EventLog -LogName "{self.EVENT_LOG}" -Source "{self.EVENT_SOURCE}" -EventId 1000 -EntryType {event_type} -Message $msg
             '''
+            
+            # Prepare secure environment for subprocess
+            secure_env = os.environ.copy()
+            secure_env["VIGILEDGE_EVENT_MSG"] = message
             
             result = subprocess.run(
                 ["powershell", "-Command", ps_command],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                env=secure_env
             )
             
             if result.returncode == 0:

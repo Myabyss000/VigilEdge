@@ -25,6 +25,7 @@ import bcrypt as _bcrypt
 from cryptography.fernet import Fernet, InvalidToken
 
 from vigiledge.config import get_settings
+from vigiledge.utils.rate_limiter import limiter, STRICT, RELAXED
 
 router = APIRouter(tags=["Authentication"])
 
@@ -228,6 +229,7 @@ def qr_b64_from_secret(secret: str) -> str:
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 @router.get("/login", response_class=HTMLResponse)
+@limiter.limit(RELAXED)
 async def login_page(request: Request):
     """Serve the login page."""
     if not is_auth_initialized(request.app.state.settings):
@@ -257,6 +259,7 @@ async def login_page(request: Request):
 
 
 @router.post("/login", response_class=HTMLResponse)
+@limiter.limit(STRICT)
 async def login(
     request: Request,
     response: Response,
@@ -322,6 +325,7 @@ async def login(
 
 
 @router.get("/bootstrap", response_class=HTMLResponse)
+@limiter.limit(RELAXED)
 async def bootstrap_page(request: Request):
     """Serve first-run admin bootstrap when default credentials have not been replaced."""
     if is_auth_initialized(request.app.state.settings):
@@ -338,6 +342,7 @@ async def bootstrap_page(request: Request):
 
 
 @router.post("/bootstrap", response_class=HTMLResponse)
+@limiter.limit(STRICT)
 async def bootstrap_admin(
     request: Request,
     admin_username: str = Form(...),
@@ -445,6 +450,7 @@ async def logout(response: Response):
 # --- 2FA Password Reset Routes ---
 
 @router.get("/auth/reset-password", response_class=HTMLResponse)
+@limiter.limit(RELAXED)
 async def reset_password_page(request: Request):
     """Serve the password reset page."""
     setup_required = not is_2fa_configured()
@@ -458,6 +464,7 @@ async def reset_password_page(request: Request):
     )
 
 @router.post("/auth/reset-password", response_class=HTMLResponse)
+@limiter.limit(STRICT)
 async def reset_password_action(
     request: Request,
     totp_code: str = Form(...),
@@ -553,6 +560,7 @@ async def reset_password_action(
 # --- 2FA Setup Routes (New) ---
 
 @router.get("/auth/setup-2fa", response_class=HTMLResponse)
+@limiter.limit(RELAXED)
 async def setup_2fa_page(request: Request):
     """Serve the 2FA setup page with a new QR code."""
     authenticated = check_auth(request)
@@ -575,6 +583,7 @@ async def setup_2fa_page(request: Request):
     })
 
 @router.post("/auth/verify-2fa", response_class=HTMLResponse)
+@limiter.limit(STRICT)
 async def verify_2fa_setup(
     request: Request,
     secret: str = Form(...),

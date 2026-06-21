@@ -17,6 +17,7 @@ import httpx
 from vigiledge.config import get_settings
 from vigiledge.utils.client_ip import get_effective_client_ip
 from .auth import require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, WRITE, READ, RELAXED
 
 # Import psutil for real network monitoring
 try:
@@ -196,7 +197,8 @@ def get_waf_engine():
 
 
 @router.get("/connections/active")
-async def get_active_connections():
+@limiter.limit(READ)
+async def get_active_connections(request: Request):
     """Get currently active connections with geolocation."""
     waf_engine = get_waf_engine()
     connections = []
@@ -223,7 +225,8 @@ async def get_active_connections():
 
 
 @router.get("/connections/geolocate")
-async def geolocate_all_connections():
+@limiter.limit(READ)
+async def geolocate_all_connections(request: Request):
     """
     Get all active connections with real-time geolocation.
     This endpoint fetches location for ALL connected IPs efficiently.
@@ -278,7 +281,8 @@ async def geolocate_all_connections():
 
 
 @router.get("/users/live")
-async def get_live_users():
+@limiter.limit(RELAXED)
+async def get_live_users(request: Request):
     """
     Get all live/active users with their locations.
     This is the main endpoint for the Network Monitor map.
@@ -315,7 +319,8 @@ async def get_live_users():
 
 
 @router.get("/connections/logs")
-async def get_connection_logs(limit: int = 50):
+@limiter.limit(READ)
+async def get_connection_logs(request: Request, limit: int = 50):
     """Get recent security events/logs."""
     waf_engine = get_waf_engine()
     events = waf_engine.security_events[-limit:]  # Get last N events
@@ -337,7 +342,8 @@ async def get_connection_logs(limit: int = 50):
 
 
 @router.get("/ips/activity")
-async def get_ip_activity():
+@limiter.limit(READ)
+async def get_ip_activity(request: Request):
     """Get IP activity statistics."""
     waf_engine = get_waf_engine()
     ip_stats = {}
@@ -375,7 +381,8 @@ async def get_ip_activity():
 
 
 @router.get("/system/uptime")
-async def get_system_uptime():
+@limiter.limit(RELAXED)
+async def get_system_uptime(request: Request):
     """Get WAF uptime and health metrics."""
     try:
         import psutil
@@ -663,7 +670,8 @@ def run_speed_test_thread():
 
 
 @router.post("/speed/test")
-async def api_start_speed_test():
+@limiter.limit(WRITE)
+async def api_start_speed_test(request: Request):
     """Start a new internet speed test."""
     global SPEED_TEST_RESULT
     
@@ -700,7 +708,8 @@ async def api_start_speed_test():
 
 
 @router.get("/speed/test")
-async def api_get_speed_test_result():
+@limiter.limit(RELAXED)
+async def api_get_speed_test_result(request: Request):
     """Get the current speed test result/status."""
     return {
         "success": True,
@@ -709,7 +718,8 @@ async def api_get_speed_test_result():
 
 
 @router.get("/speed/realtime")
-async def api_get_realtime_speed():
+@limiter.limit(RELAXED)
+async def api_get_realtime_speed(request: Request):
     """Get real-time network speed based on WAF traffic metrics."""
     global SPEED_TRACKER
     

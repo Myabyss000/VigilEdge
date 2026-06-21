@@ -8,9 +8,10 @@ import json
 import sqlite3
 import logging
 import traceback
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Request, Depends
 
 from .auth import require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, WRITE, READ, RELAXED
 
 router = APIRouter(prefix="/api/v1", tags=["AI Analysis"], dependencies=[Depends(require_control_plane_access)])
 
@@ -32,7 +33,8 @@ def ai_test():
 
 
 @router.get("/ai-stats")
-def get_ai_stats():
+@limiter.limit(READ)
+def get_ai_stats(request: Request):
     """Get AI analysis statistics."""
     try:
         db_path = get_db_path()
@@ -122,7 +124,8 @@ def get_ai_stats():
 
 
 @router.get("/ai-events")
-def get_ai_events(limit: int = 20, offset: int = 0):
+@limiter.limit(READ)
+def get_ai_events(request: Request, limit: int = 20, offset: int = 0):
     """Get events with AI analysis data."""
     try:
         db_path = get_db_path()
@@ -163,7 +166,8 @@ def get_ai_events(limit: int = 20, offset: int = 0):
 # ==================== AI SCORER SWITCHING ENDPOINTS ====================
 
 @router.get("/ai-scorer/config")
-def get_scorer_config():
+@limiter.limit(READ)
+def get_scorer_config(request: Request):
     """Get current AI scorer configuration and status."""
     try:
         from vigiledge.core.ai_scoring import get_unified_scorer
@@ -185,7 +189,8 @@ def get_scorer_config():
 
 
 @router.post("/ai-scorer/switch")
-def switch_scorer(data: dict):
+@limiter.limit(WRITE)
+def switch_scorer(request: Request, data: dict):
     """Switch between AI scoring methods.
     
     Body: {"scorer_type": "heuristic" | "lm_studio" | "hybrid"}
@@ -212,7 +217,8 @@ def switch_scorer(data: dict):
 
 
 @router.get("/ai-scorer/check-lm-studio")
-def check_lm_studio():
+@limiter.limit(RELAXED)
+def check_lm_studio(request: Request):
     """Check if LM Studio is available and running."""
     try:
         from vigiledge.core.ai_scoring import get_unified_scorer
@@ -231,7 +237,8 @@ def check_lm_studio():
 
 
 @router.post("/ai-scorer/test")
-def test_scorer(data: dict):
+@limiter.limit(WRITE)
+def test_scorer(request: Request, data: dict):
     """Test the current scorer with a sample event.
     
     Body: {"threat_type": "sql_injection", "url": "/test?id=1", ...}

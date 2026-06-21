@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse, Response
 import httpx
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from vigiledge.config import get_settings, get_cors_origins
 from vigiledge.core.waf_engine import WAFEngine
@@ -26,6 +28,7 @@ from vigiledge.utils.settings_loader import load_user_settings
 from services.websocket_manager import manager
 from services.background_tasks import animated_startup, monitoring_task, auto_backup_task
 from vigiledge.utils.upstream_config import get_upstream_proxy_path, should_proxy_root_request
+from vigiledge.utils.rate_limiter import limiter
 from routes.proxy import close_upstream_http_client
 
 
@@ -154,6 +157,10 @@ def create_app() -> FastAPI:
     
     # Add security middleware
     app.add_middleware(SecurityMiddleware, waf_engine=waf_engine)
+    
+    # Register API rate limiter
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     
     # Mount static files
     app.mount("/static", StaticFiles(directory=static_dir), name="static")

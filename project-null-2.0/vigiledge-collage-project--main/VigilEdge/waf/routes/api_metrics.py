@@ -5,9 +5,10 @@ Handles WAF performance metrics and threat statistics.
 
 import logging
 from collections import Counter
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Request, Depends
 
 from .auth import require_control_plane_access
+from vigiledge.utils.rate_limiter import limiter, RELAXED
 
 router = APIRouter(prefix="/api/v1", tags=["Metrics"], dependencies=[Depends(require_control_plane_access)])
 
@@ -25,7 +26,8 @@ def get_ws_manager():
 
 
 @router.get("/threats")
-async def api_get_threats():
+@limiter.limit(RELAXED)
+async def api_get_threats(request: Request):
     """API endpoint to get threat statistics by type."""
     try:
         waf_engine = get_waf_engine()
@@ -52,7 +54,8 @@ async def api_get_threats():
 
 
 @router.get("/metrics")
-async def api_get_metrics():
+@limiter.limit(RELAXED)
+async def api_get_metrics(request: Request):
     """API endpoint to get WAF performance metrics."""
     try:
         waf_engine = get_waf_engine()
