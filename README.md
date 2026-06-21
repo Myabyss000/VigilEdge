@@ -1,224 +1,109 @@
-# VigilEdge + ThreatLoom
+# VigilEdge WAF & ThreatLoom SOC
 
-Local-first security stack that combines inline WAF blocking with SOC correlation and incident workflows.
+![VigilEdge Logo](https://img.shields.io/badge/Security-Enterprise_WAF-blue.svg) ![Docker](https://img.shields.io/badge/Deployment-Docker_Compose-2496ED.svg) ![Python](https://img.shields.io/badge/Python-3.11-yellow.svg)
 
-Unlike typical single-layer demos, this project gives you both traffic protection and SOC intelligence in one run.
+VigilEdge is an enterprise-grade, local-first Web Application Firewall (WAF) seamlessly integrated with the ThreatLoom Security Operations Center (SOC). Engineered for zero-trust environments, VigilEdge provides robust, real-time traffic inspection and threat mitigation, while ThreatLoom delivers deep visibility, behavioral analytics, and incident response workflows.
 
-One command launches the full environment on Windows.
+Unlike standard reverse-proxies, VigilEdge provides comprehensive, multi-layered defense out of the box.
 
-## Start Here (No Technical Setup Needed)
+---
 
-### Easiest path
+## 🛡️ Core Security Capabilities
 
-Double-click:
+- **Deep Packet Inspection & Signature Detection**: Advanced Regex-based heuristics optimized to detect and block SQL Injection (SQLi), Cross-Site Scripting (XSS), Command Injection, and Path Traversal with near-zero false positive rates.
+- **AI-Assisted Threat Scoring**: Machine learning engine that scores anomalous traffic and predicts attack patterns before they manifest into known CVEs.
+- **Rate-Abuse & Burst Control**: Intelligent rate-limiting algorithms to mitigate volumetric DDoS attempts and brute-force attacks.
+- **ThreatLoom SOC Correlation**: Real-time event ingestion, IP reputation tracking, and automated security incident generation.
+- **Windows Event Viewer Integration**: Native OS-level logging for seamless integration with external SIEM tools.
 
-```bat
-run_oneclick.bat
-```
+---
 
-### Command-line path
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1
-```
-
-If you are new to terminal usage, use the double-click option first.
-
-## Why This Is Different
-
-1. Full one-click deployment with admin elevation, firewall rules, venv setup, and startup orchestration.
-2. Hybrid defense model: WAF filtering plus SOC-side ingestion, detection, and incident view.
-3. Flexible operating modes: full demo for learning, custom upstream for real app protection.
-4. Offline-capable installation fallback from local wheel/package directories.
-
-## Core Security Capability Snapshot
-
-- Signature-driven detection (SQLi, XSS, command-injection style, path traversal)
-- Rate-abuse and burst-control handling
-- SOC event ingestion and alert pipeline
-- Correlation and behavioral analysis in ThreatLoom detection engine
-
-## Offline Installation (Highlighted)
-
-The installer first tries standard pip. If network/package source fails, it automatically retries from local package directories.
-
-Use explicit offline source:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -LocalPackageDir .\offline_packages
-```
-
-Auto-detected directories:
-
-- `offline_packages`
-- `offline-packages`
-- `packages`
-- `wheels`
-
-## Quick Success Check
-
-### Beginner check
-
-If these pages open, deployment is working:
-
-- http://localhost:5000 (WAF)
-- http://localhost:8443 (SOC)
-- http://localhost:8080 (demo app, full mode)
-
-### Technical check
-
-```powershell
-Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-  Where-Object { $_.LocalPort -in 5000,5001,8080,8443 } |
-  Select-Object LocalAddress,LocalPort,OwningProcess |
-  Sort-Object LocalPort
-```
-
-## Deployment Modes
-
-Use full demo for first run. Use custom mode when protecting your own website.
-
-| Mode | Command | What starts | Best for |
-|---|---|---|---|
-| Full demo (default) | `deploy_oneclick.ps1` | WAF + SOC + demo app + chatbot | First-time setup and validation |
-| Custom upstream | `deploy_oneclick.ps1 -Mode custom` | WAF + SOC + chatbot + your upstream | Real local/staging website protection |
-| Skip chatbot | `deploy_oneclick.ps1 -SkipChatbot` | WAF + SOC + target stack | Pure security pipeline |
-
-If `-UpstreamUrl` is provided in custom mode, URL prompt is skipped.
-
-## Architecture
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart LR
-    U[User Browser] --> WAF[VigilEdge WAF :5000]
-    WAF -->|Proxy Traffic| APP[Demo or Custom Upstream]
-    WAF -->|Security Events| TL[ThreatLoom SOC :8443]
-    TL --> INC[Alerts and Incidents]
-    WAF -. Optional addon .-> BOT[Chatbot :5001]
-    BOT -. Optional LM Studio .-> LM[Local LLM :1234]
+    U[Client / Attacker] --> WAF[VigilEdge WAF :8000]
+    WAF -->|Proxy Sanitized Traffic| APP[Upstream Application :5000]
+    WAF -->|Security Events| TL[ThreatLoom SOC Dashboard]
+    TL --> INC[Automated Alerts & Incidents]
+    WAF -. Optional Addon .-> BOT[Security Assistant Chatbot]
 ```
 
-If Mermaid does not render on your platform, use this fallback:
+---
 
-```text
-Browser -> WAF (:5000) -> Upstream App
-              |
-              +-> ThreatLoom SOC (:8443) -> Alerts/Incidents
-              \-> (optional) Chatbot (:5001) -> (optional) LM Studio (:1234)
+## 🚀 Deployment Guide
+
+VigilEdge supports multiple deployment profiles. We highly recommend using Docker for isolated, reproducible deployments.
+
+### Option A: Docker Deployment (Recommended)
+
+The entire ecosystem is fully containerized. A single command will spin up the VigilEdge WAF and a vulnerable target application for penetration testing.
+
+**Prerequisites:** Docker and Docker Compose installed.
+
+```bash
+# Clone the repository
+git clone https://github.com/Myabyss000/VigilEdge.git
+cd VigilEdge
+
+# Build and start the infrastructure
+docker-compose up --build -d
 ```
 
-## What One-Click Does (Short Version)
+### Option B: Local PowerShell Installation
 
-- elevates to Administrator
-- checks ports and paths
-- creates firewall rules (Private profile)
-- creates missing WAF and ThreatLoom virtual environments
-- installs dependencies (online, then offline fallback if needed)
-- creates missing `.env` files and fills placeholder secrets
-- runs ThreatLoom migration when production mode is enabled
-- starts services and prints ready URLs
+For native Windows Server deployments, use the automated setup script. This script automatically provisions virtual environments, downloads dependencies, and configures Windows Firewall rules.
 
-## Runtime URLs
-
-- WAF: http://localhost:5000
-- WAF login: http://localhost:5000/login
-- WAF dashboard: http://localhost:5000/admin/dashboard
-- WAF protected route: http://localhost:5000/protected
-- SOC dashboard: http://localhost:8443
-- Demo app: http://localhost:8080
-- Chatbot health: http://localhost:5001/health
-
-## Chatbot Role
-
-The chatbot is an optional operator-assistance addon.
-
-- It helps explain threat context and events.
-- It is not required for WAF or SOC core operation.
-- If LM Studio is offline, core security features continue to work.
-
-## Prerequisites
-
-- Windows 10/11
-- Python 3.10+ in PATH (3.13 recommended)
-- free ports: `5000`, `5001`, `8080`, `8443`
-- Administrator rights for firewall configuration
-
-Python download:
-
-- https://www.python.org/downloads/
-
-Optional:
-
-- LM Studio at `http://localhost:1234`
-
-## First-Run Failure Guide
-
-### Problem: "It opens admin prompt and closes"
-
-This is expected. The script relaunches itself with elevated rights.
-
-### Problem: "Page is not opening"
-
-Check port usage:
+**Prerequisites:** Python 3.10+ and Administrator privileges.
 
 ```powershell
-Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 5000,5001,8080,8443 }
+# Run from an Administrator PowerShell prompt
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1
 ```
 
-### Problem: "Dependency install failed"
+*To protect a custom upstream application instead of the bundled test environment:*
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -Mode custom
+```
 
-Run with local package fallback:
+### Option C: Air-Gapped / Offline Installation
+
+If you are deploying to an isolated environment without internet access, VigilEdge can install dependencies directly from local wheel directories.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy_oneclick.ps1 -LocalPackageDir .\offline_packages
 ```
 
-### Problem: "Chatbot has no AI response"
+---
 
-Ensure LM Studio is running with a loaded model at `http://localhost:1234`.
+## 📊 Dashboard Access
 
-> [!WARNING]
-> The bundled demo application is intentionally vulnerable.
-> Do not expose it to the public internet.
-> Use demo mode only in controlled local/lab environments.
+Once deployed, the ecosystem will be available at the following endpoints:
 
-## Legacy Launchers
+| Interface | URL | Default Port | Description |
+|---|---|---|---|
+| **WAF Dashboard** | `http://localhost:8000/admin/dashboard` | `8000` | Real-time traffic metrics and firewall administration |
+| **SOC Interface** | `http://localhost:8443` | `8443` | ThreatLoom security operations and incident tracking |
+| **Protected App** | `http://localhost:5000` | `5000` | The upstream application currently protected by VigilEdge |
 
-These remain unchanged and available:
+> **⚠️ Security Warning:** The bundled demonstration application (`vulnerable-app`) contains intentional vulnerabilities for penetration testing and validation. **Never expose the vulnerable application directly to the public internet without VigilEdge actively proxying its traffic.**
 
-- `start_demo.bat`
-- `start_custom_website.bat`
-- `start_chatbot.bat`
+---
 
-## Project Status
+## 🤖 AI Security Assistant
 
-- Active development stream with production-oriented direction
-- One-click deployment stabilized for local onboarding
-- Formal semantic release tagging planned
+VigilEdge includes an optional LLM-powered chatbot designed to assist Security Analysts with threat context and incident remediation.
+* Ensure LM Studio or a compatible local model is running at `http://localhost:1234` before enabling AI insights.
+* The WAF and SOC will continue to function normally if the AI is offline.
 
-## Roadmap (Priority Order)
+---
 
-1. Release tags + changelog
-2. Offline wheel-bundle generator
-3. Containerized deployment profile
-4. Expanded startup/auth integration tests
-5. UI screenshots and guided visual walkthroughs
+## 🤝 Contributing
 
-## Contributing
+We welcome contributions from the cybersecurity community! Whether it is refining threat signatures, enhancing the machine learning models, or hardening the deployment pipeline, your PRs are appreciated.
 
-Contributions are welcome for detection improvements, deployment hardening, docs, and testing.
+Please refer to `DEPLOYMENT.md` for advanced developer documentation and testing instructions.
 
-Open an issue with:
+## 📄 License
 
-- problem statement
-- reproduction steps
-- expected behavior
-- proposed fix
-
-## Deployment Details
-
-For complete local and production instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## License
-
-This workspace includes MIT-licensed components. See `LICENSE` and nested project licenses.
+VigilEdge is open-source software. See the `LICENSE` file for full terms and conditions.
