@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  vigiledge-waf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vigiledge-waf
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=False
+      - VULNERABLE_APP_URL=http://vulnerable-app:5000
+    volumes:
+      # Mount logs database and settings so they persist between container restarts
+      - ./project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/logs:/app/waf/logs
+      - ./project-null-2.0/vigiledge-collage-project--main/VigilEdge/waf/waf_events.db:/app/waf/waf_events.db
+    restart: unless-stopped
+    depends_on:
+      - vulnerable-app
+
+  vulnerable-app:
+    image: python:3.11-slim
+    container_name: vulnerable-app
+    working_dir: /app
+    volumes:
+      - ./project-null-2.0/vigiledge-collage-project--main/VigilEdge/vulnerable-app:/app
+    # Install Flask and run the vulnerable test application
+    command: >
+      bash -c "pip install flask && python app.py"
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
