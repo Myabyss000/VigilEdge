@@ -139,7 +139,7 @@ DEFAULT_SETTINGS = {
         "auto_dark_mode": False
     },
     "authentication": {
-        "admin_username": "admin",
+        "admin_username": None,
         "admin_password": None
     }
 }

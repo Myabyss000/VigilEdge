@@ -5,6 +5,7 @@ Handles environment variables and application settings
 
 import os
 import ipaddress
+import secrets
 from typing import Optional, List
 from pydantic import Field, validator
 from pydantic_settings import BaseSettings
@@ -23,11 +24,11 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", env="ENVIRONMENT")
     
     # Security Configuration
-    secret_key: str = Field(default="vigiledge-change-me", env="SECRET_KEY")
+    secret_key: str = Field(default_factory=lambda: secrets.token_hex(32), env="SECRET_KEY")
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
-    admin_username: str = Field(default="admin", env="ADMIN_USERNAME")
-    admin_password: str = Field(default="admin", env="ADMIN_PASSWORD")
+    admin_username: Optional[str] = Field(default=None, env="ADMIN_USERNAME")
+    admin_password: Optional[str] = Field(default=None, env="ADMIN_PASSWORD")
     control_plane_api_tokens: str = Field(default="", env="CONTROL_PLANE_API_TOKENS")
     bootstrap_admin_token: str = Field(default="", env="BOOTSTRAP_ADMIN_TOKEN")
     cors_origins: str = Field(default="http://127.0.0.1:5000,http://localhost:5000", env="CORS_ORIGINS")

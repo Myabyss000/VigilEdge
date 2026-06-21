@@ -102,9 +102,13 @@ def is_auth_initialized(app_settings) -> bool:
     if auth_config.get("bootstrap_completed"):
         return True
 
+    # If env variables are explicitly provided, we consider it initialized
     admin_username = auth_config.get("admin_username") or app_settings.admin_username
     admin_password = auth_config.get("admin_password") or app_settings.admin_password
-    return not (admin_username == "admin" and admin_password == "admin")
+    
+    if admin_username and admin_password:
+        return True
+    return False
 
 
 def is_bootstrap_token_valid(request: Request, submitted_token: str) -> bool:
