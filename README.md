@@ -34,20 +34,20 @@ flowchart LR
 ## 📸 System Gallery
 
 ### VigilEdge WAF Dashboard
-![WAF Dashboard](all%20photos/vigiledge_waf_dashboard.png)
+![WAF Dashboard](ALL%20photos/vigiledge_waf_dashboard.png)
 
 ### ThreatLoom SOC Interface
-![ThreatLoom SOC](all%20photos/threatloom.png)
+![ThreatLoom SOC](ALL%20photos/threatloom.png)
 
 ### Real-Time Monitoring & Event Logs
-![Event Logs](all%20photos/event_logs.png)
+![Event Logs](ALL%20photos/event_logs.png)
 
-![Network Monitor 1](all%20photos/network_monitor_1.png)
+![Network Monitor 1](ALL%20photos/network_monitor_1.png)
 
-![Network Monitor 2](all%20photos/network_monitor_2.png)
+![Network Monitor 2](ALL%20photos/network_monitor_2.png)
 
 ### Attack Interception
-![Request Block](all%20photos/request_block.png)
+![Request Block](ALL%20photos/request_block.png)
 
 ---
 
