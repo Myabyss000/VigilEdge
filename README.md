@@ -31,6 +31,26 @@ flowchart LR
 
 ---
 
+## 📸 System Gallery
+
+### VigilEdge WAF Dashboard
+![WAF Dashboard](all%20photos/vigiledge_waf_dashboard.png)
+
+### ThreatLoom SOC Interface
+![ThreatLoom SOC](all%20photos/threatloom.png)
+
+### Real-Time Monitoring & Event Logs
+![Event Logs](all%20photos/event_logs.png)
+
+![Network Monitor 1](all%20photos/network_monitor_1.png)
+
+![Network Monitor 2](all%20photos/network_monitor_2.png)
+
+### Attack Interception
+![Request Block](all%20photos/request_block.png)
+
+---
+
 ## 🚀 Deployment Guide
 
 VigilEdge supports multiple deployment profiles. We highly recommend using Docker for isolated, reproducible deployments.

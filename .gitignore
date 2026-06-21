@@ -64,3 +64,6 @@ ThreatLoom/data/*.mmdb
 # OS
 .DS_Store
 Thumbs.db
+
+# Images
+all photos/
