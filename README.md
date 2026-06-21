@@ -1,6 +1,6 @@
 # VigilEdge WAF & ThreatLoom SOC
 
-![VigilEdge Logo](https://img.shields.io/badge/Security-Enterprise_WAF-blue.svg) ![Docker](https://img.shields.io/badge/Deployment-Docker_Compose-2496ED.svg) ![Python](https://img.shields.io/badge/Python-3.11-yellow.svg)
+![VigilEdge Logo](https://img.shields.io/badge/Security-Enterprise_WAF-blue.svg) ![Docker](https://img.shields.io/badge/Deployment-Docker_Compose-2496ED.svg?logo=docker&logoColor=white) ![Python](https://img.shields.io/badge/Language-Python_3.11-yellow.svg?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Framework-Flask-black.svg?logo=flask&logoColor=white) ![SQLite](https://img.shields.io/badge/Database-SQLite-003B57.svg?logo=sqlite&logoColor=white) ![Machine Learning](https://img.shields.io/badge/AI-Machine_Learning-FF6F00.svg?logo=scikit-learn&logoColor=white) ![Windows](https://img.shields.io/badge/OS-Windows_Server-0078D6.svg?logo=windows&logoColor=white)
 
 VigilEdge is an enterprise-grade, local-first Web Application Firewall (WAF) seamlessly integrated with the ThreatLoom Security Operations Center (SOC). Engineered for zero-trust environments, VigilEdge provides robust, real-time traffic inspection and threat mitigation, while ThreatLoom delivers deep visibility, behavioral analytics, and incident response workflows.
 
