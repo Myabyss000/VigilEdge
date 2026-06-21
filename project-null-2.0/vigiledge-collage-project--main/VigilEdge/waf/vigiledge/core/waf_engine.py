@@ -165,37 +165,36 @@ class WAFEngine:
         """Initialize security detection patterns"""
         self.sql_injection_patterns = [
             # ============= BASIC SQL COMMANDS =============
-            re.compile(r"union[\s\+\/\*!]*select", re.IGNORECASE),
-            re.compile(r"union[\s\+\/\*!]*all[\s\+\/\*!]*select", re.IGNORECASE),
-            re.compile(r"drop[\s\+\/\*!]*table", re.IGNORECASE),
-            re.compile(r"drop[\s\+\/\*!]*database", re.IGNORECASE),
-            re.compile(r"truncate[\s\+\/\*!]*table", re.IGNORECASE),
-            re.compile(r"exec[\s\+\/\*!]*(sp_|xp_)", re.IGNORECASE),
-            re.compile(r"insert[\s\+\/\*!]*into", re.IGNORECASE),
-            re.compile(r"delete[\s\+\/\*!]*from", re.IGNORECASE),
-            re.compile(r"update[\s\+\/\*!]*\w+[\s\+\/\*!]*set", re.IGNORECASE),
-            re.compile(r"alter[\s\+\/\*!]*table", re.IGNORECASE),
-            re.compile(r"create[\s\+\/\*!]*(table|database|procedure|function)", re.IGNORECASE),
+            re.compile(r"\bunion[\s\+\/\*!]+select\b", re.IGNORECASE),
+            re.compile(r"\bunion[\s\+\/\*!]+all[\s\+\/\*!]+select\b", re.IGNORECASE),
+            re.compile(r"\bdrop[\s\+\/\*!]+table\b", re.IGNORECASE),
+            re.compile(r"\bdrop[\s\+\/\*!]+database\b", re.IGNORECASE),
+            re.compile(r"\btruncate[\s\+\/\*!]+table\b", re.IGNORECASE),
+            re.compile(r"\bexec[\s\+\/\*!]+(sp_|xp_)", re.IGNORECASE),
+            re.compile(r"\binsert[\s\+\/\*!]+into\b", re.IGNORECASE),
+            re.compile(r"\bdelete[\s\+\/\*!]+from\b", re.IGNORECASE),
+            re.compile(r"\bupdate[\s\+\/\*!]+\w+[\s\+\/\*!]+set\b", re.IGNORECASE),
+            re.compile(r"\balter[\s\+\/\*!]+table\b", re.IGNORECASE),
+            re.compile(r"\bcreate[\s\+\/\*!]+(table|database|procedure|function)\b", re.IGNORECASE),
             
             # ============= BOOLEAN-BASED BLIND INJECTION =============
-            re.compile(r"(\'|\")(\s|%20|\/\*.*?\*\/)*(or|and)(\s|%20|\/\*.*?\*\/)*(\1|%27|%22)", re.IGNORECASE),
-            re.compile(r"'\s*(or|and)\s*\d+\s*[=<>!]+\s*\d+", re.IGNORECASE),  # ' OR 1=1, ' AND 1<2
-            re.compile(r"'\s*(or|and)\s*'[^']*'\s*[=<>!]+\s*'", re.IGNORECASE),  # ' OR 'a'='a
-            re.compile(r"\d+\s*(or|and)\s*\d+\s*[=<>!]", re.IGNORECASE),  # 1 OR 1=1
-            re.compile(r"'\s*(or|and)(\s+|$|%20|')", re.IGNORECASE),  # ' OR or ' AND followed by space, end, or quote
-            re.compile(r"(or|and)\s*'", re.IGNORECASE),  # OR ' or AND ' (reversed)
-            re.compile(r"'\s*(or|and)\s*true", re.IGNORECASE),  # ' OR true
-            re.compile(r"'\s*(or|and)\s*false", re.IGNORECASE),  # ' AND false
-            re.compile(r"'\s*(or|and)\s*not\s*", re.IGNORECASE),  # ' OR NOT
-            re.compile(r"\d+\s*between\s*\d+\s*and\s*\d+", re.IGNORECASE),  # 1 BETWEEN 1 AND 10
-            re.compile(r"'\s*is\s*(not\s*)?null", re.IGNORECASE),  # ' IS NULL, ' IS NOT NULL
-            re.compile(r"null\s*is\s*(not\s*)?null", re.IGNORECASE),  # NULL IS NULL
+            re.compile(r"(\'|\")(\s|%20|\/\*.*?\*\/)*(or|and)(\s|%20|\/\*.*?\*\/)+(\1|%27|%22)", re.IGNORECASE),
+            re.compile(r"['\"]\s+(or|and)\s+\d+\s*[=<>!]+\s*\d+", re.IGNORECASE),  # ' OR 1=1, ' AND 1<2
+            re.compile(r"['\"]\s+(or|and)\s+['\"][^'\"]*['\"]\s*[=<>!]+\s*['\"]", re.IGNORECASE),  # ' OR 'a'='a
+            re.compile(r"\b\d+\s+(or|and)\s+\d+\s*[=<>!]", re.IGNORECASE),  # 1 OR 1=1
+            re.compile(r"['\"]\s+(or|and)\s+['\"]\w", re.IGNORECASE),  # ' OR 'a
+            re.compile(r"\b(or|and)\s+['\"][a-zA-Z0-9_]+['\"]\s*[=<>!]", re.IGNORECASE),  # OR 'a'=
+            re.compile(r"['\"]\s+(or|and)\s+(true|false)\b", re.IGNORECASE),  # ' OR true
+            re.compile(r"['\"]\s+(or|and)\s+not\b", re.IGNORECASE),  # ' OR NOT
+            re.compile(r"\b\d+\s+between\s+\d+\s+and\s+\d+\b", re.IGNORECASE),  # 1 BETWEEN 1 AND 10
+            re.compile(r"['\"]\s+is\s+(not\s+)?null\b", re.IGNORECASE),  # ' IS NULL, ' IS NOT NULL
+            re.compile(r"\bnull\s+is\s+(not\s+)?null\b", re.IGNORECASE),  # NULL IS NULL
             
             # ============= SQL COMMENTS & OBFUSCATION =============
-            re.compile(r"--", re.IGNORECASE),  # SQL comment -- (bare double dash)
-            re.compile(r"#\s*$", re.IGNORECASE),  # MySQL comment # at end
-            re.compile(r"#\s+", re.IGNORECASE),  # MySQL comment # with space
-            re.compile(r"/\*[\s\S]*?\*/[\s]*(union|select|from|where|or|and)", re.IGNORECASE),  # SQL block comment with SQL keyword
+            re.compile(r"(?:\w|['\"])\s*--(?:\s|$)", re.IGNORECASE),  # SQL comment -- (bare double dash after text)
+            re.compile(r"['\"]\s*#\s*$", re.IGNORECASE),  # MySQL comment # at end after quote
+            re.compile(r"['\"]\s*#\s+", re.IGNORECASE),  # MySQL comment # with space after quote
+            re.compile(r"/\*[\s\S]*?\*/[\s]*(union|select|from|where|or|and)\b", re.IGNORECASE),  # SQL block comment with SQL keyword
             re.compile(r"/\*![0-9]*", re.IGNORECASE),  # MySQL conditional comments /*! */
             re.compile(r";%00", re.IGNORECASE),  # Null byte injection
             re.compile(r"(union|select|insert|delete)[\s\S]*?%00", re.IGNORECASE),  # Null byte with SQL keyword
@@ -220,7 +219,7 @@ class WAFEngine:
             re.compile(r"pg_sleep[\s\+\/\*!]*\([0-9]+\)", re.IGNORECASE),  # PG_SLEEP(5)
             
             # ============= STRING MANIPULATION & ENCODING (SQL-specific) =============
-            re.compile(r"\b(concat|chr|substring|substr|ascii|hex|unhex|bin|oct)[\s\+\/\*!]*\(", re.IGNORECASE),  # SQL functions
+            re.compile(r"(?:select|union|and|or)[\s\+\/\*!]+\b(concat|chr|substring|substr|ascii|hex|unhex|bin|oct)[\s\+\/\*!]*\(", re.IGNORECASE),  # SQL functions
             re.compile(r"\bchar[\s\+\/\*!]*\([\s]*[0-9]+[\s]*[,\)]", re.IGNORECASE),  # CHAR(65) or CHAR(65,66) - SQL specific
             re.compile(r"0x[0-9a-f]{6,}", re.IGNORECASE),  # Hex encoding (at least 6 chars for SQL strings)
             re.compile(r"\bconcat_ws[\s\+\/\*!]*\(", re.IGNORECASE),  # CONCAT_WS
@@ -296,9 +295,9 @@ class WAFEngine:
             re.compile(r"execute\s+immediate", re.IGNORECASE),  # EXECUTE IMMEDIATE
             
             # Boolean-based blind variations
-            re.compile(r"\d+\s*=\s*\d+", re.IGNORECASE),  # 1=1, 0=0
-            re.compile(r"true|false", re.IGNORECASE),  # Boolean literals
-            re.compile(r"null\s+is\s+null", re.IGNORECASE),  # NULL IS NULL
+            re.compile(r"\b\d+\s*=\s*\d+\s*(?:--|#|;|$)", re.IGNORECASE),  # 1=1, 0=0 at end of query or with comment
+            re.compile(r"\b(?:and|or)\s+(?:true|false)\b", re.IGNORECASE),  # Boolean literals with logic
+            re.compile(r"\bnull\s+is\s+null\b", re.IGNORECASE),  # NULL IS NULL
             
             # String manipulation functions
             re.compile(r"cast\s*\(", re.IGNORECASE),  # CAST()
@@ -437,12 +436,12 @@ class WAFEngine:
             re.compile(r"<\s*/\s*script\s*>", re.IGNORECASE),
             
             # ============= JAVASCRIPT PROTOCOLS =============
-            re.compile(r"javascript\s*:", re.IGNORECASE),
-            re.compile(r"vbscript\s*:", re.IGNORECASE),
-            re.compile(r"data\s*:[\s\S]*?text/html", re.IGNORECASE),
-            re.compile(r"data\s*:[\s\S]*?base64", re.IGNORECASE),
-            re.compile(r"data\s*:[\s\S]*?application/", re.IGNORECASE),
-            re.compile(r"data\s*:[\s\S]*?image/svg", re.IGNORECASE),
+            re.compile(r"\bjavascript\s*:", re.IGNORECASE),
+            re.compile(r"\bvbscript\s*:", re.IGNORECASE),
+            re.compile(r"\bdata\s*:[\s\S]*?text/html", re.IGNORECASE),
+            re.compile(r"\bdata\s*:[\s\S]*?base64", re.IGNORECASE),
+            re.compile(r"\bdata\s*:[\s\S]*?application/", re.IGNORECASE),
+            re.compile(r"\bdata\s*:[\s\S]*?image/svg", re.IGNORECASE),
             
             # ============= PROTOCOL OBFUSCATION =============
             re.compile(r"j[\s\x00]*a[\s\x00]*v[\s\x00]*a[\s\x00]*s[\s\x00]*c[\s\x00]*r[\s\x00]*i[\s\x00]*p[\s\x00]*t[\s\x00]*:", re.IGNORECASE),  # Null bytes
@@ -453,17 +452,17 @@ class WAFEngine:
             re.compile(r"%6a%61%76%61%73%63%72%69%70%74", re.IGNORECASE),  # URL encoded javascript
             
             # ============= EVENT HANDLERS (COMPREHENSIVE) =============
-            re.compile(r"on(load|click|error|focus|blur|change|submit|mouseover|mouseout|keydown|keyup|keypress)", re.IGNORECASE),
-            re.compile(r"on(dblclick|mousedown|mouseup|mousemove|contextmenu|wheel)", re.IGNORECASE),
-            re.compile(r"on(drag|dragstart|dragend|dragover|dragenter|dragleave|drop)", re.IGNORECASE),
-            re.compile(r"on(scroll|resize|select|input|invalid|search)", re.IGNORECASE),
-            re.compile(r"on(copy|cut|paste|abort|canplay|canplaythrough|durationchange)", re.IGNORECASE),
-            re.compile(r"on(ended|loadeddata|loadedmetadata|loadstart|pause|play|playing)", re.IGNORECASE),
-            re.compile(r"on(progress|ratechange|seeked|seeking|stalled|suspend|timeupdate)", re.IGNORECASE),
-            re.compile(r"on(volumechange|waiting|animationstart|animationend|animationiteration)", re.IGNORECASE),
-            re.compile(r"on(transitionend|message|open|show|toggle)", re.IGNORECASE),
-            re.compile(r"on(beforeunload|unload|hashchange|pagehide|pageshow|popstate)", re.IGNORECASE),
-            re.compile(r"on(storage|redo|undo|readystatechange|afterprint|beforeprint)", re.IGNORECASE),
+            re.compile(r"\bon(load|click|error|focus|blur|change|submit|mouseover|mouseout|keydown|keyup|keypress)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(dblclick|mousedown|mouseup|mousemove|contextmenu|wheel)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(drag|dragstart|dragend|dragover|dragenter|dragleave|drop)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(scroll|resize|select|input|invalid|search)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(copy|cut|paste|abort|canplay|canplaythrough|durationchange)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(ended|loadeddata|loadedmetadata|loadstart|pause|play|playing)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(progress|ratechange|seeked|seeking|stalled|suspend|timeupdate)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(volumechange|waiting|animationstart|animationend|animationiteration)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(transitionend|message|open|show|toggle)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(beforeunload|unload|hashchange|pagehide|pageshow|popstate)\s*=", re.IGNORECASE),
+            re.compile(r"\bon(storage|redo|undo|readystatechange|afterprint|beforeprint)\s*=", re.IGNORECASE),
             
             # ============= EVENT HANDLER OBFUSCATION =============
             re.compile(r"on[\s\x00]*error[\s\x00]*=", re.IGNORECASE),  # Null byte obfuscation
