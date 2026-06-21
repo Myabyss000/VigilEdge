@@ -87,7 +87,7 @@ async def change_password(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error changing password: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to change password: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 # Default settings template
@@ -177,7 +177,7 @@ async def get_settings(request: Request):
         return settings
     except Exception as e:
         logging.error(f"Error loading settings: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to load settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.post("/settings")
@@ -290,7 +290,7 @@ async def save_settings(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error saving settings: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to save settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.post("/settings/reset")
@@ -325,7 +325,7 @@ async def reset_settings(request: Request):
         }
     except Exception as e:
         logging.error(f"Error resetting settings: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to reset settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 # Backup Management Routes
@@ -356,7 +356,7 @@ async def list_backups(request: Request):
         return {"backups": backups, "total": len(backups)}
     except Exception as e:
         logging.error(f"Error listing backups: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to list backups: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.post("/backups/create")
@@ -399,7 +399,7 @@ async def create_backup(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error creating backup: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to create backup: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.get("/backups/download/{filename}")
@@ -432,7 +432,7 @@ async def download_backup(filename: str, request: Request):
         raise
     except Exception as e:
         logging.error(f"Error downloading backup: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to download backup: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.delete("/backups/delete/{filename}")
@@ -462,7 +462,7 @@ async def delete_backup(filename: str, request: Request):
         raise
     except Exception as e:
         logging.error(f"Error deleting backup: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete backup: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while processing your request.")
 
 
 @router.post("/rules/toggle")
@@ -509,7 +509,7 @@ async def toggle_security_rule(request: Request):
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while processing your request."}
         )
 
 

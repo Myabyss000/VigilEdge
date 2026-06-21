@@ -533,7 +533,7 @@ async def api_log_victim(request: Request):
             return {"status": "ok", "message": "Tracked by WAF", "server_processed": True}
     except Exception as e:
         logging.error(f"Failed to log victim: {e}")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "An internal server error occurred while processing your request."}
 
 
 # ============= SPEED TEST API ENDPOINTS =============
@@ -665,7 +665,7 @@ def run_speed_test_thread():
         logging.error(f"Speed test error: {e}")
         with SPEED_TEST_LOCK:
             SPEED_TEST_RESULT["status"] = "error"
-            SPEED_TEST_RESULT["message"] = f"Speed test failed: {str(e)}"
+            SPEED_TEST_RESULT["message"] = "Speed test failed due to an internal server error."
             SPEED_TEST_RESULT["progress"] = 0
 
 
@@ -761,7 +761,7 @@ async def api_get_realtime_speed(request: Request):
             "success": False,
             "download_speed": 0,
             "upload_speed": 0,
-            "error": str(e)
+            "error": "An internal server error occurred while processing your request."
         }
 
 
@@ -834,7 +834,7 @@ async def api_get_network_interfaces():
         logging.error(f"Failed to get network interfaces: {e}")
         return {
             "success": False,
-            "error": str(e),
+            "error": "An internal server error occurred while processing your request.",
             "interfaces": []
         }
 
@@ -892,7 +892,7 @@ async def api_get_network_connections():
         logging.error(f"Failed to get network connections: {e}")
         return {
             "success": False,
-            "error": str(e),
+            "error": "An internal server error occurred while processing your request.",
             "connections": []
         }
 
@@ -959,7 +959,7 @@ async def api_get_listening_ports():
         logging.error(f"Failed to get listening ports: {e}")
         return {
             "success": False,
-            "error": str(e),
+            "error": "An internal server error occurred while processing your request.",
             "ports": []
         }
 
@@ -1038,7 +1038,7 @@ async def api_get_network_summary():
     
     except Exception as e:
         logging.error(f"Failed to get network summary: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 # ============= USER ACTIVITY TRACKING =============
@@ -1079,7 +1079,7 @@ async def api_log_user_activity(request: Request):
     
     except Exception as e:
         logging.error(f"Failed to log user activity: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/activity/live")
@@ -1156,7 +1156,7 @@ async def api_get_live_activity():
     
     except Exception as e:
         logging.error(f"Failed to get live activity: {e}")
-        return {"success": False, "activities": [], "error": str(e)}
+        return {"success": False, "activities": [], "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/network/graph-data")
@@ -1242,4 +1242,4 @@ async def api_get_graph_data():
     
     except Exception as e:
         logging.error(f"Failed to get graph data: {e}")
-        return {"success": False, "nodes": [], "links": [], "error": str(e)}
+        return {"success": False, "nodes": [], "links": [], "error": "An internal server error occurred while processing your request."}

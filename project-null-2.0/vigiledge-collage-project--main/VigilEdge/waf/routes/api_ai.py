@@ -185,7 +185,7 @@ def get_scorer_config(request: Request):
         }
     except Exception as e:
         logging.error(f"Get scorer config error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.post("/ai-scorer/switch")
@@ -213,7 +213,7 @@ def switch_scorer(request: Request, data: dict):
             return {"success": False, "error": result.get("error")}
     except Exception as e:
         logging.error(f"Switch scorer error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/ai-scorer/check-lm-studio")
@@ -233,7 +233,7 @@ def check_lm_studio(request: Request):
         }
     except Exception as e:
         logging.error(f"Check LM Studio error: {e}")
-        return {"success": False, "lm_studio_available": False, "error": str(e)}
+        return {"success": False, "lm_studio_available": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.post("/ai-scorer/test")
@@ -268,4 +268,4 @@ def test_scorer(request: Request, data: dict):
         }
     except Exception as e:
         logging.error(f"Test scorer error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}

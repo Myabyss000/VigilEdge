@@ -81,7 +81,7 @@ async def get_waf_stats():
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/threats")
@@ -119,7 +119,7 @@ async def get_recent_threats():
         conn.close()
         return {"success": True, "data": threats}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/blocked_ips")
@@ -155,7 +155,7 @@ async def get_blocked_ips_api():
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/security_rules")
@@ -186,7 +186,7 @@ async def get_security_rules_api():
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/events")
@@ -224,7 +224,7 @@ async def get_recent_events_api():
         conn.close()
         return {"success": True, "data": events}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/network_monitor")
@@ -266,7 +266,7 @@ async def get_network_monitor_data():
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.get("/api/waf/threat_summary")
@@ -321,7 +321,7 @@ async def get_threat_summary():
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 # ==================== AI CHAT ENDPOINTS ====================
@@ -444,6 +444,6 @@ Be concise, technical, and helpful. Use emojis sparingly for emphasis."""
         logging.error(f"Chat error: {type(e).__name__} - {e}\n{traceback.format_exc()}")
         return {
             "success": False,
-            "error": str(e),
+            "error": "An internal server error occurred while processing your request.",
             "response": "An error occurred while processing your request."
         }

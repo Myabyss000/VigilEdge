@@ -120,9 +120,9 @@ async def proxy_request(request: Request):
         )
             
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
+        raise HTTPException(status_code=502, detail="Bad Gateway: Proxy connection failed")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def _track_visitor(client_ip: str, user_agent: str, url: str):
@@ -272,7 +272,7 @@ async def proxy_upstream_request(request: Request, path: str = "", public_base_p
 
     except Exception as e:
         return HTMLResponse(
-            content=_get_error_html(str(e)),
+            content=_get_error_html("502 Bad Gateway: Upstream server is down"),
             status_code=500
         )
 
@@ -320,14 +320,14 @@ async def test_proxy_get(path: str, request: Request):
         return JSONResponse(
             content={
                 "error": "Demo website is not running",
-                "message": f"Could not connect to {demo_target_url} - {str(e)}",
+                "message": f"Could not connect to {demo_target_url} (Connection Failed)",
                 "instruction": "Start the demo website or switch the upstream target in settings."
             },
             status_code=503
         )
     except Exception as e:
         return JSONResponse(
-            content={"error": "Proxy error", "message": str(e)},
+            content={"error": "Proxy error", "message": "Upstream connection failed"},
             status_code=500
         )
 
@@ -355,14 +355,14 @@ async def test_proxy_post(path: str, request: Request):
         return JSONResponse(
             content={
                 "error": "Demo website is not running",
-                "message": f"Could not connect to {demo_target_url} - {str(e)}",
+                "message": f"Could not connect to {demo_target_url} (Connection Failed)",
                 "instruction": "Start the demo website or switch the upstream target in settings."
             },
             status_code=503
         )
     except Exception as e:
         return JSONResponse(
-            content={"error": "Proxy error", "message": str(e)},
+            content={"error": "Proxy error", "message": "Upstream connection failed"},
             status_code=500
         )
 

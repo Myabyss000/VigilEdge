@@ -605,7 +605,7 @@ async def reset_password_action(
         print(f"Reset Error: {e}")
         return template_response_with_csrf(
             "reset_password.html",
-            {"request": request, "error": f"System Error: {str(e)}", "setup_required": False}
+            {"request": request, "error": "An internal server error occurred while processing your request.", "setup_required": False}
         )
 
 # --- 2FA Setup Routes (New) ---

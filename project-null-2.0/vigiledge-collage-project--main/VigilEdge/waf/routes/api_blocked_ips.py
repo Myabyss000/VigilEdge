@@ -42,7 +42,7 @@ async def api_get_blocked_ips(request: Request):
         }
     except Exception as e:
         logging.error(f"Error getting blocked IPs: {e}")
-        return {"success": False, "error": str(e), "blocked_ips": [], "count": 0}
+        return {"success": False, "error": "An internal server error occurred while processing your request.", "blocked_ips": [], "count": 0}
 
 
 @router.post("/blocked-ips")
@@ -82,7 +82,7 @@ async def api_block_ip(request: Request):
             
     except Exception as e:
         logging.error(f"Error blocking IP: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.delete("/blocked-ips/{ip_address}")
@@ -91,6 +91,13 @@ async def api_unblock_ip(ip_address: str, request: Request):
     """API endpoint to unblock an IP address."""
     try:
         waf_engine = get_waf_engine()
+        
+        # Validate IP format
+        try:
+            ipaddress.ip_address(ip_address)
+        except ValueError:
+            return {"success": False, "error": "Invalid IP address format"}
+            
         result = await waf_engine.unblock_ip(ip_address)
         
         if result:
@@ -104,7 +111,7 @@ async def api_unblock_ip(ip_address: str, request: Request):
             
     except Exception as e:
         logging.error(f"Error unblocking IP: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
 
 
 @router.post("/blocked-ips/clear")
@@ -125,4 +132,4 @@ async def api_clear_blocked_ips(request: Request):
             
     except Exception as e:
         logging.error(f"Error clearing blocked IPs: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal server error occurred while processing your request."}
