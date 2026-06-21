@@ -46,3 +46,7 @@ Thumbs.db
 # Project specific
 test_*.py
 !tests/
+
+# Private / Local Only
+research_package/
+

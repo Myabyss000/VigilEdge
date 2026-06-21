@@ -45,6 +45,7 @@
     "totp_secret": "gAAAAABpt5HkHEYcsrPJYyQ5bqU_V6XKKqWrsxbnM96a7xZx62HCAq0T2XDvgXVC7T8biYFtlP2Xb4L7XzCbdO7sZHb9DlZr55yaj2L7eSXDHqH-plNBxKQblG5S-bMBeTrx9t9y9EJl",
     "2fa_enabled": true,
     "admin_password": "$2b$12$OH4k.XiqdUhvDTSioYglQO3Pxn67Yr3DfWi0yjqdybAoy4IyE/TUW",
-    "admin_username": "admin"
+    "admin_username": "admin",
+    "terms_accepted": true
   }
 }

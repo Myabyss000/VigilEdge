@@ -187,6 +187,13 @@
             </p>
             {% endif %}
 
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 1rem;">
+                <input type="checkbox" id="accept_terms" name="accept_terms" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--cyber-blue);" required>
+                <label for="accept_terms" style="margin-bottom: 0; font-family: 'Inter', sans-serif; cursor: pointer; font-size: 0.9rem;">
+                    I have read and agree to the <a href="/terms" target="_blank" style="color: var(--cyber-blue); text-decoration: none; font-weight: 600;">Terms & Conditions</a>
+                </label>
+            </div>
+
             <button type="submit">Initialize Admin</button>
         </form>
 

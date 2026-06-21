@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VigilEdge WAF - Terms and Conditions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0f0f23;
+            --cyber-blue: #00d4ff;
+            --cyber-teal: #00ffa6;
+            --text-primary: #ffffff;
+            --text-secondary: #d8e3f0;
+            --glass-bg: rgba(30, 30, 50, 0.78);
+            --glass-border: rgba(100, 200, 255, 0.28);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f23;
+            color: var(--text-primary);
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h1, h2, h3 { color: var(--cyber-blue); font-family: 'JetBrains Mono', monospace; }
+        h1 { border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 2rem; }
+        h2 { margin-top: 2rem; margin-bottom: 1rem; color: var(--cyber-teal); }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; color: var(--text-secondary); }
+        p { margin-bottom: 1rem; color: var(--text-secondary); }
+        strong { color: #fff; }
+        hr { border: 0; border-top: 1px solid var(--glass-border); margin: 2rem 0; }
+    </style>
+</head>
+<body>
+    <textarea id="raw-content" style="display: none;">{{ terms_content }}</textarea>
+    <div class="container" id="rendered-content"></div>
+    <script>
+        const rawMarkdown = document.getElementById('raw-content').value;
+        document.getElementById('rendered-content').innerHTML = marked.parse(rawMarkdown);
+    </script>
+</body>
+</html>

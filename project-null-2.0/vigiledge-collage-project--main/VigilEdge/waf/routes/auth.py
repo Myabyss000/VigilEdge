@@ -248,12 +248,14 @@ async def login_page(request: Request):
     elif query_params.get("msg") == ["2fa_bootstrap_required"]:
         message = "Sign in first to manage 2FA. If 2FA has not been configured yet, use the setup link below."
 
+    terms_accepted = get_auth_config().get("terms_accepted", False)
     return template_response_with_csrf(
         "login.html",
         {
             "request": request,
             "message": message,
             "show_setup_2fa": not is_2fa_configured(),
+            "terms_accepted": terms_accepted,
         },
     )
 
@@ -266,18 +268,21 @@ async def login(
     username: str = Form(...),
     password: str = Form(...),
     csrf_token: str = Form(""),
+    accept_terms: str = Form(None),
 ):
     """Handle login form submission."""
     if not is_auth_initialized(request.app.state.settings):
         return RedirectResponse(url="/bootstrap", status_code=303)
 
     if not validate_csrf_token(request, csrf_token):
+        terms_accepted = get_auth_config().get("terms_accepted", False)
         return template_response_with_csrf(
             "login.html",
             {
                 "request": request,
                 "error": "Security token expired. Please refresh and try again.",
                 "show_setup_2fa": not is_2fa_configured(),
+                "terms_accepted": terms_accepted,
             },
             status_code=400,
         )
@@ -289,7 +294,29 @@ async def login(
         and _verify_password(password, effective_password)
     )
 
+    settings_data = load_settings_file()
+    auth_config = settings_data.get("authentication", {})
+    terms_accepted = auth_config.get("terms_accepted", False)
+
+    if auth_success and not terms_accepted and accept_terms != "on":
+        return template_response_with_csrf(
+            "login.html",
+            {
+                "request": request,
+                "error": "You must accept the Terms and Conditions to proceed.",
+                "show_setup_2fa": not is_2fa_configured(),
+                "terms_accepted": terms_accepted,
+            },
+            status_code=400,
+        )
+
     if auth_success:
+        if not terms_accepted and accept_terms == "on":
+            if "authentication" not in settings_data:
+                settings_data["authentication"] = {}
+            settings_data["authentication"]["terms_accepted"] = True
+            save_settings_file(settings_data)
+
         # Self-repair: keep app state aligned with persisted settings.
         app_settings.admin_username = effective_username
         app_settings.admin_password = effective_password
@@ -313,12 +340,14 @@ async def login(
         return response
     
     # Login failed
+    terms_accepted = get_auth_config().get("terms_accepted", False)
     return template_response_with_csrf(
         "login.html", 
         {
             "request": request,
             "error": "Invalid Operator ID or Access Key",
             "show_setup_2fa": not is_2fa_configured(),
+            "terms_accepted": terms_accepted,
         }, 
         status_code=401
     )
@@ -350,6 +379,7 @@ async def bootstrap_admin(
     confirm_password: str = Form(...),
     bootstrap_token: str = Form(""),
     csrf_token: str = Form(""),
+    accept_terms: str = Form(None),
 ):
     """Initialize the first WAF admin account and mark bootstrap complete."""
     if is_auth_initialized(request.app.state.settings):
@@ -361,6 +391,17 @@ async def bootstrap_admin(
             {
                 "request": request,
                 "error": "Security token expired. Please refresh and try again.",
+                "bootstrap_token_required": bool(request.app.state.settings.bootstrap_admin_token),
+            },
+            status_code=400,
+        )
+
+    if accept_terms != "on":
+        return template_response_with_csrf(
+            "bootstrap.html",
+            {
+                "request": request,
+                "error": "You must accept the Terms and Conditions to proceed.",
                 "bootstrap_token_required": bool(request.app.state.settings.bootstrap_admin_token),
             },
             status_code=400,
@@ -417,6 +458,7 @@ async def bootstrap_admin(
     auth_config["admin_username"] = normalized_username
     auth_config["admin_password"] = hashed_password
     auth_config["bootstrap_completed"] = True
+    auth_config["terms_accepted"] = True
     save_settings_file(settings_data)
 
     request.app.state.settings.admin_username = normalized_username
@@ -444,6 +486,15 @@ async def logout(response: Response):
     response.delete_cookie(COOKIE_NAME)
     response.delete_cookie(CSRF_COOKIE_NAME, path="/")
     return response
+
+
+@router.get("/terms", response_class=HTMLResponse)
+@limiter.limit(RELAXED)
+async def terms_page(request: Request):
+    """Serve the Terms and Conditions page."""
+    terms_path = Path("../TERMS.md")
+    content = terms_path.read_text(encoding="utf-8") if terms_path.exists() else "Terms and Conditions not found."
+    return template_response_with_csrf("terms.html", {"request": request, "terms_content": content})
 
 
 
