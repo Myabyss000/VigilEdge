@@ -4,770 +4,1292 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threat Detection - VigilEdge WAF</title>
+    <title>Threat Detection — VigilEdge WAF</title>
+    <meta name="description" content="Real-time threat detection command center for VigilEdge WAF security operations.">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="/static/css/enhanced-dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
+        /* ═══════════════════════════════════════════════════════════════
+           DESIGN TOKENS
+           ═══════════════════════════════════════════════════════════════ */
         :root {
             --bg-primary: #0a0e1a;
-            --bg-secondary: #1a1f2e;
-            --card-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: #a0a9c0;
-            --text-muted: #6b7280;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a1f2e;
+            --card-bg: rgba(255, 255, 255, 0.025);
+            --card-bg-hover: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-border-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
             --cyber-blue: #00d4ff;
             --cyber-teal: #00ffa6;
             --cyber-purple: #7c3aed;
+            --cyber-pink: #ec4899;
+            --critical: #ef4444;
+            --critical-bg: rgba(239, 68, 68, 0.1);
+            --high: #f97316;
+            --high-bg: rgba(249, 115, 22, 0.1);
+            --medium: #eab308;
+            --medium-bg: rgba(234, 179, 8, 0.1);
+            --low: #3b82f6;
+            --low-bg: rgba(59, 130, 246, 0.1);
             --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
-            --glow-teal: 0 0 20px rgba(0, 255, 166, 0.5);
-            --glow-purple: 0 0 20px rgba(124, 58, 237, 0.5);
             --radius-sm: 6px;
             --radius-md: 12px;
-            --radius-lg: 18px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-glow-blue: 0 0 20px rgba(0, 212, 255, 0.15);
+            --shadow-glow-red: 0 0 25px rgba(239, 68, 68, 0.2);
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-med: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            background-image:
+                radial-gradient(ellipse at 15% 10%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 90%, rgba(124, 58, 237, 0.05) 0%, transparent 50%);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        .container {
-            display: flex;
-            min-height: 100vh;
-        }
+        .layout { display: flex; min-height: 100vh; }
 
-        /* Sidebar */
+        /* ═══════════════════════════════════════════════════════════════
+           SIDEBAR
+           ═══════════════════════════════════════════════════════════════ */
         .sidebar {
-            width: 280px;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
+            width: 260px;
+            background: rgba(15, 18, 30, 0.9);
+            backdrop-filter: blur(24px);
             border-right: 1px solid var(--glass-border);
-            padding: 2rem 0;
+            padding: 1.75rem 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+            z-index: 100;
         }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0 2rem;
-            margin-bottom: 3rem;
-        }
-
+        .logo { display: flex; align-items: center; gap: 0.75rem; padding: 0 1.5rem; margin-bottom: 2.5rem; }
         .logo-icon {
-            width: 32px;
-            height: 32px;
+            width: 36px; height: 36px;
             background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
             border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
         }
+        .logo-text { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.5px; }
+        .logo-subtitle { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
 
-        .logo-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .logo-subtitle {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0 1rem;
-        }
-
-        .nav-item {
-            margin-bottom: 0.5rem;
-        }
-
+        .nav-menu { list-style: none; padding: 0 0.75rem; }
+        .nav-item { margin-bottom: 2px; }
         .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
+            display: flex; align-items: center; gap: 0.85rem;
+            padding: 0.7rem 0.85rem;
             color: var(--text-secondary);
             text-decoration: none;
             border-radius: var(--radius-md);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            transition: all var(--transition-fast);
+            font-size: 0.9rem; font-weight: 450;
         }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-            transform: translateX(5px);
-        }
-
+        .nav-link:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); transform: translateX(3px); }
         .nav-link.active {
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 166, 0.1));
-            color: var(--text-primary);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 255, 166, 0.06));
+            color: var(--cyber-blue); font-weight: 600;
             border-left: 3px solid var(--cyber-blue);
-            box-shadow: var(--glow-blue);
         }
+        .nav-icon { font-size: 1.1rem; width: 22px; text-align: center; }
 
-        .nav-icon {
-            font-size: 1.25rem;
-            width: 24px;
-            text-align: center;
-        }
+        /* ═══════════════════════════════════════════════════════════════
+           MAIN CONTENT
+           ═══════════════════════════════════════════════════════════════ */
+        .main { flex: 1; margin-left: 260px; padding: 2rem 2.25rem; }
 
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 2rem;
-        }
-
+        /* Page Header */
         .page-header {
-            margin-bottom: 2rem;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 2rem; flex-wrap: wrap; gap: 1.5rem;
         }
-
         .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 2rem; font-weight: 800; letter-spacing: -1px;
             background: linear-gradient(135deg, var(--cyber-blue), var(--cyber-teal));
-            -webkit-background-clip: text;
-            background-clip: text;
+            -webkit-background-clip: text; background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
         }
+        .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem; }
 
-        .page-subtitle {
-            color: var(--text-muted);
-            font-size: 1.125rem;
+        /* Header controls */
+        .header-controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .control-btn {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 1rem; border-radius: var(--radius-md);
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            color: var(--text-secondary); font-size: 0.8rem; font-weight: 500;
+            cursor: pointer; transition: all var(--transition-fast);
+            font-family: 'Inter', sans-serif;
         }
-
-        /* Threat Overview Grid */
-        .threat-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+        .control-btn:hover { background: var(--card-bg-hover); color: var(--text-primary); border-color: var(--glass-border-hover); }
+        .control-btn.active { background: rgba(0, 212, 255, 0.1); border-color: var(--cyber-blue); color: var(--cyber-blue); }
+        .control-btn .dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+            animation: pulse-dot 1.5s ease-in-out infinite;
         }
+        .control-btn.paused .dot { background: var(--medium); animation: none; }
 
-        .threat-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            padding: 2rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+        /* Time Range Picker */
+        .time-range-bar {
+            display: flex; align-items: center; gap: 0.6rem;
+            margin-bottom: 1.75rem; flex-wrap: wrap;
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); padding: 0.65rem 1rem;
+            backdrop-filter: blur(12px);
         }
-
-        .threat-card.critical {
-            border-color: var(--danger);
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        .time-range-bar .range-label {
+            font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-right: 0.25rem;
         }
-
-        .threat-card.critical::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--danger);
+        .range-preset {
+            padding: 0.4rem 0.85rem; border-radius: var(--radius-sm);
+            background: transparent; border: 1px solid var(--glass-border);
+            color: var(--text-secondary); font-size: 0.78rem; font-weight: 500;
+            cursor: pointer; transition: all var(--transition-fast);
+            font-family: 'Inter', sans-serif;
         }
-
-        .threat-card.warning {
-            border-color: var(--warning);
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+        .range-preset:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); border-color: var(--glass-border-hover); }
+        .range-preset.active { background: rgba(0, 212, 255, 0.12); border-color: var(--cyber-blue); color: var(--cyber-blue); font-weight: 600; }
+        .range-separator { width: 1px; height: 24px; background: var(--glass-border); margin: 0 0.25rem; }
+        .range-date-input {
+            padding: 0.4rem 0.6rem; border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border);
+            color: var(--text-primary); font-size: 0.75rem; font-family: 'JetBrains Mono', monospace;
+            transition: border-color var(--transition-fast);
+            color-scheme: dark;
         }
-
-        .threat-card.warning::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--warning);
+        .range-date-input:focus { outline: none; border-color: var(--cyber-blue); }
+        .range-apply-btn {
+            padding: 0.4rem 0.85rem; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 255, 166, 0.1));
+            border: 1px solid var(--cyber-blue); color: var(--cyber-blue);
+            font-size: 0.75rem; font-weight: 600; cursor: pointer;
+            transition: all var(--transition-fast); font-family: 'Inter', sans-serif;
         }
-
-        .threat-card.info {
-            border-color: var(--info);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .threat-card.info::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--info);
-        }
-
-        .threat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .threat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .threat-info h3 {
-            color: var(--text-primary);
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .threat-count {
-            font-size: 2.5rem;
-            font-weight: 700;
+        .range-apply-btn:hover { background: rgba(0, 212, 255, 0.25); }
+        .range-active-label {
+            font-size: 0.72rem; color: var(--cyber-teal); margin-left: auto;
             font-family: 'JetBrains Mono', monospace;
-            line-height: 1;
-        }
-
-        .threat-card.critical .threat-count {
-            color: var(--danger);
-        }
-
-        .threat-card.warning .threat-count {
-            color: var(--warning);
-        }
-
-        .threat-card.info .threat-count {
-            color: var(--info);
-        }
-
-        .threat-description {
-            color: var(--text-muted);
-            font-size: 0.925rem;
-            margin-top: 0.5rem;
-        }
-
-        /* Real-time Threats */
-        .realtime-section {
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .refresh-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--cyber-blue);
-            font-size: 0.875rem;
-        }
-
-        .refresh-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--cyber-blue);
-            border-radius: 50%;
-            animation: pulse-dot 1s ease-in-out infinite;
         }
 
         @keyframes pulse-dot {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.5;
-                transform: scale(1.2);
-            }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
         }
 
-        .threat-list {
+        /* ═══════════════════════════════════════════════════════════════
+           THREAT LEVEL GAUGE + SUMMARY ROW
+           ═══════════════════════════════════════════════════════════════ */
+        .gauge-summary-row {
+            display: grid; grid-template-columns: 200px 1fr; gap: 1.5rem;
+            margin-bottom: 2rem; align-items: stretch;
+        }
+
+        .gauge-container {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl); padding: 1.5rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; backdrop-filter: blur(12px);
+        }
+        .gauge-container.threat-critical { border-color: rgba(239,68,68,0.3); box-shadow: var(--shadow-glow-red); }
+        .gauge-container.threat-high { border-color: rgba(249,115,22,0.3); box-shadow: 0 0 25px rgba(249,115,22,0.15); }
+        .gauge-container.threat-medium { border-color: rgba(234,179,8,0.3); box-shadow: 0 0 25px rgba(234,179,8,0.15); }
+        .gauge-container.threat-low { border-color: rgba(59,130,246,0.3); box-shadow: 0 0 25px rgba(59,130,246,0.15); }
+
+        .gauge-svg { width: 130px; height: 130px; transform: rotate(-90deg); }
+        .gauge-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+        .gauge-fill {
+            fill: none; stroke-width: 10; stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+        }
+        .gauge-label {
+            position: absolute; text-align: center;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .gauge-level { font-size: 0.9rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+        .gauge-sublabel { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+        /* Summary stats bar */
+        .summary-stats {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+        }
+        .summary-stat {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+            transition: all var(--transition-fast); backdrop-filter: blur(12px);
+        }
+        .summary-stat:hover { background: var(--card-bg-hover); transform: translateY(-2px); }
+        .summary-stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+        .summary-stat-value {
+            font-size: 1.75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+        .summary-stat-value.critical-text { color: var(--critical); }
+        .summary-stat-value.high-text { color: var(--high); }
+        .summary-stat-value.medium-text { color: var(--medium); }
+        .summary-stat-value.blue-text { color: var(--cyber-blue); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ATTACK TYPE CARDS GRID (16 types)
+           ═══════════════════════════════════════════════════════════════ */
+        .section-label {
+            font-size: 1.1rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .section-label .label-line {
+            flex: 1; height: 1px;
+            background: linear-gradient(90deg, var(--glass-border), transparent);
+        }
+
+        .attack-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+            gap: 0.85rem; margin-bottom: 2rem;
+        }
+
+        .attack-card {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
+            border-radius: var(--radius-md);
+            padding: 1rem 1.15rem;
+            transition: all var(--transition-fast);
+            position: relative; overflow: hidden;
+            cursor: default; backdrop-filter: blur(8px);
+        }
+        .attack-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 3px; border-radius: 3px 3px 0 0;
+        }
+        .attack-card:hover { transform: translateY(-3px); background: var(--card-bg-hover); border-color: var(--glass-border-hover); }
+
+        /* Severity color classes */
+        .attack-card.sev-critical::before { background: var(--critical); }
+        .attack-card.sev-critical:hover { box-shadow: 0 4px 20px rgba(239,68,68,0.15); }
+        .attack-card.sev-high::before { background: var(--high); }
+        .attack-card.sev-high:hover { box-shadow: 0 4px 20px rgba(249,115,22,0.15); }
+        .attack-card.sev-medium::before { background: var(--medium); }
+        .attack-card.sev-medium:hover { box-shadow: 0 4px 20px rgba(234,179,8,0.15); }
+        .attack-card.sev-low::before { background: var(--low); }
+        .attack-card.sev-low:hover { box-shadow: 0 4px 20px rgba(59,130,246,0.15); }
+
+        .attack-card-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .attack-card-name { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; line-height: 1.3; }
+        .attack-card-count {
+            font-size: 1.6rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+        .attack-card.sev-critical .attack-card-count { color: var(--critical); }
+        .attack-card.sev-high .attack-card-count { color: var(--high); }
+        .attack-card.sev-medium .attack-card-count { color: var(--medium); }
+        .attack-card.sev-low .attack-card-count { color: var(--low); }
+
+        .attack-card-severity {
+            display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; padding: 2px 6px; border-radius: 3px; margin-top: 0.4rem;
+        }
+        .sev-badge-critical { background: var(--critical-bg); color: var(--critical); }
+        .sev-badge-high { background: var(--high-bg); color: var(--high); }
+        .sev-badge-medium { background: var(--medium-bg); color: var(--medium); }
+        .sev-badge-low { background: var(--low-bg); color: var(--low); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHARTS GRID
+           ═══════════════════════════════════════════════════════════════ */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.25rem; margin-bottom: 2rem;
+        }
+        .charts-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.25rem; margin-bottom: 2rem;
         }
 
-        .threat-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--glass-border);
-            transition: all 0.3s ease;
+        .chart-panel {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); padding: 1.5rem;
+            backdrop-filter: blur(12px);
         }
-
-        .threat-item:last-child {
-            border-bottom: none;
+        .chart-panel-title {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+            margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;
         }
+        .chart-canvas-wrap { position: relative; width: 100%; }
+        .chart-canvas-wrap canvas { width: 100% !important; }
 
-        .threat-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+        /* ═══════════════════════════════════════════════════════════════
+           HEATMAP
+           ═══════════════════════════════════════════════════════════════ */
+        .heatmap-grid {
+            display: grid; grid-template-columns: 50px repeat(24, 1fr);
+            gap: 2px; font-size: 0.65rem;
         }
-
-        .threat-severity {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
+        .heatmap-label {
+            color: var(--text-muted); display: flex; align-items: center;
+            justify-content: flex-end; padding-right: 6px; font-family: 'JetBrains Mono', monospace;
         }
-
-        .threat-severity.high {
-            background: var(--danger);
-            box-shadow: 0 0 10px var(--danger);
-        }
-
-        .threat-severity.medium {
-            background: var(--warning);
-            box-shadow: 0 0 10px var(--warning);
-        }
-
-        .threat-severity.low {
-            background: var(--info);
-            box-shadow: 0 0 10px var(--info);
-        }
-
-        .threat-details {
-            flex: 1;
-        }
-
-        .threat-title {
-            color: var(--text-primary);
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .threat-ip {
-            color: var(--cyber-blue);
+        .heatmap-header {
+            color: var(--text-muted); text-align: center; padding: 2px 0;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            margin-bottom: 0.25rem;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1; border-radius: 3px;
+            background: rgba(255,255,255,0.03);
+            transition: all var(--transition-fast);
+            cursor: pointer; position: relative;
+        }
+        .heatmap-cell:hover { transform: scale(1.3); z-index: 2; }
+        .heatmap-cell[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute; bottom: calc(100% + 4px); left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-tertiary); border: 1px solid var(--glass-border);
+            color: var(--text-primary); padding: 3px 8px; border-radius: 4px;
+            font-size: 0.65rem; white-space: nowrap; z-index: 10;
+            pointer-events: none;
         }
 
-        .threat-time {
-            color: var(--text-muted);
-            font-size: 0.875rem;
+        /* ═══════════════════════════════════════════════════════════════
+           MITRE ATT&CK GRID
+           ═══════════════════════════════════════════════════════════════ */
+        .mitre-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 0.75rem; margin-bottom: 2rem;
+        }
+        .mitre-card {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md); padding: 1rem;
+            transition: all var(--transition-fast);
+        }
+        .mitre-card:hover { background: var(--card-bg-hover); transform: translateY(-2px); }
+        .mitre-tactic { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--cyber-purple); margin-bottom: 0.35rem; }
+        .mitre-technique { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .mitre-id { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+        .mitre-count {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 22px; height: 22px; border-radius: 11px;
+            background: rgba(124, 58, 237, 0.2); color: var(--cyber-purple);
+            font-size: 0.7rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            float: right; margin-top: -1.5rem;
         }
 
-        .threat-actions {
-            display: flex;
-            gap: 0.5rem;
+        /* ═══════════════════════════════════════════════════════════════
+           TOP ATTACKER IPS
+           ═══════════════════════════════════════════════════════════════ */
+        .ip-list { list-style: none; }
+        .ip-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: all var(--transition-fast);
+        }
+        .ip-item:last-child { border-bottom: none; }
+        .ip-item:hover { background: rgba(255,255,255,0.02); padding-left: 0.5rem; }
+        .ip-rank {
+            width: 22px; height: 22px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            background: rgba(255,255,255,0.05); color: var(--text-muted); flex-shrink: 0;
+        }
+        .ip-rank.top-3 { background: rgba(239,68,68,0.15); color: var(--critical); }
+        .ip-address { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--cyber-blue); flex: 1; }
+        .ip-count { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+        .ip-bar {
+            width: 80px; height: 6px; border-radius: 3px;
+            background: rgba(255,255,255,0.05); overflow: hidden; flex-shrink: 0;
+        }
+        .ip-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--critical), var(--high)); transition: width 1s ease; }
+        .ip-block-btn {
+            padding: 3px 8px; border-radius: 4px;
+            background: transparent; border: 1px solid rgba(239,68,68,0.3);
+            color: var(--critical); font-size: 0.65rem; font-weight: 600;
+            cursor: pointer; transition: all var(--transition-fast);
+            font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .ip-block-btn:hover { background: rgba(239,68,68,0.15); border-color: var(--critical); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           THREAT FEED
+           ═══════════════════════════════════════════════════════════════ */
+        .feed-toolbar {
+            display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;
+        }
+        .feed-select, .feed-input {
+            padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            color: var(--text-primary); font-size: 0.8rem; font-family: 'Inter', sans-serif;
+            transition: border-color var(--transition-fast);
+        }
+        .feed-select:focus, .feed-input:focus { outline: none; border-color: var(--cyber-blue); }
+        .feed-select option { background: var(--bg-secondary); }
+
+        .threat-feed {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); overflow: hidden; backdrop-filter: blur(12px);
+        }
+        .feed-item {
+            display: grid; grid-template-columns: 14px 100px 1fr 140px 90px 110px;
+            gap: 0.85rem; align-items: center;
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: all var(--transition-fast);
+            animation: slideIn 0.4s ease;
+        }
+        .feed-item:hover { background: rgba(255,255,255,0.03); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .action-btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .feed-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .feed-dot.sev-CRITICAL { background: var(--critical); box-shadow: 0 0 8px var(--critical); }
+        .feed-dot.sev-HIGH { background: var(--high); box-shadow: 0 0 8px var(--high); }
+        .feed-dot.sev-MEDIUM { background: var(--medium); }
+        .feed-dot.sev-LOW { background: var(--low); }
+
+        .feed-type-tag {
+            font-size: 0.7rem; font-weight: 600; padding: 3px 8px;
+            border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .feed-type-tag.tag-critical { background: var(--critical-bg); color: var(--critical); }
+        .feed-type-tag.tag-high { background: var(--high-bg); color: var(--high); }
+        .feed-type-tag.tag-medium { background: var(--medium-bg); color: var(--medium); }
+        .feed-type-tag.tag-low { background: var(--low-bg); color: var(--low); }
+
+        .feed-ip { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--cyber-blue); }
+        .feed-url { font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .feed-time { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .feed-actions { display: flex; gap: 0.4rem; }
+        .feed-btn {
+            padding: 4px 8px; border-radius: 4px; font-size: 0.65rem;
+            font-weight: 600; cursor: pointer; transition: all var(--transition-fast);
+            border: 1px solid transparent; font-family: 'Inter', sans-serif;
+            text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .feed-btn.btn-block { background: rgba(239,68,68,0.15); color: var(--critical); border-color: rgba(239,68,68,0.3); }
+        .feed-btn.btn-block:hover { background: rgba(239,68,68,0.25); }
+        .feed-btn.btn-detail { background: rgba(0,212,255,0.1); color: var(--cyber-blue); border-color: rgba(0,212,255,0.2); }
+        .feed-btn.btn-detail:hover { background: rgba(0,212,255,0.2); }
+
+        .feed-empty {
+            text-align: center; padding: 3rem; color: var(--text-muted);
+            font-size: 0.9rem;
         }
 
-        .action-btn.block {
-            background: var(--danger);
-            color: white;
+        /* ═══════════════════════════════════════════════════════════════
+           DETAIL MODAL
+           ═══════════════════════════════════════════════════════════════ */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px); z-index: 1000;
+            display: none; align-items: center; justify-content: center;
         }
-
-        .action-btn.block:hover {
-            background: #dc2626;
-            transform: translateY(-1px);
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--bg-secondary); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl); padding: 2rem;
+            width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;
+            animation: modalIn 0.3s ease;
         }
-
-        .action-btn.analyze {
-            background: rgba(0, 212, 255, 0.2);
-            color: var(--cyber-blue);
-            border: 1px solid var(--cyber-blue);
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; }
+        .modal-close {
+            width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--glass-border);
+            background: transparent; color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 1rem;
+            transition: all var(--transition-fast);
         }
+        .modal-close:hover { background: rgba(239,68,68,0.1); color: var(--critical); border-color: var(--critical); }
+        .modal-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
+        .modal-label { font-size: 0.75rem; color: var(--text-muted); min-width: 100px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .modal-value { font-size: 0.85rem; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; word-break: break-all; }
 
-        .action-btn.analyze:hover {
-            background: rgba(0, 212, 255, 0.3);
-            transform: translateY(-1px);
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 1200px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .charts-grid-3 { grid-template-columns: 1fr 1fr; }
+            .gauge-summary-row { grid-template-columns: 1fr; }
         }
-
-        /* Responsive Design */
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-
-            .page-title {
-                font-size: 2rem;
-            }
-
-            .threat-overview {
-                grid-template-columns: 1fr;
-            }
-
-            .threat-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
-
-            .threat-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
+            .sidebar { transform: translateX(-100%); }
+            .main { margin-left: 0; padding: 1rem; }
+            .attack-cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid-3 { grid-template-columns: 1fr; }
+            .feed-item { grid-template-columns: 10px 1fr; gap: 0.5rem; }
+            .summary-stats { grid-template-columns: repeat(2, 1fr); }
+            .mitre-grid { grid-template-columns: repeat(2, 1fr); }
         }
+
+        /* Animate count-up */
+        .count-up { transition: color 0.3s ease; }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <!-- Sidebar Navigation -->
+    <div class="layout">
+        <!-- ═══════════ SIDEBAR ═══════════ -->
         <aside class="sidebar">
             <div class="logo">
                 <div class="logo-icon">🛡️</div>
                 <div>
                     <div class="logo-text">VigilEdge</div>
-                    <div class="logo-subtitle">SECURITY OPERATIONS</div>
+                    <div class="logo-subtitle">Security Operations</div>
                 </div>
             </div>
-
             <nav>
                 <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a href="/admin/dashboard" class="nav-link">
-                            <span class="nav-icon">📊</span>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/security-rules" class="nav-link">
-                            <span class="nav-icon">🔒</span>
-                            Security Rules
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/threat-detection" class="nav-link active">
-                            <span class="nav-icon">🚨</span>
-                            Threat Detection
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/analytics" class="nav-link">
-                            <span class="nav-icon">📈</span>
-                            Analytics
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/network-monitor" class="nav-link">
-                            <span class="nav-icon">🌐</span>
-                            Network Monitor
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/blocked-ips" class="nav-link">
-                            <span class="nav-icon">🚫</span>
-                            Blocked IPs
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/event-logs" class="nav-link">
-                            <span class="nav-icon">📝</span>
-                            Event Logs
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/settings" class="nav-link">
-                            <span class="nav-icon">⚙️</span>
-                            Settings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/auth/setup-2fa" class="nav-link">
-                            <span class="nav-icon">🔐</span>
-                            <span>Setup 2FA</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item"
-                        style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
-                        <a href="/logout" class="nav-link" style="color: #ff6b6b;">
-                            <span class="nav-icon">🚪</span>
-                            <span>Logout</span>
-                        </a>
+                    <li class="nav-item"><a href="/admin/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a></li>
+                    <li class="nav-item"><a href="/security-rules" class="nav-link"><span class="nav-icon">🔒</span> Security Rules</a></li>
+                    <li class="nav-item"><a href="/threat-detection" class="nav-link active"><span class="nav-icon">🚨</span> Threat Detection</a></li>
+                    <li class="nav-item"><a href="/analytics" class="nav-link"><span class="nav-icon">📈</span> Analytics</a></li>
+                    <li class="nav-item"><a href="/network-monitor" class="nav-link"><span class="nav-icon">🌐</span> Network Monitor</a></li>
+                    <li class="nav-item"><a href="/blocked-ips" class="nav-link"><span class="nav-icon">🚫</span> Blocked IPs</a></li>
+                    <li class="nav-item"><a href="/event-logs" class="nav-link"><span class="nav-icon">📝</span> Event Logs</a></li>
+                    <li class="nav-item"><a href="/settings" class="nav-link"><span class="nav-icon">⚙️</span> Settings</a></li>
+                    <li class="nav-item"><a href="/auth/setup-2fa" class="nav-link"><span class="nav-icon">🔐</span> Setup 2FA</a></li>
+                    <li class="nav-item" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.75rem;">
+                        <a href="/logout" class="nav-link" style="color: #ff6b6b;"><span class="nav-icon">🚪</span> Logout</a>
                     </li>
                 </ul>
             </nav>
         </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
+        <!-- ═══════════ MAIN ═══════════ -->
+        <main class="main">
+            <!-- Page Header -->
             <div class="page-header">
-                <h1 class="page-title">Threat Detection</h1>
-                <p class="page-subtitle">Real-time monitoring and analysis of security threats</p>
-            </div>
-
-            <!-- Threat Overview -->
-            <div class="threat-overview">
-                <div class="threat-card critical">
-                    <div class="threat-header">
-                        <div class="threat-info">
-                            <h3>SQL Injection</h3>
-                            <div class="threat-count" id="sql-threat-count">0</div>
-                        </div>
-                    </div>
-                    <div class="threat-description">
-                        Blocked SQL injection attacks
-                    </div>
+                <div>
+                    <h1 class="page-title">Threat Detection</h1>
+                    <p class="page-subtitle" id="page-subtitle">Last 12 hours — monitoring all attack vectors</p>
                 </div>
-
-                <div class="threat-card warning">
-                    <div class="threat-header">
-                        <div class="threat-info">
-                            <h3>XSS Attacks</h3>
-                            <div class="threat-count" id="xss-threat-count">0</div>
-                        </div>
-                    </div>
-                    <div class="threat-description">
-                        Blocked cross-site scripting attacks
-                    </div>
-                </div>
-
-                <div class="threat-card info">
-                    <div class="threat-header">
-                        <div class="threat-info">
-                            <h3>Path Traversal</h3>
-                            <div class="threat-count" id="path-threat-count">0</div>
-                        </div>
-                    </div>
-                    <div class="threat-description">
-                        Blocked directory traversal attempts
-                    </div>
-                </div>
-
-                <div class="threat-card info">
-                    <div class="threat-header">
-                        <div class="threat-info">
-                            <h3>Rate Limited</h3>
-                            <div class="threat-count" id="rate-threat-count">0</div>
-                        </div>
-                    </div>
-                    <div class="threat-description">
-                        IPs throttled for excessive requests
-                    </div>
+                <div class="header-controls">
+                    <button class="control-btn active" id="btn-auto-refresh" onclick="toggleAutoRefresh()">
+                        <div class="dot"></div>
+                        <span id="refresh-label">Live</span>
+                    </button>
+                    <button class="control-btn" id="btn-sound" onclick="toggleSound()">
+                        🔊 <span id="sound-label">Alerts On</span>
+                    </button>
+                    <button class="control-btn" onclick="exportCSV()">📥 Export CSV</button>
                 </div>
             </div>
 
-            <!-- Real-time Threats -->
-            <div class="realtime-section">
-                <div class="section-header">
-                    <h2 class="section-title">Real-time Threat Feed</h2>
-                    <div class="refresh-indicator">
-                        <div class="refresh-dot"></div>
-                        Live Updates
-                    </div>
-                </div>
+            <!-- ═══════════ TIME RANGE PICKER ═══════════ -->
+            <div class="time-range-bar">
+                <span class="range-label">⏱ Range</span>
+                <button class="range-preset" data-hours="1" onclick="setPresetRange(1, this)">1H</button>
+                <button class="range-preset" data-hours="6" onclick="setPresetRange(6, this)">6H</button>
+                <button class="range-preset active" data-hours="12" onclick="setPresetRange(12, this)">12H</button>
+                <button class="range-preset" data-hours="24" onclick="setPresetRange(24, this)">24H</button>
+                <button class="range-preset" data-hours="168" onclick="setPresetRange(168, this)">7D</button>
+                <button class="range-preset" data-hours="720" onclick="setPresetRange(720, this)">30D</button>
+                <div class="range-separator"></div>
+                <label style="font-size:0.72rem; color:var(--text-muted);">From</label>
+                <input type="datetime-local" class="range-date-input" id="range-start">
+                <label style="font-size:0.72rem; color:var(--text-muted);">To</label>
+                <input type="datetime-local" class="range-date-input" id="range-end">
+                <button class="range-apply-btn" onclick="applyCustomRange()">Apply</button>
+                <span class="range-active-label" id="range-active-label">Last 12 hours</span>
+            </div>
 
-                <div class="threat-list" id="threat-list">
-                    <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
-                        <p>Loading real-time threats...</p>
+            <!-- ═══════════ GAUGE + SUMMARY ═══════════ -->
+            <div class="gauge-summary-row">
+                <div class="gauge-container" id="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 140 140">
+                        <circle class="gauge-track" cx="70" cy="70" r="58"></circle>
+                        <circle class="gauge-fill" id="gauge-fill" cx="70" cy="70" r="58"
+                            stroke-dasharray="364.42" stroke-dashoffset="364.42"></circle>
+                    </svg>
+                    <div class="gauge-label">
+                        <div class="gauge-level" id="gauge-level">—</div>
+                        <div class="gauge-sublabel">Threat Level</div>
                     </div>
                 </div>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Total Blocked</div>
+                        <div class="summary-stat-value blue-text count-up" id="stat-total">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Critical</div>
+                        <div class="summary-stat-value critical-text count-up" id="stat-critical">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">High</div>
+                        <div class="summary-stat-value high-text count-up" id="stat-high">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Medium / Low</div>
+                        <div class="summary-stat-value medium-text count-up" id="stat-medlow">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ ATTACK TYPE CARDS ═══════════ -->
+            <div class="section-label">Attack Vectors Detected <span class="label-line"></span></div>
+            <div class="attack-cards-grid" id="attack-cards-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- ═══════════ CHARTS ROW 1: Timeline + Doughnut ═══════════ -->
+            <div class="charts-grid">
+                <div class="chart-panel">
+                    <div class="chart-panel-title">
+                        <span>📈 Attack Timeline — Last 24 Hours</span>
+                    </div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-timeline" height="260"></canvas></div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title"><span>🎯 Attack Distribution</span></div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-doughnut" height="260"></canvas></div>
+                </div>
+            </div>
+
+            <!-- ═══════════ CHARTS ROW 2: Severity + Top IPs + Heatmap ═══════════ -->
+            <div class="charts-grid-3">
+                <div class="chart-panel">
+                    <div class="chart-panel-title"><span>🔥 Severity Breakdown</span></div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-severity" height="220"></canvas></div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title"><span>🎯 Top Attacker IPs</span></div>
+                    <ul class="ip-list" id="ip-list">
+                        <li class="feed-empty">Loading...</li>
+                    </ul>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title"><span>🗓️ Weekly Heatmap</span></div>
+                    <div class="heatmap-grid" id="heatmap-grid"></div>
+                </div>
+            </div>
+
+            <!-- ═══════════ MITRE ATT&CK ═══════════ -->
+            <div class="section-label">MITRE ATT&CK Mapping <span class="label-line"></span></div>
+            <div class="mitre-grid" id="mitre-grid"></div>
+
+            <!-- ═══════════ THREAT FEED ═══════════ -->
+            <div class="section-label">Live Threat Feed <span class="label-line"></span></div>
+            <div class="feed-toolbar">
+                <select class="feed-select" id="filter-type" onchange="applyFilters()">
+                    <option value="">All Types</option>
+                    <option value="sql_injection">SQL Injection</option>
+                    <option value="xss_attempt">XSS Attempt</option>
+                    <option value="html_injection">HTML Injection</option>
+                    <option value="path_traversal">Path Traversal</option>
+                    <option value="command_injection">Command Injection</option>
+                    <option value="ldap_injection">LDAP Injection</option>
+                    <option value="xml_injection">XML Injection</option>
+                    <option value="ssrf_attempt">SSRF Attempt</option>
+                    <option value="template_injection">Template Injection</option>
+                    <option value="rce_attempt">RCE Attempt</option>
+                    <option value="auth_bypass_attempt">Auth Bypass</option>
+                    <option value="ddos_attack">DDoS Attack</option>
+                    <option value="rate_limit_exceeded">Rate Limited</option>
+                    <option value="blocked_ip">Blocked IP</option>
+                    <option value="bot_detected">Bot Detected</option>
+                </select>
+                <select class="feed-select" id="filter-severity" onchange="applyFilters()">
+                    <option value="">All Severities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                </select>
+                <input class="feed-input" type="text" id="filter-ip" placeholder="Filter by IP..." oninput="applyFilters()" style="width: 160px;">
+            </div>
+            <div class="threat-feed" id="threat-feed">
+                <div class="feed-empty">Loading threat feed...</div>
             </div>
         </main>
     </div>
 
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detail-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="modal-title">🔍 Threat Details</span>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Sound for CRITICAL alerts -->
+    <audio id="alert-sound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRl9vT19teleXcG/Zk5BVEVGBQAAAEAAAAEAAEABAAIAQAAGAAEAHAEAAA==" type="audio/wav">
+    </audio>
+
     <script>
-        // Fetch real threat data from API
-        async function fetchThreatsData() {
-            try {
-                const response = await fetch('/api/v1/threats');
-                const data = await response.json();
+    /* ═══════════════════════════════════════════════════════════════════
+       CONFIGURATION & STATE
+       ═══════════════════════════════════════════════════════════════════ */
+    const ATTACK_TYPE_CONFIG = {
+        sql_injection:       { icon: '💉', name: 'SQL Injection',       severity: 'critical', mitre: { tactic: 'Initial Access',     technique: 'Exploit Public-Facing App', id: 'T1190' }},
+        xss_attempt:         { icon: '⚡', name: 'XSS Attempt',         severity: 'critical', mitre: { tactic: 'Execution',           technique: 'JavaScript Execution',      id: 'T1059.007' }},
+        html_injection:      { icon: '🏷️', name: 'HTML Injection',      severity: 'medium',   mitre: { tactic: 'Execution',           technique: 'User Execution',            id: 'T1204' }},
+        path_traversal:      { icon: '📁', name: 'Path Traversal',      severity: 'critical', mitre: { tactic: 'Discovery',           technique: 'File & Dir Discovery',      id: 'T1083' }},
+        command_injection:   { icon: '💀', name: 'Command Injection',   severity: 'critical', mitre: { tactic: 'Execution',           technique: 'Command & Scripting',       id: 'T1059' }},
+        ldap_injection:      { icon: '🔗', name: 'LDAP Injection',      severity: 'high',     mitre: { tactic: 'Credential Access',   technique: 'Exploitation for Cred',     id: 'T1212' }},
+        xml_injection:       { icon: '📄', name: 'XML Injection (XXE)', severity: 'critical', mitre: { tactic: 'Initial Access',      technique: 'Exploit Public-Facing App', id: 'T1190' }},
+        ssrf_attempt:        { icon: '🌐', name: 'SSRF Attempt',        severity: 'high',     mitre: { tactic: 'Lateral Movement',    technique: 'Exploitation of Services',  id: 'T1210' }},
+        template_injection:  { icon: '🧩', name: 'Template Injection',  severity: 'critical', mitre: { tactic: 'Execution',           technique: 'Template Injection',        id: 'T1221' }},
+        rce_attempt:         { icon: '☠️', name: 'Remote Code Exec',    severity: 'critical', mitre: { tactic: 'Execution',           technique: 'Exploitation for Exec',     id: 'T1203' }},
+        auth_bypass_attempt: { icon: '🔓', name: 'Auth Bypass',         severity: 'critical', mitre: { tactic: 'Credential Access',   technique: 'Modify Auth Process',       id: 'T1556' }},
+        ddos_attack:         { icon: '🌊', name: 'DDoS Attack',         severity: 'critical', mitre: { tactic: 'Impact',              technique: 'Network DoS',               id: 'T1498' }},
+        rate_limit_exceeded: { icon: '⏱️', name: 'Rate Limited',        severity: 'medium',   mitre: { tactic: 'Impact',              technique: 'Endpoint DoS',              id: 'T1499' }},
+        blocked_ip:          { icon: '🚫', name: 'Blocked IP',          severity: 'high',     mitre: { tactic: 'Command & Control',   technique: 'Known Malicious IP',        id: 'T1071' }},
+        bot_detected:        { icon: '🤖', name: 'Bot Detected',        severity: 'medium',   mitre: { tactic: 'Reconnaissance',      technique: 'Active Scanning',           id: 'T1595' }},
+        processing_error:    { icon: '⚠️', name: 'Processing Error',    severity: 'low',      mitre: { tactic: 'Other',               technique: 'N/A',                       id: '—' }},
+    };
 
-                // Helper function to find count by threat type (handles variations)
-                const getThreatCount = (threatCounts, variations) => {
-                    for (let variant of variations) {
-                        if (threatCounts[variant]) {
-                            return threatCounts[variant].count;
-                        }
-                    }
-                    return 0;
-                };
+    const SEV_COLORS = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#3b82f6' };
+    const GAUGE_COLORS = { LOW: '#3b82f6', MEDIUM: '#eab308', HIGH: '#f97316', CRITICAL: '#ef4444' };
+    const GAUGE_OFFSETS = { LOW: 320, MEDIUM: 230, HIGH: 130, CRITICAL: 30 };
 
-                // Update threat counts with flexible matching
-                document.getElementById('sql-threat-count').textContent = getThreatCount(data.threat_counts,
-                    ['SQL Injection', 'sql_injection', 'SQLi', 'sql injection']);
-                document.getElementById('xss-threat-count').textContent = getThreatCount(data.threat_counts,
-                    ['XSS', 'xss_attempt', 'Cross-Site Scripting', 'xss']);
-                document.getElementById('path-threat-count').textContent = getThreatCount(data.threat_counts,
-                    ['Path Traversal', 'path_traversal', 'Directory Traversal']);
-                document.getElementById('rate-threat-count').textContent = getThreatCount(data.threat_counts,
-                    ['Rate Limit', 'rate_limit', 'Rate Limiting', 'DDoS']);
+    let autoRefresh = true;
+    let soundEnabled = true;
+    let refreshInterval = null;
+    let allThreats = [];
+    let chartTimeline = null, chartDoughnut = null, chartSeverity = null;
 
-                // Update threat list
-                const threatList = document.getElementById('threat-list');
-                if (data.recent_threats && data.recent_threats.length > 0) {
-                    threatList.innerHTML = '';
-                    data.recent_threats.forEach(threat => {
-                        const threatItem = createThreatItem(threat);
-                        threatList.appendChild(threatItem);
-                    });
-                } else {
-                    threatList.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-muted);"><p>No recent threats detected</p></div>';
+    // Time range state — default last 12 hours
+    let currentRangeHours = 12;
+    let customStart = null;
+    let customEnd = null;
+
+    function getTimeRangeParams() {
+        let start, end;
+        if (customStart && customEnd) {
+            start = new Date(customStart).toISOString();
+            end = new Date(customEnd).toISOString();
+        } else {
+            const now = new Date();
+            end = now.toISOString();
+            start = new Date(now.getTime() - currentRangeHours * 60 * 60 * 1000).toISOString();
+        }
+        return { start, end };
+    }
+
+    function setPresetRange(hours, btnEl) {
+        currentRangeHours = hours;
+        customStart = null;
+        customEnd = null;
+        // Clear custom date inputs
+        document.getElementById('range-start').value = '';
+        document.getElementById('range-end').value = '';
+        // Update active button
+        document.querySelectorAll('.range-preset').forEach(b => b.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        // Update labels
+        const labels = {1:'Last 1 hour',6:'Last 6 hours',12:'Last 12 hours',24:'Last 24 hours',168:'Last 7 days',720:'Last 30 days'};
+        document.getElementById('range-active-label').textContent = labels[hours] || `Last ${hours}h`;
+        document.getElementById('page-subtitle').textContent = (labels[hours] || `Last ${hours} hours`) + ' — monitoring all attack vectors';
+        fetchData();
+    }
+
+    function applyCustomRange() {
+        const startVal = document.getElementById('range-start').value;
+        const endVal = document.getElementById('range-end').value;
+        if (!startVal || !endVal) { alert('Please select both start and end dates.'); return; }
+        if (new Date(startVal) >= new Date(endVal)) { alert('Start date must be before end date.'); return; }
+        customStart = startVal;
+        customEnd = endVal;
+        document.querySelectorAll('.range-preset').forEach(b => b.classList.remove('active'));
+        const fmt = (d) => new Date(d).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        const label = `${fmt(startVal)} → ${fmt(endVal)}`;
+        document.getElementById('range-active-label').textContent = label;
+        document.getElementById('page-subtitle').textContent = label + ' — monitoring all attack vectors';
+        fetchData();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       FETCH DATA
+       ═══════════════════════════════════════════════════════════════════ */
+    async function fetchData() {
+        try {
+            const { start, end } = getTimeRangeParams();
+            const params = new URLSearchParams({ start, end });
+            const res = await fetch(`/api/v1/threats/enhanced?${params}`);
+            const data = await res.json();
+            allThreats = data.recent_threats || [];
+            updateGauge(data.overall_threat_level);
+            updateSummaryStats(data);
+            updateAttackCards(data.threat_counts);
+            updateTimelineChart(data.hourly_timeline, data.threat_counts);
+            updateDoughnutChart(data.threat_counts);
+            updateSeverityChart(data.severity_distribution);
+            updateTopIPs(data.top_attacking_ips);
+            updateHeatmap(data.heatmap_data);
+            updateMitreGrid(data.threat_counts);
+            applyFilters();
+
+            // Sound alert for new CRITICAL
+            if (soundEnabled && data.recent_threats.length > 0) {
+                const latest = data.recent_threats[0];
+                if (latest.threat_level === 'CRITICAL') {
+                    playAlertSound();
                 }
-            } catch (error) {
-                console.error('Failed to fetch threats:', error);
+            }
+        } catch (err) {
+            console.error('Failed to fetch threat data:', err);
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       GAUGE
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateGauge(level) {
+        const el = document.getElementById('gauge-fill');
+        const label = document.getElementById('gauge-level');
+        const container = document.getElementById('gauge-container');
+        const color = GAUGE_COLORS[level] || GAUGE_COLORS.LOW;
+        const offset = GAUGE_OFFSETS[level] ?? 320;
+
+        el.style.stroke = color;
+        el.style.strokeDashoffset = offset;
+        label.textContent = level;
+        label.style.color = color;
+
+        container.className = 'gauge-container threat-' + level.toLowerCase();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       SUMMARY STATS
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateSummaryStats(data) {
+        animateCount('stat-total', data.total_blocked || 0);
+        animateCount('stat-critical', data.severity_distribution?.CRITICAL || 0);
+        animateCount('stat-high', data.severity_distribution?.HIGH || 0);
+        const med = (data.severity_distribution?.MEDIUM || 0) + (data.severity_distribution?.LOW || 0);
+        animateCount('stat-medlow', med);
+    }
+
+    function animateCount(id, target) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const start = parseInt(el.textContent) || 0;
+        if (start === target) return;
+        const duration = 800;
+        const startTime = performance.now();
+        function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(start + (target - start) * eased);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       ATTACK CARDS (all 16 types)
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateAttackCards(counts) {
+        const grid = document.getElementById('attack-cards-grid');
+        grid.innerHTML = '';
+
+        // Merge known types with any unknown types from the API
+        const allTypes = { ...ATTACK_TYPE_CONFIG };
+        for (const key of Object.keys(counts)) {
+            if (!allTypes[key]) {
+                allTypes[key] = { icon: '❓', name: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), severity: 'low', mitre: { tactic: 'Other', technique: 'Unknown', id: '—' }};
             }
         }
 
-        // Create threat item element
-        function createThreatItem(threat) {
-            const div = document.createElement('div');
-            div.className = 'threat-item';
+        // Sort: types with counts first (descending), then zero-count types
+        const sorted = Object.entries(allTypes).sort((a, b) => (counts[b[0]] || 0) - (counts[a[0]] || 0));
 
-            const severityClass = threat.threat_level === 'CRITICAL' ? 'high' : threat.threat_level === 'HIGH' ? 'high' : 'medium';
-            const timeAgo = getRelativeTime(threat.timestamp);
+        for (const [key, cfg] of sorted) {
+            const count = counts[key] || 0;
+            const card = document.createElement('div');
+            card.className = `attack-card sev-${cfg.severity}`;
+            card.innerHTML = `
+                <div class="attack-card-icon">${cfg.icon}</div>
+                <div class="attack-card-name">${cfg.name}</div>
+                <div class="attack-card-count count-up" data-target="${count}">0</div>
+                <span class="attack-card-severity sev-badge-${cfg.severity}">${cfg.severity}</span>
+            `;
+            grid.appendChild(card);
 
-            div.innerHTML = `
-                <div class="threat-severity ${severityClass}"></div>
-                <div class="threat-details">
-                    <div class="threat-title">${threat.threat_type} Detected</div>
-                    <div class="threat-ip">${threat.ip || 'Unknown'}</div>
-                    <div class="threat-time">${timeAgo}</div>
+            // Animate count
+            const countEl = card.querySelector('.attack-card-count');
+            animateCountEl(countEl, count);
+        }
+    }
+
+    function animateCountEl(el, target) {
+        if (target === 0) { el.textContent = '0'; return; }
+        const duration = 1000;
+        const startTime = performance.now();
+        function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       CHARTS
+       ═══════════════════════════════════════════════════════════════════ */
+    const chartColors = [
+        '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6',
+        '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f43f5e',
+        '#a855f7', '#6366f1', '#0ea5e9', '#84cc16', '#fb923c', '#64748b'
+    ];
+
+    function updateTimelineChart(timeline, counts) {
+        const ctx = document.getElementById('chart-timeline').getContext('2d');
+        const types = Object.keys(counts).slice(0, 6); // Top 6 for readability
+        const labels = timeline.map(t => t.hour);
+
+        const datasets = types.map((type, i) => ({
+            label: (ATTACK_TYPE_CONFIG[type]?.name || type).substring(0, 18),
+            data: timeline.map(t => t[type] || 0),
+            borderColor: chartColors[i],
+            backgroundColor: chartColors[i] + '15',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+        }));
+
+        if (chartTimeline) chartTimeline.destroy();
+        chartTimeline = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 15, font: { size: 11 } } },
+                    tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#f1f5f9', bodyColor: '#94a3b8', padding: 10 }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 0 } },
+                    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function updateDoughnutChart(counts) {
+        const ctx = document.getElementById('chart-doughnut').getContext('2d');
+        const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        const labels = entries.map(([k]) => (ATTACK_TYPE_CONFIG[k]?.name || k).substring(0, 20));
+        const data = entries.map(([, v]) => v);
+        const colors = entries.map((_, i) => chartColors[i % chartColors.length]);
+
+        if (chartDoughnut) chartDoughnut.destroy();
+        chartDoughnut = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#0a0e1a', borderWidth: 2 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10, padding: 8, font: { size: 10 } } },
+                    tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#f1f5f9', bodyColor: '#94a3b8' }
+                }
+            }
+        });
+    }
+
+    function updateSeverityChart(dist) {
+        const ctx = document.getElementById('chart-severity').getContext('2d');
+        const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+        const colors = [SEV_COLORS.critical, SEV_COLORS.high, SEV_COLORS.medium, SEV_COLORS.low];
+        const data = levels.map(l => dist[l] || 0);
+
+        if (chartSeverity) chartSeverity.destroy();
+        chartSeverity = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: levels,
+                datasets: [{ data, backgroundColor: colors.map(c => c + 'aa'), borderColor: colors, borderWidth: 1, borderRadius: 6, barThickness: 30 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#f1f5f9', bodyColor: '#94a3b8' }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true },
+                    y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, weight: '600' } } }
+                }
+            }
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       TOP ATTACKER IPS
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateTopIPs(ips) {
+        const list = document.getElementById('ip-list');
+        if (!ips || ips.length === 0) { list.innerHTML = '<li class="feed-empty">No attacker data</li>'; return; }
+        const maxCount = ips[0]?.count || 1;
+
+        list.innerHTML = ips.map((ip, i) => `
+            <li class="ip-item">
+                <span class="ip-rank ${i < 3 ? 'top-3' : ''}">${i + 1}</span>
+                <span class="ip-address">${ip.ip}</span>
+                <div class="ip-bar"><div class="ip-bar-fill" style="width: ${(ip.count / maxCount * 100)}%"></div></div>
+                <span class="ip-count">${ip.count}</span>
+                <button class="ip-block-btn" onclick="blockIP('${ip.ip}')">Block</button>
+            </li>
+        `).join('');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       HEATMAP
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateHeatmap(data) {
+        const grid = document.getElementById('heatmap-grid');
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let maxVal = 0;
+        for (const row of data) for (const v of row) if (v > maxVal) maxVal = v;
+
+        let html = '<div></div>'; // empty top-left
+        for (let h = 0; h < 24; h++) html += `<div class="heatmap-header">${h}</div>`;
+
+        for (let d = 0; d < 7; d++) {
+            html += `<div class="heatmap-label">${days[d]}</div>`;
+            for (let h = 0; h < 24; h++) {
+                const val = data[d]?.[h] || 0;
+                const intensity = maxVal > 0 ? val / maxVal : 0;
+                let bg;
+                if (val === 0) bg = 'rgba(255,255,255,0.02)';
+                else if (intensity < 0.3) bg = `rgba(59, 130, 246, ${0.2 + intensity})`;
+                else if (intensity < 0.6) bg = `rgba(234, 179, 8, ${0.2 + intensity * 0.6})`;
+                else bg = `rgba(239, 68, 68, ${0.3 + intensity * 0.5})`;
+
+                html += `<div class="heatmap-cell" style="background:${bg}" data-tooltip="${days[d]} ${h}:00 — ${val} attacks"></div>`;
+            }
+        }
+        grid.innerHTML = html;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       MITRE ATT&CK GRID
+       ═══════════════════════════════════════════════════════════════════ */
+    function updateMitreGrid(counts) {
+        const grid = document.getElementById('mitre-grid');
+        const tactics = {};
+
+        for (const [key, count] of Object.entries(counts)) {
+            const cfg = ATTACK_TYPE_CONFIG[key];
+            if (!cfg || !cfg.mitre) continue;
+            const t = cfg.mitre.tactic;
+            if (!tactics[t]) tactics[t] = { attacks: [], total: 0 };
+            tactics[t].attacks.push({ name: cfg.name, id: cfg.mitre.id, technique: cfg.mitre.technique, count });
+            tactics[t].total += count;
+        }
+
+        grid.innerHTML = Object.entries(tactics)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([tactic, info]) => `
+                <div class="mitre-card">
+                    <div class="mitre-tactic">${tactic}</div>
+                    <span class="mitre-count">${info.total}</span>
+                    ${info.attacks.map(a => `
+                        <div class="mitre-technique">${a.technique}</div>
+                        <div class="mitre-id">${a.id} · ${a.name} (${a.count})</div>
+                    `).join('')}
                 </div>
-                <div class="threat-actions">
-                    <button class="action-btn block" onclick="blockIP('${threat.ip}')">Block IP</button>
-                    <button class="action-btn analyze">Details</button>
+            `).join('');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       THREAT FEED
+       ═══════════════════════════════════════════════════════════════════ */
+    function applyFilters() {
+        const typeFilter = document.getElementById('filter-type').value;
+        const sevFilter = document.getElementById('filter-severity').value;
+        const ipFilter = document.getElementById('filter-ip').value.trim().toLowerCase();
+
+        let filtered = allThreats;
+        if (typeFilter) filtered = filtered.filter(t => t.threat_type === typeFilter);
+        if (sevFilter) filtered = filtered.filter(t => t.threat_level === sevFilter);
+        if (ipFilter) filtered = filtered.filter(t => (t.ip || '').toLowerCase().includes(ipFilter));
+
+        renderFeed(filtered);
+    }
+
+    function renderFeed(threats) {
+        const feed = document.getElementById('threat-feed');
+        if (!threats || threats.length === 0) {
+            feed.innerHTML = '<div class="feed-empty">No threats match current filters</div>';
+            return;
+        }
+
+        feed.innerHTML = threats.map(t => {
+            const cfg = ATTACK_TYPE_CONFIG[t.threat_type] || { severity: 'low' };
+            const sevClass = (t.threat_level || 'LOW');
+            const tagClass = `tag-${cfg.severity}`;
+            const typeName = cfg.name || t.threat_type || 'Unknown';
+            return `
+                <div class="feed-item">
+                    <div class="feed-dot sev-${sevClass}"></div>
+                    <span class="feed-type-tag ${tagClass}">${typeName}</span>
+                    <span class="feed-url" title="${t.url || ''}">${t.url || '—'}</span>
+                    <span class="feed-ip">${t.ip || 'Unknown'}</span>
+                    <span class="feed-time">${getTimeAgo(t.timestamp)}</span>
+                    <div class="feed-actions">
+                        <button class="feed-btn btn-block" onclick="blockIP('${t.ip}')">Block</button>
+                        <button class="feed-btn btn-detail" onclick='showDetail(${JSON.stringify(t).replace(/'/g, "&#39;")})'>Info</button>
+                    </div>
                 </div>
             `;
-            return div;
-        }
+        }).join('');
+    }
 
-        // Calculate relative time
-        function getRelativeTime(timestamp) {
-            const now = new Date();
-            const past = new Date(timestamp);
-            const diffMs = now - past;
-            const diffSec = Math.floor(diffMs / 1000);
-            const diffMin = Math.floor(diffSec / 60);
-            const diffHour = Math.floor(diffMin / 60);
-            const diffDay = Math.floor(diffHour / 24);
+    function getTimeAgo(ts) {
+        if (!ts) return '—';
+        const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+        if (diff < 60) return `${Math.floor(diff)}s ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
 
-            if (diffSec < 60) return `${diffSec} seconds ago`;
-            if (diffMin < 60) return `${diffMin} minutes ago`;
-            if (diffHour < 24) return `${diffHour} hours ago`;
-            return `${diffDay} days ago`;
-        }
+    /* ═══════════════════════════════════════════════════════════════════
+       MODAL
+       ═══════════════════════════════════════════════════════════════════ */
+    function showDetail(threat) {
+        const content = document.getElementById('modal-content');
+        const cfg = ATTACK_TYPE_CONFIG[threat.threat_type] || {};
+        content.innerHTML = `
+            <div class="modal-row"><span class="modal-label">Event ID</span><span class="modal-value">${threat.event_id || '—'}</span></div>
+            <div class="modal-row"><span class="modal-label">Type</span><span class="modal-value">${cfg.icon || ''} ${cfg.name || threat.threat_type}</span></div>
+            <div class="modal-row"><span class="modal-label">Severity</span><span class="modal-value" style="color:${GAUGE_COLORS[threat.threat_level] || '#94a3b8'}">${threat.threat_level}</span></div>
+            <div class="modal-row"><span class="modal-label">Source IP</span><span class="modal-value">${threat.ip || '—'}</span></div>
+            <div class="modal-row"><span class="modal-label">Target URL</span><span class="modal-value">${threat.url || '—'}</span></div>
+            <div class="modal-row"><span class="modal-label">User Agent</span><span class="modal-value" style="font-size:0.75rem">${threat.user_agent || '—'}</span></div>
+            <div class="modal-row"><span class="modal-label">Timestamp</span><span class="modal-value">${threat.timestamp || '—'}</span></div>
+            ${cfg.mitre ? `
+            <div class="modal-row"><span class="modal-label">MITRE Tactic</span><span class="modal-value">${cfg.mitre.tactic} — ${cfg.mitre.id}</span></div>
+            <div class="modal-row"><span class="modal-label">Technique</span><span class="modal-value">${cfg.mitre.technique}</span></div>
+            ` : ''}
+            ${threat.details && Object.keys(threat.details).length ? `
+            <div class="modal-row"><span class="modal-label">Details</span><span class="modal-value" style="font-size:0.7rem; white-space:pre-wrap">${JSON.stringify(threat.details, null, 2)}</span></div>
+            ` : ''}
+        `;
+        document.getElementById('detail-modal').classList.add('open');
+    }
 
-        // Block IP function
-        async function blockIP(ip) {
-            if (!confirm(`Are you sure you want to block IP: ${ip}?`)) {
-                return;
-            }
+    function closeModal() { document.getElementById('detail-modal').classList.remove('open'); }
+    document.getElementById('detail-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 
-            try {
-                const response = await fetch('/api/v1/blocked-ips', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ip: ip,
-                        reason: 'Blocked from threat detection',
-                        reason_type: 'malicious',
-                        notes: 'Blocked from real-time threat feed'
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert(`✅ Successfully blocked IP: ${ip}`);
-                    fetchThreatsData(); // Refresh
-                } else {
-                    alert(`❌ Failed to block IP: ${data.error || 'Unknown error'}`);
-                }
-            } catch (error) {
-                console.error('Failed to block IP:', error);
-                alert('❌ Error blocking IP. Please try again.');
-            }
-        }
-
-        // Add click handlers for action buttons
-        document.addEventListener('DOMContentLoaded', function () {
-            const blockButtons = document.querySelectorAll('.action-btn.block');
-            const analyzeButtons = document.querySelectorAll('.action-btn.analyze');
-
-            blockButtons.forEach(btn => {
-                btn.addEventListener('click', function () {
-                    this.textContent = 'BLOCKED';
-                    this.disabled = true;
-                    this.style.backgroundColor = '#6b7280';
-
-                    // Remove the threat item after animation
-                    setTimeout(() => {
-                        this.closest('.threat-item').style.opacity = '0';
-                        this.closest('.threat-item').style.transform = 'translateX(100%)';
-                        setTimeout(() => {
-                            this.closest('.threat-item').remove();
-                        }, 300);
-                    }, 1000);
-                });
+    /* ═══════════════════════════════════════════════════════════════════
+       BLOCK IP
+       ═══════════════════════════════════════════════════════════════════ */
+    async function blockIP(ip) {
+        if (!ip || ip === 'Unknown' || ip === 'null') return;
+        if (!confirm(`Block IP: ${ip}?`)) return;
+        try {
+            const res = await fetch('/api/v1/blocked-ips', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip, reason: 'Blocked from Threat Detection', reason_type: 'malicious' })
             });
+            const data = await res.json();
+            if (data.success) { alert(`✅ Blocked ${ip}`); fetchData(); }
+            else alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+        } catch (err) { alert('❌ Error blocking IP'); }
+    }
 
-            analyzeButtons.forEach(btn => {
-                btn.addEventListener('click', function () {
-                    this.textContent = 'ANALYZING...';
-                    this.disabled = true;
-                    setTimeout(() => {
-                        this.textContent = 'ANALYZED';
-                        this.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                        this.style.color = '#10b981';
-                        this.style.borderColor = '#10b981';
-                    }, 2000);
-                });
-            });
-        });
+    /* ═══════════════════════════════════════════════════════════════════
+       CONTROLS
+       ═══════════════════════════════════════════════════════════════════ */
+    function toggleAutoRefresh() {
+        autoRefresh = !autoRefresh;
+        const btn = document.getElementById('btn-auto-refresh');
+        const label = document.getElementById('refresh-label');
+        if (autoRefresh) {
+            btn.classList.add('active');
+            btn.classList.remove('paused');
+            label.textContent = 'Live';
+            startRefresh();
+        } else {
+            btn.classList.remove('active');
+            btn.classList.add('paused');
+            label.textContent = 'Paused';
+            clearInterval(refreshInterval);
+        }
+    }
 
-        // Start real-time updates
-        fetchThreatsData(); // Initial load
-        setInterval(fetchThreatsData, 5000); // Refresh every 5 seconds
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        document.getElementById('sound-label').textContent = soundEnabled ? 'Alerts On' : 'Alerts Off';
+        document.getElementById('btn-sound').querySelector('span:first-child') || null;
+    }
+
+    function playAlertSound() {
+        try {
+            const actx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.connect(gain); gain.connect(actx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.15, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.3);
+            osc.start(); osc.stop(actx.currentTime + 0.3);
+        } catch (e) { /* AudioContext may not be available */ }
+    }
+
+    function exportCSV() {
+        if (!allThreats || allThreats.length === 0) { alert('No threat data to export'); return; }
+        const headers = ['Event ID', 'Timestamp', 'Type', 'Severity', 'IP', 'URL', 'User Agent'];
+        const rows = allThreats.map(t => [
+            t.event_id, t.timestamp, t.threat_type, t.threat_level, t.ip, t.url, t.user_agent
+        ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`));
+
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `vigiledge_threats_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       INIT
+       ═══════════════════════════════════════════════════════════════════ */
+    function startRefresh() {
+        clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => { if (autoRefresh) fetchData(); }, 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData();
+        startRefresh();
+    });
     </script>
 </body>
-
 </html>

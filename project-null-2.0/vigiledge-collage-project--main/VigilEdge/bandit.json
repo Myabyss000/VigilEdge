@@ -1,0 +1,1732 @@
+{
+  "errors": [],
+  "generated_at": "2026-06-21T02:56:55Z",
+  "metrics": {
+    "_totals": {
+      "CONFIDENCE.HIGH": 47,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 9,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 48,
+      "SEVERITY.MEDIUM": 8,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 9799,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/app.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 219,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/main_new.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 20,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\__init__.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 28,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_ai.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 223,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_blocked_ips.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 106,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_chatbot.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 367,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_events.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 34,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_metrics.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 72,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_network.py": {
+      "CONFIDENCE.HIGH": 8,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 5,
+      "SEVERITY.MEDIUM": 4,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 975,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\api_settings.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 406,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\auth.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 2,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 630,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\dashboard.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 345,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\proxy.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 539,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/routes\\websocket.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 75,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/scripts\\train_alert_model.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 202,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/services\\__init__.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 12,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/services\\background_tasks.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 131,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/services\\threatloom_integration.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 149,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/services\\websocket_manager.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 40,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/services\\windows_defender_integration.py": {
+      "CONFIDENCE.HIGH": 7,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 7,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 288,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\__init__.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 16,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\api\\routes.py": {
+      "CONFIDENCE.HIGH": 4,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 4,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 599,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\config.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 158,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\core\\ai_scoring.py": {
+      "CONFIDENCE.HIGH": 3,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 4,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1145,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\core\\security_manager.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 348,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\core\\waf_engine.py": {
+      "CONFIDENCE.HIGH": 20,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 20,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1844,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\middleware\\security_middleware.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 278,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\utils\\client_ip.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 56,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\utils\\logger.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 200,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\utils\\rate_limiter.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 16,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\utils\\settings_loader.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 211,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "waf/vigiledge\\utils\\upstream_config.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 67,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "76     # Show connection info\n77     display_host = \"127.0.0.1\" if settings.host == \"0.0.0.0\" else settings.host\n78     print(f\"\\n\ud83c\udf10 Server Information:\")\n",
+      "col_offset": 51,
+      "end_col_offset": 60,
+      "filename": "waf/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 77,
+      "line_range": [
+        77
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "9 import asyncio\n10 import subprocess\n11 import threading\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 10,
+      "line_range": [
+        10
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "78                           '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',\n79                           'localhost', '0.0.0.0', '::1'))\n80 \n81 \n82 async def get_server_public_ip() -> Optional[str]:\n83     \"\"\"Get the server's public IP address for geolocation of private IPs.\"\"\"\n",
+      "col_offset": 39,
+      "end_col_offset": 48,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 79,
+      "line_range": [
+        76,
+        77,
+        78,
+        79
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "560             \n561             result = subprocess.run(\n562                 [speedtest_path, \"--simple\"],\n563                 capture_output=True,\n564                 text=True,\n565                 timeout=120\n566             )\n567             \n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 561,
+      "line_range": [
+        561,
+        562,
+        563,
+        564,
+        565,
+        566
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "597                 try:\n598                     urllib.request.urlopen(\"http://www.google.com\", timeout=5)\n599                     ping_times.append((time.time() - start) * 1000)\n",
+      "col_offset": 20,
+      "end_col_offset": 78,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 22,
+        "link": "https://cwe.mitre.org/data/definitions/22.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.",
+      "line_number": 598,
+      "line_range": [
+        598
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b310-urllib-urlopen",
+      "test_id": "B310",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "620                     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})\n621                     response = urllib.request.urlopen(req, timeout=30)\n622                     data = response.read()\n",
+      "col_offset": 31,
+      "end_col_offset": 70,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 22,
+        "link": "https://cwe.mitre.org/data/definitions/22.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.",
+      "line_number": 621,
+      "line_range": [
+        621
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b310-urllib-urlopen",
+      "test_id": "B310",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "646                 )\n647                 urllib.request.urlopen(req, timeout=30)\n648                 elapsed = time.time() - start\n",
+      "col_offset": 16,
+      "end_col_offset": 55,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 22,
+        "link": "https://cwe.mitre.org/data/definitions/22.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.",
+      "line_number": 647,
+      "line_range": [
+        647
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b310-urllib-urlopen",
+      "test_id": "B310",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "877                 })\n878             except Exception:\n879                 continue\n880         \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 878,
+      "line_range": [
+        878,
+        879
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "936                     })\n937                 except Exception:\n938                     continue\n939         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 937,
+      "line_range": [
+        937,
+        938
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1114                             })\n1115                 except Exception:\n1116                     pass\n1117                 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "waf/routes\\api_network.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1115,
+      "line_range": [
+        1115,
+        1116
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "142         \"admin_username\": None,\n143         \"admin_password\": None\n144     }\n145 }\n146 \n147 \n",
+      "col_offset": 8,
+      "end_col_offset": 24,
+      "filename": "waf/routes\\api_settings.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'None'",
+      "line_number": 143,
+      "line_range": [
+        141,
+        142,
+        143,
+        144
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "74 bearer_scheme = HTTPBearer(auto_error=False)\n75 SESSION_TOKEN_TYPE = \"admin_session\"\n76 CSRF_COOKIE_NAME = \"vigiledge_csrf\"\n",
+      "col_offset": 21,
+      "end_col_offset": 36,
+      "filename": "waf/routes\\auth.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'admin_session'",
+      "line_number": 75,
+      "line_range": [
+        75
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "419                 \"error\": \"Invalid bootstrap token.\",\n420                 \"bootstrap_token_required\": True,\n421             },\n422             status_code=403,\n423         )\n424 \n425     normalized_username = (admin_username or \"\").strip()\n",
+      "col_offset": 16,
+      "end_col_offset": 42,
+      "filename": "waf/routes\\auth.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'True'",
+      "line_number": 420,
+      "line_range": [
+        417,
+        418,
+        419,
+        420,
+        421
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "252                     content = html_content.encode('utf-8')\n253                 except Exception:\n254                     pass\n255 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "waf/routes\\proxy.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 253,
+      "line_range": [
+        253,
+        254
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "388                 })\n389     except:\n390         pass\n391     \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "waf/routes\\proxy.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 389,
+      "line_range": [
+        389,
+        390
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "99         pass\n100     except Exception:\n101         # Any other error - silent cleanup\n102         pass\n103     finally:\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "waf/routes\\websocket.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 100,
+      "line_range": [
+        100,
+        101,
+        102
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "5 \n6 import subprocess\n7 import logging\n",
+      "col_offset": 0,
+      "end_col_offset": 17,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 6,
+      "line_range": [
+        6
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "70             '''\n71             result = subprocess.run(\n72                 [\"powershell\", \"-Command\", ps_script],\n73                 capture_output=True,\n74                 text=True,\n75                 timeout=5\n76             )\n77             logger.info(f\"Event source check: {result.stdout.strip()}\")\n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 71,
+      "line_range": [
+        71,
+        72,
+        73,
+        74,
+        75,
+        76
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "70             '''\n71             result = subprocess.run(\n72                 [\"powershell\", \"-Command\", ps_script],\n73                 capture_output=True,\n74                 text=True,\n75                 timeout=5\n76             )\n77             logger.info(f\"Event source check: {result.stdout.strip()}\")\n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 71,
+      "line_range": [
+        71,
+        72,
+        73,
+        74,
+        75,
+        76
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "207             \n208             result = subprocess.run(\n209                 [\"powershell\", \"-Command\", ps_command],\n210                 capture_output=True,\n211                 text=True,\n212                 timeout=5,\n213                 env=secure_env\n214             )\n215             \n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 208,
+      "line_range": [
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "207             \n208             result = subprocess.run(\n209                 [\"powershell\", \"-Command\", ps_command],\n210                 capture_output=True,\n211                 text=True,\n212                 timeout=5,\n213                 env=secure_env\n214             )\n215             \n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 208,
+      "line_range": [
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "240             \n241             result = subprocess.run(\n242                 [\n243                     \"eventcreate\",\n244                     \"/T\", event_type,\n245                     \"/ID\", \"1000\",\n246                     \"/L\", \"APPLICATION\",\n247                     \"/SO\", \"VigilEdge-WAF\",\n248                     \"/D\", truncated_message\n249                 ],\n250                 capture_output=True,\n251                 text=True,\n252                 timeout=5\n253             )\n254             \n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 241,
+      "line_range": [
+        241,
+        242,
+        243,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251,
+        252,
+        253
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "240             \n241             result = subprocess.run(\n242                 [\n243                     \"eventcreate\",\n244                     \"/T\", event_type,\n245                     \"/ID\", \"1000\",\n246                     \"/L\", \"APPLICATION\",\n247                     \"/SO\", \"VigilEdge-WAF\",\n248                     \"/D\", truncated_message\n249                 ],\n250                 capture_output=True,\n251                 text=True,\n252                 timeout=5\n253             )\n254             \n",
+      "col_offset": 21,
+      "end_col_offset": 13,
+      "filename": "waf/services\\windows_defender_integration.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 241,
+      "line_range": [
+        241,
+        242,
+        243,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251,
+        252,
+        253
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "630                         await waf_engine.log_auto_block(ip, {\"action\": \"approved\", \"note\": note, \"event_id\": event_id})\n631                     except Exception:\n632                         pass\n633                     # broadcast notification\n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\api\\routes.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 631,
+      "line_range": [
+        631,
+        632
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "635                         await websocket_manager.broadcast(json.dumps({\"type\": \"alert\", \"message\": f\"\u26d4 Auto-block approved for {ip}\"}))\n636                     except Exception:\n637                         pass\n638                     return JSONResponse(content={\"status\": \"success\", \"message\": f\"IP {ip} blocked\"})\n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\api\\routes.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 636,
+      "line_range": [
+        636,
+        637
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "656                 await waf_engine.log_auto_block(ip, {\"action\": \"rejected\", \"note\": note, \"event_id\": event_id})\n657             except Exception:\n658                 pass\n659 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "waf/vigiledge\\api\\routes.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 657,
+      "line_range": [
+        657,
+        658
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "697                         continue\n698                 except Exception:\n699                     pass\n700 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\api\\routes.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 698,
+      "line_range": [
+        698,
+        699
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "21     debug: bool = Field(default=False, env=\"DEBUG\")\n22     host: str = Field(default=\"0.0.0.0\", env=\"HOST\")  # Bind to all network interfaces\n23     port: int = Field(default=5000, env=\"PORT\")\n",
+      "col_offset": 30,
+      "end_col_offset": 39,
+      "filename": "waf/vigiledge\\config.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 22,
+      "line_range": [
+        22
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "470                 compiled.append((pattern, re.compile(pattern, re.IGNORECASE)))\n471             except Exception:\n472                 continue\n473         return compiled\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\core\\ai_scoring.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 471,
+      "line_range": [
+        471,
+        472
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "578                     matches.append(label[:40])\n579             except Exception:\n580                 continue\n581 \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\core\\ai_scoring.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 579,
+      "line_range": [
+        579,
+        580
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "707                     context[\"endpoint_type\"] = \"sensitive\"\n708             except Exception:\n709                 continue\n710         \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\core\\ai_scoring.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 708,
+      "line_range": [
+        708,
+        709
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "783             \"brute_force\": 0.75,\n784             \"password_spray\": 0.75,\n785             \"ssrf\": 0.95,\n786             \"xxe\": 0.95,\n787             \"xml_bomb\": 0.9,\n788             \"billion_laughs\": 0.9,\n789             \"ddos_attack\": 0.85,\n790             \"slowloris\": 0.8,\n791             \"syn_flood\": 0.85,\n792             \"udp_flood\": 0.8,\n793             \"http_flood\": 0.85,\n794             \"amplification_attack\": 0.9,\n795             \"header_injection\": 0.8,\n796             \"crlf_injection\": 0.8,\n797             \"host_header_injection\": 0.85,\n798             \"http_response_splitting\": 0.85,\n799             \"http_smuggling\": 0.9,\n800             \"directory_listing\": 0.6,\n801             \"sensitive_data_exposure\": 0.7,\n802             \"information_disclosure\": 0.65,\n803             \"path_disclosure\": 0.6,\n804             \"error_disclosure\": 0.5,\n805             \"bot_attack\": 0.7,\n806             \"web_scraping\": 0.5,\n807             \"automated_scan\": 0.6,\n808             \"vulnerability_scan\": 0.7,\n809             \"scanner_detected\": 0.7,\n810             \"api_abuse\": 0.75,\n811             \"excessive_data_exposure\": 0.7,\n812             \"broken_authentication\": 0.9,\n813             \"broken_access_control\": 0.85,\n814             \"mass_assignment\": 0.8,\n815             \"security_misconfiguration\": 0.7,\n816             \"rate_limit_exceeded\": 0.6,\n817             \"resource_exhaustion\": 0.75,\n818             \"zip_bomb\": 0.8,\n819             \"regex_dos\": 0.75,\n820             \"privilege_escalation\": 0.95,\n821             \"idor\": 0.85,\n822             \"forced_browsing\": 0.7,\n823             \"parameter_tampering\": 0.75,\n824             \"blocked_ip\": 0.8,\n825             \"suspicious_behavior\": 0.7,\n826             \"malicious_payload\": 0.85,\n827             \"backdoor_attempt\": 0.95,\n828             \"webshell\": 0.98,\n829             \"crypto_mining\": 0.9,\n830         }\n831 \n832         if threat_type in threat_scores:\n833             return threat_scores[threat_type]\n834 \n835         if any(marker in threat_type for marker in [\"injection\", \"rce\", \"webshell\"]):\n836             return 0.9\n837         if any(marker in threat_type for marker in [\"xss\", \"csrf\", \"ssrf\", \"xxe\", \"traversal\"]):\n838             return 0.85\n839         if any(marker in threat_type for marker in [\"scan\", \"bot\", \"scrap\", \"brute\"]):\n840             return 0.65\n841         if any(marker in threat_type for marker in [\"rate\", \"flood\", \"dos\"]):\n842             return 0.7\n843 \n844         return 0.5\n845 \n846     def _ua_suspicious(self, user_agent: str) -> float:\n847         \"\"\"Legacy method for backwards compatibility\"\"\"\n848         ua_analysis = self._analyze_user_agent(user_agent)\n849         return ua_analysis[\"score\"]\n850 \n851     def score_event(self, event: Any) -> Dict[str, Any]:\n852         \"\"\"Enhanced multi-factor security event scoring.\n853 \n854         Returns comprehensive analysis with:\n855         - ai_score: Overall threat score (0.0-1.0)\n856         - ai_confidence: Confidence in the assessment\n857         - analysis: Detailed breakdown of scoring factors\n858         - risk_factors: List of identified risk indicators\n859         \"\"\"\n860         # Access fields with tolerance for both dataclass and dict\n861         details = getattr(event, \"details\", {}) or {}\n862         ddos_score = float(details.get(\"ddos_score\", 0))\n863         ua = getattr(event, \"user_agent\", details.get(\"user_agent\", \"\")) or \"\"\n",
+      "col_offset": 12,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\ai_scoring.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '0.75'",
+      "line_number": 784,
+      "line_range": [
+        752,
+        753,
+        754,
+        755,
+        756,
+        757,
+        758,
+        759,
+        760,
+        761,
+        762,
+        763,
+        764,
+        765,
+        766,
+        767,
+        768,
+        769,
+        770,
+        771,
+        772,
+        773,
+        774,
+        775,
+        776,
+        777,
+        778,
+        779,
+        780,
+        781,
+        782,
+        783,
+        784,
+        785,
+        786,
+        787,
+        788,
+        789,
+        790,
+        791,
+        792,
+        793,
+        794,
+        795,
+        796,
+        797,
+        798,
+        799,
+        800,
+        801,
+        802,
+        803,
+        804,
+        805,
+        806,
+        807,
+        808,
+        809,
+        810,
+        811,
+        812,
+        813,
+        814,
+        815,
+        816,
+        817,
+        818,
+        819,
+        820,
+        821,
+        822,
+        823,
+        824,
+        825,
+        826,
+        827,
+        828,
+        829,
+        830
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "160                         )\n161             except Exception:\n162                 continue\n163     \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\core\\security_manager.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 161,
+      "line_range": [
+        161,
+        162
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "386                     imported_count += 1\n387             except Exception:\n388                 continue\n389         return imported_count\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "waf/vigiledge\\core\\security_manager.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 387,
+      "line_range": [
+        387,
+        388
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1139                                         # AI is for alerts only - never blocks IPs directly\n1140                             except Exception:\n1141                                 pass\n1142                     except Exception:\n",
+      "col_offset": 28,
+      "end_col_offset": 36,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1140,
+      "line_range": [
+        1140,
+        1141
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1141                                 pass\n1142                     except Exception:\n1143                         pass\n1144             except Exception as e:\n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1142,
+      "line_range": [
+        1142,
+        1143
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1647                         detected_patterns.append(pattern.pattern)\n1648                 except Exception:\n1649                     continue\n1650         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1648,
+      "line_range": [
+        1648,
+        1649
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1701                         detected_patterns.append(pattern.pattern)\n1702                 except Exception:\n1703                     continue\n1704         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1702,
+      "line_range": [
+        1702,
+        1703
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1734                         detected_patterns.append(pattern.pattern)\n1735                 except Exception:\n1736                     continue\n1737         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1735,
+      "line_range": [
+        1735,
+        1736
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1788                         detected_patterns.append(pattern.pattern)\n1789                 except Exception:\n1790                     continue\n1791         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1789,
+      "line_range": [
+        1789,
+        1790
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1811                         detected_patterns.append(pattern.pattern)\n1812                 except Exception:\n1813                     continue\n1814         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1812,
+      "line_range": [
+        1812,
+        1813
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1855                             detected_patterns.append(f\"Suspicious auth parameter: {match.group(0)}\")\n1856                 except Exception:\n1857                     continue\n1858         \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1856,
+      "line_range": [
+        1856,
+        1857
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1871                         detected_patterns.append(pattern.pattern)\n1872                 except Exception:\n1873                     continue\n1874         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1872,
+      "line_range": [
+        1872,
+        1873
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1886                         detected_patterns.append(pattern.pattern)\n1887                 except Exception:\n1888                     continue\n1889         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1887,
+      "line_range": [
+        1887,
+        1888
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1915                         detected_patterns.append(pattern.pattern)\n1916                 except Exception:\n1917                     continue\n1918         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1916,
+      "line_range": [
+        1916,
+        1917
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1930                         detected_patterns.append(pattern.pattern)\n1931                 except Exception:\n1932                     continue\n1933         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1931,
+      "line_range": [
+        1931,
+        1932
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1945                         detected_patterns.append(pattern.pattern)\n1946                 except Exception:\n1947                     continue\n1948         return detected_patterns\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1946,
+      "line_range": [
+        1946,
+        1947
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "1992         # Whitelist localhost/loopback IPs from DDoS checks\n1993         if ip in ['127.0.0.1', 'localhost', '::1', '0.0.0.0']:\n1994             return {\"score\": 0, \"indicators\": [\"Localhost whitelisted\"]}\n",
+      "col_offset": 51,
+      "end_col_offset": 60,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 1993,
+      "line_range": [
+        1993
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "2143             })\n2144         except Exception:\n2145             pass\n2146     \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2144,
+      "line_range": [
+        2144,
+        2145
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2165                 })\n2166             except Exception:\n2167                 pass\n2168             return True\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2166,
+      "line_range": [
+        2166,
+        2167
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2196                             await httpx.post(self.settings.webhook_url, json=record, timeout=5.0)\n2197                         except Exception:\n2198                             pass\n2199                     try:\n",
+      "col_offset": 24,
+      "end_col_offset": 32,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2197,
+      "line_range": [
+        2197,
+        2198
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2201                         asyncio.create_task(_post())\n2202                     except Exception:\n2203                         pass\n2204             except Exception:\n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2202,
+      "line_range": [
+        2202,
+        2203
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2203                         pass\n2204             except Exception:\n2205                 pass\n2206         except Exception:\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2204,
+      "line_range": [
+        2204,
+        2205
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2205                 pass\n2206         except Exception:\n2207             pass\n2208 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2206,
+      "line_range": [
+        2206,
+        2207
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2371                 security_event.details[\"ai\"] = ai_result\n2372             except Exception:\n2373                 pass\n2374 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "waf/vigiledge\\core\\waf_engine.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2372,
+      "line_range": [
+        2372,
+        2373
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "142                 app_settings.port = network.get(\"listen_port\", app_settings.port)\n143                 app_settings.host = \"0.0.0.0\"  # Listen on all interfaces\n144                 logger.info(f\"Network: port={app_settings.port}, max_connections={network.get('max_connections')}\")\n",
+      "col_offset": 36,
+      "end_col_offset": 45,
+      "filename": "waf/vigiledge\\utils\\settings_loader.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 143,
+      "line_range": [
+        143
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    }
+  ]
+}

@@ -86,6 +86,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             "/api/v1/events",
             "/api/v1/blocked-ips",
             "/api/v1/threats",
+            "/api/v1/threats/enhanced",
             "/api/v1/analytics",
             "/api/v1/event-logs",
             "/api/v1/network-connections",

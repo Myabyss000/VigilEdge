@@ -106,6 +106,183 @@ def setup_routes(app, waf_engine: WAFEngine, websocket_manager):
             })
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+    @api_v1.get("/threats/enhanced")
+    async def get_threats_enhanced(start: str = None, end: str = None):
+        """Get comprehensive threat data for the enhanced Threat Detection page.
+        Accepts optional `start` and `end` query params (ISO datetime strings).
+        Defaults to last 12 hours if not provided.
+        """
+        try:
+            import sqlite3
+            from collections import defaultdict
+            from datetime import datetime as dt, timedelta
+
+            conn = sqlite3.connect(waf_engine.db_path)
+            cursor = conn.cursor()
+
+            # ── Resolve time window ───────────────────────────────────────
+            now = dt.now()
+            if start:
+                try:
+                    # Frontend sends UTC (Z). Convert to system local time to match DB.
+                    t_start = dt.fromisoformat(start.replace('Z', '+00:00'))
+                    t_start = t_start.astimezone().replace(tzinfo=None)
+                except Exception:
+                    t_start = now - timedelta(hours=12)
+            else:
+                t_start = now - timedelta(hours=12)
+
+            if end:
+                try:
+                    t_end = dt.fromisoformat(end.replace('Z', '+00:00'))
+                    t_end = t_end.astimezone().replace(tzinfo=None)
+                except Exception:
+                    t_end = now
+            else:
+                t_end = now
+
+            start_str = t_start.isoformat()
+            end_str = t_end.isoformat()
+            time_filter = "AND timestamp >= ? AND timestamp <= ?"
+            time_params = (start_str, end_str)
+
+            # ── 1. Threat counts by type ──────────────────────────────────
+            cursor.execute(f"""
+                SELECT threat_type, COUNT(*) as count
+                FROM security_events
+                WHERE blocked = 1 AND threat_type IS NOT NULL
+                {time_filter}
+                GROUP BY threat_type
+                ORDER BY count DESC
+            """, time_params)
+            threat_counts = {}
+            for threat_type, count in cursor.fetchall():
+                threat_counts[threat_type] = count
+
+            # ── 2. Hourly timeline (within selected range) ────────────────
+            cursor.execute(f"""
+                SELECT strftime('%H', timestamp) as hour,
+                       threat_type,
+                       COUNT(*) as count
+                FROM security_events
+                WHERE blocked = 1
+                  AND threat_type IS NOT NULL
+                  {time_filter}
+                GROUP BY hour, threat_type
+                ORDER BY hour
+            """, time_params)
+            timeline_raw = defaultdict(lambda: defaultdict(int))
+            for hour, threat_type, count in cursor.fetchall():
+                timeline_raw[hour][threat_type] = count
+
+            hourly_timeline = []
+            for h in range(24):
+                hour_str = f"{h:02d}"
+                entry = {"hour": f"{hour_str}:00"}
+                entry.update(dict(timeline_raw.get(hour_str, {})))
+                hourly_timeline.append(entry)
+
+            # ── 3. Severity distribution ──────────────────────────────────
+            cursor.execute(f"""
+                SELECT threat_level, COUNT(*) as count
+                FROM security_events
+                WHERE blocked = 1 AND threat_level IS NOT NULL
+                {time_filter}
+                GROUP BY threat_level
+            """, time_params)
+            severity_distribution = {}
+            for level, count in cursor.fetchall():
+                severity_distribution[level] = count
+
+            # ── 4. Top 10 attacker IPs ────────────────────────────────────
+            cursor.execute(f"""
+                SELECT ip,
+                       COUNT(*) as attack_count,
+                       GROUP_CONCAT(DISTINCT threat_type) as types
+                FROM security_events
+                WHERE blocked = 1 AND ip IS NOT NULL
+                {time_filter}
+                GROUP BY ip
+                ORDER BY attack_count DESC
+                LIMIT 10
+            """, time_params)
+            top_attacking_ips = []
+            for ip, count, types in cursor.fetchall():
+                type_list = types.split(",") if types else []
+                top_attacking_ips.append({
+                    "ip": ip,
+                    "count": count,
+                    "top_type": type_list[0] if type_list else "unknown",
+                    "types": type_list
+                })
+
+            # ── 5. Heatmap data (7 days × 24 hours within range) ──────────
+            cursor.execute(f"""
+                SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,
+                       CAST(strftime('%H', timestamp) AS INTEGER) as hour,
+                       COUNT(*) as count
+                FROM security_events
+                WHERE blocked = 1
+                {time_filter}
+                GROUP BY dow, hour
+            """, time_params)
+            heatmap = [[0] * 24 for _ in range(7)]
+            for dow, hour, count in cursor.fetchall():
+                heatmap[dow][hour] = count
+
+            # ── 6. Recent threats (within range, last 30) ─────────────────
+            cursor.execute(f"""
+                SELECT event_id, timestamp, threat_type, threat_level,
+                       ip, url, user_agent, details
+                FROM security_events
+                WHERE blocked = 1
+                {time_filter}
+                ORDER BY timestamp DESC
+                LIMIT 30
+            """, time_params)
+            recent_threats = []
+            for row in cursor.fetchall():
+                recent_threats.append({
+                    "event_id": row[0],
+                    "timestamp": row[1],
+                    "threat_type": row[2],
+                    "threat_level": row[3],
+                    "ip": row[4],
+                    "url": row[5],
+                    "user_agent": row[6],
+                    "details": json.loads(row[7]) if row[7] else {}
+                })
+
+            conn.close()
+
+            # ── 7. Calculate overall threat level ─────────────────────────
+            total_blocked = sum(threat_counts.values())
+            critical_count = severity_distribution.get("CRITICAL", 0)
+            high_count = severity_distribution.get("HIGH", 0)
+
+            if critical_count > 5 or total_blocked > 50:
+                overall_threat_level = "CRITICAL"
+            elif critical_count > 0 or high_count > 5 or total_blocked > 20:
+                overall_threat_level = "HIGH"
+            elif high_count > 0 or total_blocked > 5:
+                overall_threat_level = "MEDIUM"
+            else:
+                overall_threat_level = "LOW"
+
+            return JSONResponse(content={
+                "threat_counts": threat_counts,
+                "hourly_timeline": hourly_timeline,
+                "severity_distribution": severity_distribution,
+                "top_attacking_ips": top_attacking_ips,
+                "heatmap_data": heatmap,
+                "overall_threat_level": overall_threat_level,
+                "total_blocked": total_blocked,
+                "recent_threats": recent_threats,
+                "time_range": {"start": start_str, "end": end_str}
+            })
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
     
     @api_v1.get("/analytics")
     async def get_analytics():
